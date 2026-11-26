@@ -17,6 +17,7 @@ export interface AdminInstallableApp {
   screen_status?: 'registered' | 'not_registered' | 'manifest_missing' | string;
   manifest_id?: string | null;
   manifest_version?: string | null;
+  delivery?: { kind: "npm-static"; package: string } | null;
   surfaces?: string[];
   screens?: Array<{
     id: string;
@@ -33,10 +34,10 @@ export interface AdminInstallableApp {
 }
 export interface AdminAppsDirectoryProps {
   loadApps(): Promise<AdminInstallableApp[]>;
-  installApp(key: string): Promise<void>;
+  installApp(key: string, app?: AdminInstallableApp): Promise<void>;
   removeApp?(key: string): Promise<void>;
   updateApp?(key: string, enabled: boolean): Promise<void>;
-  onOpenApp?(href: string): void;
+  onOpenApp?(href: string, app?: AdminInstallableApp): void;
   onInstalled?(): void;
 }
 
@@ -93,7 +94,7 @@ export function useAdminApps({ loadApps, installApp, removeApp, updateApp, onIns
     if (active) return;
     setError(''); setActive(app.key);
     try {
-      if (kind === 'install') await installApp(app.key);
+      if (kind === 'install') await installApp(app.key, app);
       if (kind === 'remove') await removeApp?.(app.key);
       if (kind === 'enable') await updateApp?.(app.key, true);
       if (kind === 'disable') await updateApp?.(app.key, false);
@@ -104,8 +105,11 @@ export function useAdminApps({ loadApps, installApp, removeApp, updateApp, onIns
       setConfirmRemove(null);
       onInstalled?.();
       if (kind === 'install' && view !== 'all') setView('installed');
-    } catch {
-      setError('Account App change failed. No success has been assumed; refresh to verify its current state.');
+    } catch (failure) {
+      const code = String(failure);
+      setError(/app_package_|desktop_app_package|Device package/.test(code)
+        ? `Device installation could not be verified: ${code}. No account installation success has been assumed.`
+        : 'Account App change failed. No success has been assumed; refresh to verify its current state.');
     } finally { setActive(null); }
   }
   return {

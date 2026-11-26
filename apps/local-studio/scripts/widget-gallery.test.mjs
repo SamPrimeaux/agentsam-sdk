@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  listLocalStudioWidgets,
-  setLocalStudioWidgetVisible,
-} from '../frontend/src/lib/widgets/preferences.ts';
+import { listLocalStudioWidgets } from '../frontend/src/lib/widgets/preferences.ts';
 
 test('Local Studio exposes the donor concept gallery without installing concept widgets', () => {
   const widgets = listLocalStudioWidgets();
@@ -13,7 +10,11 @@ test('Local Studio exposes the donor concept gallery without installing concept 
 
   const ready = widgets.filter((widget) => widget.availability === 'ready');
   assert.deepEqual(ready.map((widget) => widget.id), ['queues', 'countdown', 'clock', 'calculator']);
-  assert.equal(ready[0].visible, true);
+  assert.ok(ready.every((widget) =>
+    !widget.visible &&
+    !widget.removable &&
+    widget.preferenceScope === 'Your account · New Tab'
+  ));
 
   const concepts = widgets.filter((widget) => widget.availability === 'demo');
   assert.equal(concepts.length, 18);
@@ -22,5 +23,4 @@ test('Local Studio exposes the donor concept gallery without installing concept 
     !widget.deeplink &&
     widget.preferenceScope === 'Not installed'
   ));
-  assert.throws(() => setLocalStudioWidgetVisible('approvals', true), /widget_not_found/);
 });

@@ -1,17 +1,20 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AdminAppMark } from "@inneranimalmedia/agentsam-nav";
 import { Pin, PinOff, Settings2 } from "lucide-react";
 import type { SettingsUnitId } from "@inneranimalmedia/agentsam-settings";
 import type { SideItem, SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
 import { useWorkStore } from "@/lib/work/store";
-import { pinAccountApp, reloadAccountApps, useAccountApps } from "@/lib/apps-account";
+import { deviceAppPackage, markAccountAppOpened, pinAccountApp, reloadAccountApps, useAccountApps, type DeviceAppReceipt } from "@/lib/apps-account";
 import { pluginNeedsReconnect } from "@/lib/connections/plugin-state";
 import { useAccountPlugins } from "@/lib/connections/account-plugins";
 import { settingsPaneLabel } from "@/components/settings/settingsPaneLabel";
 import { useActiveCompanion } from "../../../agentsam/CompanionContext";
 import { resolveCompanion } from "../../../agentsam/companions";
 import { PluginLogo } from "./stage-icons";
+import { isPackagedDesktop } from "@/lib/desktop/tauri";
+import { EmbeddedBrowserViewport } from "./embedded-browser-viewport";
+import "./browser-stage.css";
 import "./item-stage.css";
 
 const LocalStudioSettingsPage = lazy(() =>
@@ -76,6 +79,45 @@ function ItemHeader({ icon, title, meta, children }: { icon: React.ReactNode; ti
   );
 }
 
+function InstalledDeviceApp({ tab, appKey }: { tab: SideTab; appKey: string }) {
+  const [receipt, setReceipt] = useState<DeviceAppReceipt | null>(null);
+  const [failure, setFailure] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [generation, setGeneration] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setReceipt(null); setFailure("");
+    deviceAppPackage(appKey, "open").then(result => {
+      if (!active) return;
+      setReceipt(result);
+      if (result.ready) void markAccountAppOpened(appKey);
+    }).catch(error => { if (active) setFailure(String(error)); });
+    return () => { active = false; };
+  }, [appKey, generation]);
+  const install = async () => {
+    setBusy(true); setFailure("");
+    try {
+      const result = await deviceAppPackage(appKey, "install");
+      if (!result.ready) throw new Error("Device package not ready");
+      setGeneration(value => value + 1);
+    } catch (error) { setFailure(String(error)); }
+    finally { setBusy(false); }
+  };
+  return <div className="flex min-h-0 flex-1 flex-col">
+    {receipt?.ready && receipt.url ? <>
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1 text-xs text-muted-foreground">
+        <span>Installed on this device · {receipt.version}</span>
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void install()}>{busy ? "Checking…" : "Check for update"}</Button>
+      </div>
+      {failure && <p role="alert" className="px-3 py-1 text-xs text-destructive">{failure}</p>}
+      <div className="min-h-0 flex-1"><EmbeddedBrowserViewport sessionId={tab.id} url={receipt.url} disposeOnUnmount /></div>
+    </> : <div className="mx-auto max-w-xl space-y-3 p-6 text-sm">
+      {failure ? <p role="alert" className="text-destructive">{failure}</p> : <p>{receipt ? "This app is enabled for your account but is not installed on this device." : "Checking this device…"}</p>}
+      {(receipt || failure) && <div className="flex gap-2"><Button type="button" disabled={busy} onClick={() => void install()}>{busy ? "Installing…" : "Install on this device"}</Button><Button type="button" variant="outline" disabled={busy} onClick={() => setGeneration(value => value + 1)}>Retry</Button></div>}
+    </div>}
+  </div>;
+}
+
 function AppItem({ tab, appKey }: { tab: SideTab; appKey: string }) {
   const { apps, loaded, error, reload } = useAccountApps();
   const openSettings = useTabSettings(tab);
@@ -87,7 +129,7 @@ function AppItem({ tab, appKey }: { tab: SideTab; appKey: string }) {
       <ConnectionIssue name={tab.title} onReconnect={() => openSettings("customize", "apps")} onRetry={() => void reload()} />
     );
   }
-  const status = !app.installed ? "Not installed" : app.enabled ? "Installed" : "Turned off";
+  const status = !app.installed ? "Not installed" : app.enabled ? (app.delivery ? "Account enabled" : "Installed") : "Turned off";
   const togglePin = async () => {
     setBusy(true);
     try { await pinAccountApp(app.key, !app.pinned); await reloadAccountApps(); } finally { setBusy(false); }
@@ -103,7 +145,9 @@ function AppItem({ tab, appKey }: { tab: SideTab; appKey: string }) {
         ) : null}
         <Button type="button" size="sm" variant="outline" onClick={() => openSettings("customize", "apps")}><Settings2 className="size-3.5" />Manage</Button>
       </ItemHeader>
-      {live && app.embed_href ? (
+      {live && isPackagedDesktop() && app.delivery?.kind === "npm-static" ? (
+        <InstalledDeviceApp key={app.key} tab={tab} appKey={app.key} />
+      ) : live && app.embed_href ? (
         <iframe
           key={app.embed_href} src={app.embed_href} title={app.label}
           allow="clipboard-read; clipboard-write; fullscreen"

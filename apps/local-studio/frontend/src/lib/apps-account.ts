@@ -1,6 +1,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
 import { navigateApp } from "@/lib/work/navigate";
+import { getTauriInvoke, isPackagedDesktop } from "@/lib/desktop/tauri";
+import { useWorkStore } from "@/lib/work/store";
 
 type Method = "GET" | "POST" | "DELETE" | "PATCH";
 
@@ -29,7 +31,29 @@ export async function loadAccountApps(): Promise<AdminInstallableApp[]> {
   if (!Array.isArray(value.apps)) throw new Error("apps_inventory_invalid");
   return value.apps;
 }
-export async function installAccountApp(key: string): Promise<void> {
+export type DeviceAppReceipt = { ready: boolean; version?: string; url?: string };
+export async function deviceAppPackage(key: string, action: "install" | "status" | "open"): Promise<DeviceAppReceipt> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("Desktop device installation requires AgentSam Desktop");
+  const result = await invoke("desktop_app_package", { key, action }) as DeviceAppReceipt;
+  if (!result || typeof result.ready !== "boolean") throw new Error("Invalid device installation response");
+  if (action === "open" && result.ready) {
+    const url = new URL(result.url || "");
+    if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !url.port || url.username || url.password) throw new Error("Invalid installed app origin");
+  }
+  return result;
+}
+export async function installAccountApp(key: string, selected?: AdminInstallableApp): Promise<void> {
+  const generation = accountAppsGeneration;
+  if (isPackagedDesktop()) {
+    const app = selected?.key === key ? selected : appsState.apps.find(row => row.key === key) ?? (await loadAccountApps()).find(row => row.key === key);
+    if (!app) throw new Error("App is not in the account catalog");
+    if (app.delivery?.kind === "npm-static") {
+      const receipt = await deviceAppPackage(key, "install");
+      if (!receipt.ready) throw new Error("Device package is not ready");
+    }
+  }
+  if (generation !== accountAppsGeneration) throw new Error("Account changed during installation");
   await appsRequest("POST", { key });
   await reloadAccountApps();
   if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
@@ -50,10 +74,15 @@ export async function setAccountAppEnabled(key: string, enabled: boolean): Promi
 
 const SAFE_APP_HREF = /^\/(?!\/)[\w/%?&=.,#:+~-]*$/;
 export function isSafeAppHref(href: string): boolean { return SAFE_APP_HREF.test(href); }
-export function openAccountApp(href: string): void {
+export function openAccountApp(href: string, selected?: AdminInstallableApp): void {
   if (!isSafeAppHref(href)) return;
-  const app = appsState.apps.find(row => row.installed && row.enabled && row.href === href);
-  if (app) void markAccountAppOpened(app.key);
+  const app = selected ?? appsState.apps.find(row => row.installed && row.enabled && row.href === href);
+  if (app?.installed && app.enabled && isPackagedDesktop() && app.delivery?.kind === "npm-static") {
+    useWorkStore.getState().openSideTab("item", { title: app.label, item: { type: "app", key: app.key }, ephemeral: false });
+    navigateApp("/admin/agentsam");
+    return;
+  }
+  if (app?.installed && app.enabled) void markAccountAppOpened(app.key);
   navigateApp(href);
 }
 

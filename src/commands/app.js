@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 /**
- * Where APP manifests are read from. An installed CLI does not ship manifests, so discovery
+ * Where APP manifests are read from. The installed CLI ships APP manifest definitions, so discovery
  * must not depend on where the CLI lives: explicit root, else the agentsam-sdk checkout the user
  * is standing in (walking up from cwd), else the package's own directory.
  */
@@ -66,6 +66,96 @@ function resolveApp(id, root = REPO_ROOT) {
   return hit;
 }
 
+// npm is the existing machine package manager (also used by scripts/install.sh).
+// Account entitlements and native desktop installation are separate lifecycles.
+const APP_PACKAGE = /^@inneranimalmedia\/[a-z0-9][a-z0-9-]*$/;
+const APP_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+function npmGlobalRoot(env = process.env) {
+  const result = spawnSync('npm', ['root', '--global'], { encoding: 'utf8', env });
+  if (result.error || result.status !== 0 || !path.isAbsolute(String(result.stdout || '').trim())) {
+    throw new Error('Unable to resolve the npm global installation directory');
+  }
+  return String(result.stdout).trim();
+}
+
+function installedApp(app, globalRoot, expectedVersion) {
+  const name = app.manifest.package;
+  if (!APP_PACKAGE.test(name || '')) return null;
+  const dir = path.join(globalRoot, name);
+  if (!fs.existsSync(dir)) return null;
+  const pkg = readJson(path.join(dir, 'package.json'));
+  const manifestPath = path.join(dir, 'agentsam.app.json');
+  const manifest = readJson(manifestPath);
+  if (pkg.name !== name || manifest.schema !== 'agentsam.app.v1' || manifest.kind !== 'app' ||
+      manifest.id !== app.id || manifest.package !== name || manifest.version !== pkg.version ||
+      (expectedVersion && pkg.version !== expectedVersion)) {
+    throw new Error(`Installed package identity/version mismatch: ${name}`);
+  }
+  const bin = manifest.bin || manifest.entrypoints?.cli || null;
+  if (bin) {
+    const target = path.resolve(dir, bin);
+    const relative = path.relative(dir, target);
+    const bins = typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin || {});
+    if (!relative || relative.startsWith('..' + path.sep) || relative === '..' || path.isAbsolute(relative) ||
+        !bins.some(value => path.resolve(dir, value) === target) || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
+      throw new Error(`Installed app has an invalid or missing executable: ${name}`);
+    }
+    const actual = path.relative(fs.realpathSync(dir), fs.realpathSync(target));
+    if (actual === '..' || actual.startsWith('..' + path.sep) || path.isAbsolute(actual)) throw new Error('Installed app executable escapes package');
+  }
+  return { ...app, dir, manifestPath, manifest, bin, commands: manifest.commands || {} };
+}
+
+export function installAppPackage(app, args = [], options = {}) {
+  const env = options.env || process.env;
+  const write = options.write || (text => process.stdout.write(text));
+  let version;
+  let previewPackage = false;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--version') { version = args[++i]; if (!version) throw new Error('--version requires an exact version'); }
+    else if (args[i] === '--preview-package') previewPackage = true;
+    else throw new Error(`Unknown app install option: ${args[i]}`);
+  }
+  const name = app.manifest.package;
+  if (!APP_PACKAGE.test(name || '') || (version !== undefined && !APP_VERSION.test(version))) throw new Error(`App ${app.id} has no valid npm package identity or exact requested version`);
+  const distribution = app.manifest.distribution || {};
+  const sourcePackage = path.join(app.dir, 'package.json');
+  if (['source-private', 'bundled-source'].includes(distribution.release_status) ||
+      (fs.existsSync(sourcePackage) && readJson(sourcePackage).private === true)) {
+    throw new Error(`App ${app.id} has no independently released npm distribution`);
+  }
+  if (distribution.native_release_required && !previewPackage) {
+    throw new Error(`App ${app.id} requires a native installer; npm is only its preview distribution. Use --preview-package explicitly for that distribution.`);
+  }
+  if (previewPackage && !distribution.native_release_required) throw new Error('--preview-package is only for a desktop host preview distribution');
+  // The manifest identifies the product; npm's latest dist-tag identifies its
+  // released version. A source version may be ahead of the public registry.
+  if (version === undefined) {
+    const result = spawnSync('npm', ['view', `${name}@latest`, 'version', '--json', '--prefer-online', '--fetch-retries=0', '--fetch-timeout=15000'], { env, encoding: 'utf8' });
+    if (result.error || result.status !== 0) throw new Error(`Cannot resolve published latest release for ${name}: ${String(result.stderr || result.error?.message || '').trim()}`);
+    try { version = JSON.parse(result.stdout); } catch { throw new Error(`Invalid npm release response for ${name}`); }
+    if (typeof version !== 'string' || !APP_VERSION.test(version)) throw new Error(`Invalid npm release version for ${name}`);
+    write(`Published latest: ${name}@${version}\n`);
+  }
+  const globalRoot = npmGlobalRoot(env);
+  const spec = `${name}@${version}`;
+  const current = installedApp(app, globalRoot);
+  if (!current || current.manifest.version !== version) {
+    write(`Installing ${spec} via npm...\n`);
+    const result = spawnSync('npm', ['install', '--global', '--no-audit', '--no-fund', spec], { env, stdio: 'inherit' });
+    if (result.error || result.status !== 0) throw new Error(`npm installation failed for ${spec}; no verified installation recorded`);
+  }
+  const installed = installedApp(app, globalRoot, version);
+  if (!installed) throw new Error(`npm did not produce an installed app: ${spec}`);
+  const standalone = Boolean(installed.bin);
+  write(`Installed package verified: ${spec}\n`);
+  if (standalone) write(`Run: agentsam app doctor ${app.id} / agentsam app preview ${app.id}\n`);
+  else write('Package installed; no standalone executable is declared. Host integration is not activated.\n');
+  if (distribution.native_release_required) write('Preview package only; native desktop application not installed.\n');
+  return { id: app.id, package: name, version, directory: installed.dir, installed: true, standalone_entrypoint: standalone, native_installed: false, account_installation_changed: false };
+}
+
 function runAppBin(app, args, options = {}) {
   if (!app.bin) throw new Error(`app ${app.id} has no bin entry`);
   const binPath = path.resolve(app.dir, app.bin);
@@ -73,7 +163,7 @@ function runAppBin(app, args, options = {}) {
   const result = spawnSync(process.execPath, [binPath, ...args], {
     cwd: options.cwd || process.cwd(),
     stdio: 'inherit',
-    env: process.env,
+    env: options.env || process.env,
   });
   if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1);
 }
@@ -400,7 +490,7 @@ export async function runApp(argv = [], options = {}) {
       'agentsam app info <id>',
       'agentsam app inspect <id>',
       'agentsam app validate [--all|<id>]',
-      'agentsam app install <id>',
+      'agentsam app install <id> [--version <exact>] [--preview-package]',
       'agentsam app doctor <id>',
       'agentsam app preview <id>',
       'agentsam app scaffold <id> <dir>',
@@ -432,7 +522,7 @@ export async function runApp(argv = [], options = {}) {
       write(`  No app manifests found under ${sourceRoot}.\n`);
       write('  Run this inside an agentsam-sdk checkout (apps/*/agentsam.app.json).\n');
     }
-    write('\n  Source manifest discovery only; this is not an installability or release check.\n\n');
+    write('\n  Manifest discovery only; this is not an installability or release check.\n\n');
     return apps;
   }
 
@@ -467,19 +557,7 @@ export async function runApp(argv = [], options = {}) {
     write(`${JSON.stringify(app.manifest, null, 2)}\n`);
     return app.manifest;
   }
-  if (command === 'install') {
-    const curl =
-      app.manifest?.install?.curl ||
-      `curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id ${app.id}`;
-    const npmCmd =
-      app.manifest?.install?.command ||
-      (app.manifest?.package ? `npm install ${app.manifest.package}` : null);
-    write(`\n  Install ${app.id}\n\n`);
-    if (npmCmd) write(`  ${npmCmd}\n`);
-    write(`  ${curl}\n\n`);
-    write('  app_id is stable product identity. Pass --app-id explicitly; no AGENTSAM_DEFAULT_APP.\n\n');
-    return { id: app.id, curl, command: npmCmd };
-  }
+  if (command === 'install') return installAppPackage(app, rest, options);
   if (command === 'package') {
     const dryRun = rest.includes('--dry-run') || !rest.includes('--write');
     const packArgs = ['pack', ...(dryRun ? ['--dry-run', '--ignore-scripts'] : []), '--json'];
@@ -490,7 +568,8 @@ export async function runApp(argv = [], options = {}) {
     return metadata;
   }
   if (command === 'doctor' || command === 'preview') {
-    runAppBin(app, [command, ...rest], options);
+    const installed = installedApp(app, npmGlobalRoot(options.env || process.env));
+    runAppBin(installed || app, [command, ...rest], options);
     return;
   }
   if (command === 'scaffold') {

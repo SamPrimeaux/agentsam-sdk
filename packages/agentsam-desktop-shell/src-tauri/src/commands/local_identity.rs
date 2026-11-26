@@ -1085,6 +1085,53 @@ async fn run_local_identity(app: AppHandle, request_json: String) -> Result<Stri
     Ok(stdout)
 }
 
+/// The renderer supplies only an app ID and intent. Package identity is resolved
+/// from the authenticated account catalog, not caller-controlled download URLs.
+#[tauri::command]
+pub async fn desktop_app_package(
+    app: AppHandle,
+    webview: tauri::Webview,
+    session_state: State<'_, super::keychain::IdentitySessionState>,
+    key: String,
+    action: String,
+) -> Result<Value, String> {
+    if !matches!(webview.label(), "main") && !webview.label().starts_with("studio-") {
+        return Err("app_package_host_only".into());
+    }
+    let origin = webview.url().map_err(|_| "app_package_host_origin_unavailable")?;
+    if !((origin.scheme() == "tauri" && origin.host_str() == Some("localhost")) ||
+        (matches!(origin.scheme(), "http" | "https") && origin.host_str() == Some("tauri.localhost"))) {
+        return Err("app_package_host_origin_forbidden".into());
+    }
+    if !matches!(action.as_str(), "install" | "status" | "open") {
+        return Err("app_package_action_invalid".into());
+    }
+    let config = load_runtime_config(&app)?;
+    if config.authority != "service" { return Err("app_package_account_required".into()); }
+    let raw = service_studio_bridge(&config, &session_state, &json!({
+        "operation":"apps", "path":"/api/apps/launcher", "method":"GET"
+    }).to_string()).await?;
+    let response: Value = serde_json::from_str(&raw).map_err(|_| "app_package_catalog_invalid")?;
+    if response["ok"] != true { return Err("app_package_catalog_unavailable".into()); }
+    let catalog: Value = serde_json::from_str(response["body"].as_str().unwrap_or("")).map_err(|_| "app_package_catalog_invalid")?;
+    let account = catalog["account_id"].as_str().filter(|v| !v.is_empty()).ok_or("app_package_account_required")?;
+    let row = catalog["apps"].as_array().and_then(|rows| rows.iter().find(|row| row["key"].as_str() == Some(key.as_str()))).ok_or("app_package_not_in_catalog")?;
+    if row["delivery"]["kind"] != "npm-static" || row["installable"] != true { return Err("app_package_delivery_unavailable".into()); }
+    if action == "open" && (row["installed"] != true || row["enabled"] != true) { return Err("app_package_account_not_enabled".into()); }
+    let package = row["delivery"]["package"].as_str().ok_or("app_package_identity_missing")?;
+    use sha2::{Digest, Sha256};
+    let scope = format!("{:x}", Sha256::digest(account.as_bytes()));
+    let token = super::agentsamd::agentsamd_pairing_token()?;
+    let result = reqwest::Client::new().post("http://127.0.0.1:18765/v1/apps/package")
+        .header("X-Agentsamd-Token", token)
+        .json(&json!({"action":action,"id":key,"package":package,"scope":scope}))
+        .timeout(std::time::Duration::from_secs(210)).send().await.map_err(|e| format!("app_package_device_unavailable:{e}"))?;
+    let status = result.status();
+    let payload: Value = result.json().await.map_err(|_| "app_package_device_response_invalid")?;
+    if !status.is_success() || payload["ok"] != true { return Err(format!("app_package_failed:{}", payload["error"].as_str().unwrap_or("unknown"))); }
+    Ok(payload)
+}
+
 #[tauri::command]
 pub async fn studio_service_bridge(
     app: AppHandle,

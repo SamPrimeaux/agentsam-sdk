@@ -34,7 +34,7 @@ function useGreeting() {
 
 function statusOf(app: AdminInstallableApp) {
   if (!app.installed) return app.installable ? "Not installed" : "Setup required";
-  return app.enabled ? "Installed" : "Disabled";
+  return app.enabled ? (app.delivery ? "Account enabled" : "Installed") : "Disabled";
 }
 
 function AppCard({ app, busy, confirming, onAction, onAskRemove, onCancelRemove }: {
@@ -71,7 +71,7 @@ function AppCard({ app, busy, confirming, onAction, onAskRemove, onCancelRemove 
         </div>
       ) : app.installed ? (
         <div className="flex flex-wrap items-center gap-2">
-          {app.enabled && app.href ? <Button type="button" size="sm" onClick={() => openAccountApp(app.href!)}>Open</Button> : null}
+          {app.enabled && app.href ? <Button type="button" size="sm" onClick={() => openAccountApp(app.href!, app)}>Open</Button> : null}
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onAction(app, app.enabled ? "disable" : "enable")}>
             {app.enabled ? "Disable" : "Enable"}
           </Button>

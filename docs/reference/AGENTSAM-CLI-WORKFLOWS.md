@@ -35,7 +35,7 @@ The first group prints the CLI, registry and package descriptions. It does not g
 | Validate runtime state | `agentsam setup runtime --dry-run`, `agentsam runtime doctor --json`, `agentsam connections` | Placement plan and actual runtime/connection evidence; a profile plan is not enrollment |
 | Prepare a native dependency | `agentsam setup --list`, `agentsam setup <recipe> --dry-run` | Explicit OS/native package recipe and mutation plan |
 | Discover and inspect applications | `agentsam app list`, `agentsam app inspect <id>`, `agentsam app validate --all` | APP manifests and validation findings |
-| Find application distribution instructions | `agentsam app install <id>` | **Prints** npm/curl installation instructions; current CLI does not execute them or create a durable user installation record |
+| Install an independently released application package | `agentsam app install <id> [--version <exact>]` | Resolves the current npm latest dist-tag unless an exact version is requested, installs globally, and verifies its app identity, version and declared executable; separate from account access and native installers |
 | Manage plugins | `agentsam plugins`, `agentsam plugin inspect <target>` | Governed plugin/catalog integration; installation, connection, approval and tool-readiness are separate |
 | Inspect delivery evidence | `agentsam receipts`, `agentsam deploy-receipt capture`, `agentsam security scan` | Content-addressed receipts and trust-boundary findings; not proof of a deployed customer journey by themselves |
 | Review identity / providers | `agentsam whoami`, `agentsam credentials audit --verify`, `agentsam providers`, `agentsam google-cloud doctor` | Account, credential-name-only status, provider/connection diagnostics |

@@ -26,6 +26,7 @@ const paths = [
   '/admin/analytics/overview',
   '/admin/analytics/finance',
   '/admin/analytics/health',
+  '/admin/analytics/security',
   '/admin/theme-editor?slug=home',
   '/admin/theme-editor?showcase=plain-jane&slug=journal-home',
   '/admin/theme-editor?new=1&site_id=site_a',

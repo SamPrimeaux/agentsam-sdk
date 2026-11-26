@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { mkdirSync, copyFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const cwd = fileURLToPath(new URL('../', import.meta.url));
 rmSync(`${cwd}/dist`, { recursive: true, force: true });
@@ -16,7 +17,25 @@ await build({
   target: 'es2022',
   jsx: 'automatic',
 });
-await build({ absWorkingDir: cwd, entryPoints: ['src/browser.tsx'], outfile: 'dist/browser.global.js', bundle: true, format: 'iife', globalName: 'AgentSamNav', target: 'es2022', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, minify: true });
+// The global browser adapter mounts its own React root inside the legacy host.
+// Linked Radix packages may resolve peer React from Local Studio's separate
+// install, so every React entrypoint must use this package's one runtime copy.
+await build({
+  absWorkingDir: cwd,
+  entryPoints: ['src/browser.tsx'],
+  outfile: 'dist/browser.global.js',
+  bundle: true,
+  format: 'iife',
+  globalName: 'AgentSamNav',
+  target: 'es2022',
+  jsx: 'automatic',
+  alias: {
+    react: path.resolve(cwd, 'node_modules/react'),
+    'react-dom': path.resolve(cwd, 'node_modules/react-dom'),
+  },
+  define: { 'process.env.NODE_ENV': '"production"' },
+  minify: true,
+});
 execFileSync('tsc', ['-p', 'tsconfig.build.json'], { cwd, stdio: 'inherit' });
 copyFileSync(`${cwd}/src/shell.css`, `${cwd}/dist/theme.css`);
 copyFileSync(`${cwd}/src/theme.css`, `${cwd}/dist/legacy.css`);

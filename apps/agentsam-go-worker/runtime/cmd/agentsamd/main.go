@@ -133,6 +133,7 @@ func main() {
 	})
 	mux.HandleFunc("/v1/language/packs", handleLanguagePacks)
 	mux.HandleFunc("/v1/language/packs/install", authorizedLanguagePackInstall(checkHeaderAuth))
+	mux.HandleFunc("/v1/apps/package", newAppPackageManager().handler(checkHeaderAuth))
 
 	// Real exec/pty surfaces. Both require the local pairing token.
 	mux.HandleFunc("/v1/exec", execapi.ExecHandler(checkHeaderAuth))

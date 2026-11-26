@@ -19,6 +19,15 @@ test('desktop builds always rebuild every manifest-included application before b
     'desktop assets must be synchronized only after the host build');
 });
 
+test('Local Studio rebuilds the shared navigation package before staging the desktop host', () => {
+  const studioPackage = JSON.parse(readFileSync(path.resolve(shellRoot, '../../apps/local-studio/package.json'), 'utf8'));
+  const settingsBuild = studioPackage.scripts['build:settings'];
+  assert.match(studioPackage.scripts['build:nav'], /npm --prefix \.\.\/\.\.\/packages\/agentsam-nav run build/);
+  assert.ok(settingsBuild.includes('npm run build:nav'), 'the Local Studio host must rebuild AgentSam navigation from source');
+  assert.ok(settingsBuild.indexOf('npm run build:ide') < settingsBuild.indexOf('npm run build:nav'),
+    'the shared React runtime must be aligned before the navigation bundle is built');
+});
+
 test('both installable bundles depend on the full mandatory desktop asset pipeline', () => {
   for (const name of ['bundle', 'bundle:app']) {
     assert.match(scripts[name], /npm run build:desktop-assets/, name);

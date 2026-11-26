@@ -12,6 +12,7 @@ function d1(sqlite) {
           return {
             async first() { return sqlite.prepare(sql).get(...values) || null; },
             async all() { return { results: sqlite.prepare(sql).all(...values) }; },
+            async run() { return sqlite.prepare(sql).run(...values); },
           };
         },
       };
@@ -165,4 +166,38 @@ test("Local Studio analytics routes are login-first and account-scoped across D1
   } finally {
     sqlite.close();
   }
+});
+
+test("security receipt import, deduplication, coverage validation and account-scoped read", async () => {
+  const {sqlite,env} = fixture();
+  try {
+    const events = [];
+    env.AGENTSAM_ACTIVITY = {async send(batch){events.push(...batch);}};
+    const url = "https://localhost/api/analytics/security";
+    const summary = {
+      scanner:"agentsam-sca",schema_version:1,checked_at:new Date().toISOString(),status:"clean",
+      repository:"owner/repo",dependency_count:2,checked_count:2,dependency_complete:true,boundary_complete:true,
+      ast_files:3,browser_reachable_files:2,browser_roots:1,finding_count:0,vulnerability_count:0,boundary_count:0,
+      merkle_root:"sha256:"+"a".repeat(64),metadata_root:"sha256:"+"b".repeat(64)
+    };
+    const post = (body,origin="https://localhost")=>new Request(url,{method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify(body)});
+    assert.equal((await handleAnalyticsQueryRequest(post(summary,"https://elsewhere.test"),env,"account_A")).status,403);
+    assert.equal((await handleAnalyticsQueryRequest(post({...summary,checked_count:1}),env,"account_A")).status,400);
+    const created = await handleAnalyticsQueryRequest(post(summary),env,"account_A");
+    assert.equal(created.status,201);
+    assert.equal(created.body.basin.ok,true);
+    assert.equal(events.length,1);
+    const duplicate = await handleAnalyticsQueryRequest(post(summary),env,"account_A");
+    assert.equal(duplicate.body.duplicate,true);
+    assert.equal(events.length,1);
+    const own = await handleAnalyticsQueryRequest(new Request(url+"?range=All&account_id=account_B"),env,"account_A");
+    assert.equal(own.status,200);
+    assert.equal(own.body.scans.length,1);
+    assert.equal(own.body.scans[0].status,"clean");
+    assert.equal(own.body.scans[0].metrics.checked_count,2);
+    assert.equal(own.body.scans[0].source,"user_imported");
+    const other = await handleAnalyticsQueryRequest(new Request(url),env,"account_B");
+    assert.equal(other.body.scans.length,0);
+    assert.equal((await handleAnalyticsQueryRequest(new Request(url),env,null)).status,401);
+  } finally {sqlite.close();}
 });

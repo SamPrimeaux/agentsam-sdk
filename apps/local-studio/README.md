@@ -1,6 +1,6 @@
 # AgentSam Local Studio
 
-Authoring workspace for the browser UI launched by `agentsam start-local`.
+Source workspace for AgentSam Desktop and the hosted Studio. The npm distribution is a compiled preview artifact, not a source checkout or a native desktop installer. `agentsam-studio preview`, `info`, and `doctor` consume `desktop-dist/`, the app manifest, and the CLI. The source workspace, Worker deployment, migrations, and development tools remain in the repository; native signed installers are produced by the desktop shell.
 
 This app was seeded from the working `AgentSam-Grok-Workmode` Studio UI and is being normalized here before it is exported to `dist/local-studio/`. Routes and cloud deployment wiring are donor-era details and are expected to change; the reusable shell, workbench, terminal, browser, Monaco, helper-chat and project UX are the parts to preserve.
 

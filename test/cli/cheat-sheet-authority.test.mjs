@@ -29,7 +29,7 @@ test('cheat-sheet distinguishes install recipes, runtime, declarations, and app 
   const displayed = renderCheatSheet('2.6.12');
   assert.match(displayed, /agentsam setup runtime --dry-run/);
   assert.match(displayed, /agentsam capabilities --inventory --json/);
-  assert.match(displayed, /agentsam app install <id>\s+Print distribution instructions; not a runtime install/);
+  assert.match(displayed, /agentsam app install <id>\s+Install and verify the declared npm app package/);
   assert.doesNotMatch(displayed, /agentsam project\s/);
   assert.doesNotMatch(displayed, /agentsam artifacts\s/);
   let json = '';

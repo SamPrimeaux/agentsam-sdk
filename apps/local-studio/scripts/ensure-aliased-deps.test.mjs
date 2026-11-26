@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync, readFileSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -69,6 +69,51 @@ test('ensure-aliased-deps links local workspace packages before falling back to 
 });
 
 
+test('aliased React packages share the repository React/ReactDOM pair when it is installed', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'aliased-react-runtime-'));
+  try {
+    const studio = path.join(root, 'apps', 'local-studio');
+    const scripts = path.join(studio, 'scripts');
+    const workbench = path.join(root, 'packages', 'agentsam-workbench');
+    mkdirSync(scripts, { recursive: true });
+    mkdirSync(path.join(workbench, 'dist'), { recursive: true });
+    mkdirSync(path.join(workbench, 'node_modules'), { recursive: true });
+    writeFileSync(path.join(scripts, 'ensure-aliased-deps.mjs'), readFileSync(script, 'utf8'));
+    writeFileSync(path.join(workbench, 'dist', 'index.js'), 'export {};\n');
+    writeFileSync(path.join(workbench, 'package.json'), JSON.stringify({
+      name: '@inneranimalmedia/agentsam-workbench',
+      exports: { '.': { import: './dist/index.js' } },
+      peerDependencies: { react: '>=18', 'react-dom': '>=18' },
+      devDependencies: { react: '^19', 'react-dom': '^19' },
+    }, null, 2));
+
+    function installed(base, name, version) {
+      const dir = path.join(base, 'node_modules', name);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name, version, main: './index.js' }));
+      writeFileSync(path.join(dir, 'index.js'), 'export {};\n');
+      return dir;
+    }
+
+    const studioReact = installed(studio, 'react', '19.2.8');
+    const studioReactDom = installed(studio, 'react-dom', '19.2.8');
+    const rootReact = installed(root, 'react', '19.3.0');
+    const rootReactDom = installed(root, 'react-dom', '19.3.0');
+    symlinkSync(studioReact, path.join(workbench, 'node_modules', 'react'), 'dir');
+    symlinkSync(studioReactDom, path.join(workbench, 'node_modules', 'react-dom'), 'dir');
+
+    const run = spawnSync(process.execPath, [path.join(scripts, 'ensure-aliased-deps.mjs')], {
+      cwd: studio, encoding: 'utf8', timeout: 20000,
+    });
+    assert.equal(run.status, 0, run.stdout + '\n' + run.stderr);
+    assert.equal(realpathSync(path.join(workbench, 'node_modules', 'react')), realpathSync(rootReact));
+    assert.equal(realpathSync(path.join(workbench, 'node_modules', 'react-dom')), realpathSync(rootReactDom));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
 test('Cloudflare app-only install builds sibling SDK packages with linked build tooling', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'aliased-build-cloudflare-'));
   try {
@@ -124,7 +169,7 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
 
     const ide = sibling('agentsam-ide', {
       peerDependencies: { '@monaco-editor/react': '^4.7.0', 'monaco-editor': '^0.50.0' },
-      devDependencies: { react: '^19', '@types/react': '^19', 'monaco-editor': '^0.50.0' },
+      devDependencies: { react: '^19', 'react-dom': '^19', '@types/react': '^19', '@types/react-dom': '^19', 'monaco-editor': '^0.50.0' },
     });
     const nav = sibling('agentsam-nav', { devDependencies: { esbuild: '^0.28.1' } });
     const contracts = sibling('agentsam-contracts', { devDependencies: { esbuild: '^0.28.1' } });
@@ -147,6 +192,8 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
     for (const dir of [ide, nav, contracts, workbench, settings, analyticsUi, analytics]) {
       assert.equal(existsSync(path.join(dir, 'dist', 'index.js')), true, dir);
     }
+    assert.equal(realpathSync(path.join(ide, 'node_modules', 'react')), realpathSync(path.join(studio, 'node_modules', 'react')));
+    assert.equal(realpathSync(path.join(ide, 'node_modules', 'react-dom')), realpathSync(path.join(studio, 'node_modules', 'react-dom')));
     assert.equal(existsSync(path.join(ide, 'node_modules', '@monaco-editor', 'react', 'package.json')), true);
     assert.equal(existsSync(path.join(ide, 'node_modules', '@monaco-editor', 'loader', 'package.json')), true);
     assert.equal(existsSync(path.join(contracts, 'node_modules', 'esbuild', 'package.json')), true);
