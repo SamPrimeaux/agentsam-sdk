@@ -226,6 +226,7 @@ export class CloudflareApiClient {
         operation,
         httpStatus: res.status,
         providerMessage: message,
+        permissionCatalog: this.permissionCatalog,
       })
       : null;
     return new CloudflareApiError(message, {
