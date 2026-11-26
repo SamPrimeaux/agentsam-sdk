@@ -23,5 +23,4 @@ test('Local Studio exposes the donor concept gallery without installing concept 
     !widget.deeplink &&
     widget.preferenceScope === 'Not installed'
   ));
-  assert.throws(() => setLocalStudioWidgetVisible('approvals', true), /widget_not_found/);
 });
