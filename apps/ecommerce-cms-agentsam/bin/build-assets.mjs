@@ -11,7 +11,6 @@ import { STARTER_PRODUCT_ILLUSTRATIONS } from '../frontend/theme-editor/starter-
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dest = path.join(app, "dist/assets");
 const source = (name) => path.join(app, name);
-const installed = (name) => path.join(app, "node_modules", name);
 const copy = async (from, to) => {
   if (!fs.existsSync(from)) throw new Error("Required installed asset missing: " + from);
   await mkdir(path.dirname(to), { recursive: true });
