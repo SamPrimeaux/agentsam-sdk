@@ -1,3 +1,4 @@
+-- agentsam-engine: d1
 -- Preserve registered platform MCPs while enabling account-owned custom
 -- server definitions in the same MCP registry (no parallel catalogs).
 ALTER TABLE agentsam_mcp_servers ADD COLUMN account_id TEXT;
