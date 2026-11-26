@@ -429,7 +429,7 @@ jobs:
           if [ ! -e "$GITHUB_WORKSPACE/node_modules/jsdom/package.json" ]; then
             ln -s "$test_deps/node_modules/jsdom" "$GITHUB_WORKSPACE/node_modules/jsdom"
           fi
-          node -e 'const p=require("./node_modules/jsdom/package.json"); if(p.version!==process.env.JSDOM_EXPECTED_VERSION) throw new Error("ecommerce_jsdom_version_mismatch")' 
+          JSDOM_EXPECTED_VERSION="$jsdom_version" node -e 'const p=require("./node_modules/jsdom/package.json"); if(p.version!==process.env.JSDOM_EXPECTED_VERSION) throw new Error("ecommerce_jsdom_version_mismatch")'
       - name: Build packaged portable contracts
         run: npm run build:contracts
       - name: Check Ecommerce standalone npm prerequisites
