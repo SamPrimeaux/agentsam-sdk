@@ -108,7 +108,7 @@ export default function HealthPage({range}:PageProps){
  return <section className="analytics-health">
   <div className="page-head health-head">
    <div><h1 className="page-title">Health</h1>
-    <p className="page-sub">Account-scoped operations, Cloudflare traffic and repository quality · {range}</p></div>
+    <p className="page-sub">Account-scoped operations, Cloudflare traffic and repository quality · {range} · <a href="/admin/analytics/security">Security assessments</a></p></div>
    <div className="page-actions health-actions">
     <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?(data.edge.available&&data.app.available?"Sources connected":visibility?"Partial telemetry":"Telemetry unavailable"):"Loading sources"}/>
     <button type="button" className="btn" onClick={reload} disabled={loading}><Icon name="refresh" size={12}/> {loading?"Refreshing…":"Refresh"}</button>

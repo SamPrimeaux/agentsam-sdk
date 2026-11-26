@@ -4,6 +4,7 @@ import {
   queryAgentSamToolUsage,
   queryAgentSamAgentRuns,
 } from "@inneranimalmedia/agentsam-analytics/server";
+import { handleSecurityAnalytics } from "./security-analytics.js";
 import { buildFinancialAnalyticsReadModel } from "@inneranimalmedia/financial-analytics/server";
 
 const PRIVATE_HEADERS = {
@@ -315,6 +316,9 @@ export async function handleAnalyticsQueryRequest(request, env, accountId) {
   }
   if (!env?.DB || typeof env.DB.prepare !== "function") {
     return { status: 503, headers: PRIVATE_HEADERS, body: { ok: false, error: "analytics_db_unavailable" } };
+  }
+  if (new URL(request.url).pathname === "/api/analytics/security") {
+    return handleSecurityAnalytics(request, env, accountId);
   }
   if (request.method !== "GET") {
     return { status: 405, headers: { ...PRIVATE_HEADERS, allow: "GET" }, body: { ok: false, error: "method_not_allowed" } };

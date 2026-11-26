@@ -107,6 +107,7 @@ export function studioNavigationProjection({ repoRoot = ROOT, manifestPath = pat
       { id: "analytics", label: "Analytics", href: "/admin/analytics/overview", icon: "chart-no-axes-combined", children: [
         { id: "finance", label: "Finance", href: "/admin/analytics/finance" },
         { id: "health", label: "Health", href: "/admin/analytics/health" },
+        { id: "security", label: "Security", href: "/admin/analytics/security" },
       ] },
     ],
     work: [

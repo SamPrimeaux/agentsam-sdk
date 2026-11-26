@@ -8,6 +8,7 @@ const AnalyticsShell = lazy(() => import("./pages/analytics/AnalyticsShell"));
 const OverviewPage = lazy(() => import("./pages/analytics/OverviewPage"));
 const FinancePage = lazy(() => import("./pages/analytics/FinancePage"));
 const HealthPage = lazy(() => import("./pages/analytics/HealthPage"));
+const SecurityPage = lazy(() => import("./pages/analytics/SecurityPage"));
 const AccountPage = lazy(() => import("./pages/account/AccountPage"));
 const ProductStudioPage = lazy(() => import("./pages/products/ProductStudioPage"));
 const CollectionLibrary = lazy(() => import("./pages/collections/CollectionLibrary"));
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="overview" element={<AnalyticsRoute page={OverviewPage} title="Overview" />} />
             <Route path="finance" element={<AnalyticsRoute page={FinancePage} title="Finance" />} />
             <Route path="health" element={<AnalyticsRoute page={HealthPage} title="Health" />} />
+            <Route path="security" element={<AnalyticsRoute page={SecurityPage} title="Security" />} />
           </Route>
           <Route path="account" element={<AccountRoute />} />
           <Route path="collections" element={<CollectionLibrary />} />
