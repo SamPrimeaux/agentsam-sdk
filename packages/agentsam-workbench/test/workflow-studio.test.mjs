@@ -70,7 +70,7 @@ test('action nodes require exactly one valid resolution path', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'workflow_action_resolution_required'));
   const routed = graph({ nodes: [{ ...node('start', 'action'), resolutionMode: 'routed', capabilityKey: 'repo.read' }, node('finish', 'output')] });
   assert.equal(validateWorkflowGraph(routed).ok, true);
-  const pinned = graph({ nodes: [{ ...node('start', 'action'), resolutionMode: 'pinned', pinnedToolId: 'tool_1' }, node('finish', 'output')] });
+  const pinned = graph({ nodes: [{ ...node('start', 'action'), resolutionMode: 'pinned', capabilityKey: 'repo.read', pinnedToolId: 'tool_1' }, node('finish', 'output')] });
   assert.equal(validateWorkflowGraph(pinned).ok, true);
 });
 
