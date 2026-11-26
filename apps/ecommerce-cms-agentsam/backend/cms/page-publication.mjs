@@ -146,13 +146,22 @@ export async function publishMerchantPage(env,accountId,siteId,slug,pageId) {
   if (page.page_type === 'global' || page.route_path.startsWith('/__cms/')) return error('cms_system_page_cannot_publish',409);
   if (site.status !== 'active') return error('cms_site_not_active',409);
 
-  // URL handles are draft data. A published route changes only in the same
-  // transaction that advances the verified HTML and manifest pointers.
-  const nextSlug=page.route_path==='/'?page.slug:String(draft.url_handle||page.slug).trim().toLowerCase();
+  // cms_pages owns the canonical route. Only a valid legacy URL-handle
+  // draft may request a route change; absent legacy fields preserve nested
+  // site-owned slugs such as work/fuelnfreetime exactly as stored.
+  const requestedHandle=typeof draft.url_handle==='string'&&draft.url_handle.trim()
+    ? draft.url_handle.trim().toLowerCase() : null;
+  if(requestedHandle&&(!safeSlug(requestedHandle)||requestedHandle==='site'))
+    return error('cms_page_route_invalid',409);
+  const currentSlug=String(page.slug||'');
   const routePrefix=page.route_path==='/'?'/':page.route_path.slice(0,page.route_path.lastIndexOf('/')+1);
-  const nextRoute=page.route_path==='/'?'/':routePrefix+nextSlug;
-  if(!safeSlug(nextSlug)||nextSlug==='site'||!isValidPath(nextRoute)||
-    (routePrefix==='/'&&/^(admin|api|auth|checkout|media|settings)$/i.test(nextSlug)))
+  const slugPrefix=currentSlug.includes('/')?currentSlug.slice(0,currentSlug.lastIndexOf('/')+1):'';
+  const nextSlug=page.route_path==='/'||!requestedHandle
+    ? currentSlug : slugPrefix+requestedHandle;
+  const nextRoute=page.route_path==='/'||!requestedHandle
+    ? page.route_path : routePrefix+requestedHandle;
+  if(!isValidPath(nextRoute)||
+    (requestedHandle&&routePrefix==='/'&&/^(admin|api|auth|checkout|media|settings)$/i.test(requestedHandle)))
     return error('cms_page_route_invalid',409);
   if(nextSlug!==page.slug||nextRoute!==page.route_path){
     const collision=await env.DB.prepare(`
