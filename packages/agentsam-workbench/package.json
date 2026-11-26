@@ -91,6 +91,10 @@
     "./workflows/model": {
       "types": "./dist/workflows/model.d.ts",
       "import": "./dist/workflows/model.js"
+    },
+    "./agent/annotation-selection": {
+      "types": "./dist/agent/annotation-selection.d.ts",
+      "import": "./dist/agent/annotation-selection.js"
     }
   },
   "scripts": {
