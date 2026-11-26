@@ -33,6 +33,25 @@ Theme implementations own layout, markup, typography, media, motion,
 content bindings and behavior. Merchant data and publication state remain
 under the one `ecommerce-cms-agentsam` CMS.
 
+### Ownership boundaries
+
+- `cms_component_templates` is the merchant-facing catalog of prebuilt
+  sections/components. It is not this package.
+- `cms_definitions` owns versioned schemas and allowed block composition.
+- `cms_components` identifies the verified renderer implementation.
+  `cms_artifacts` stores immutable implementation artifacts.
+- `cms_page_sections` and `cms_section_blocks` are the installed,
+  site-owned editable instances.
+- `agentsam-sections` is the host that consumes the authorized records and
+  an explicit verified renderer map. It does not own catalog discovery,
+  database persistence, theme presets or storefront embeds.
+- The Apps picker is a separate domain: it contains installable
+  `storefront_embeds`, not CMS sections or platform admin apps.
+
+The former `section-library` package was a legacy visual renderer/preset
+bundle. It was neither the merchant catalog nor the section host and must not
+be reintroduced as a dependency of Ecommerce CMS.
+
 Unknown renderers render a diagnostic only in editor mode. Preview and
 published rendering throw; they never replace the theme with a dummy section.
 Hidden sections do not render publicly. No CMS tables or SQL are shipped.
