@@ -153,7 +153,9 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     'the registered Theme Workspace route remains available through the same host');
   assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?marketplace_kind=bad'),
     null);
-  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), '/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), null, 'Retired legacy HTML source query is not an authorized editor destination');
+  assert.equal(resolveEcommerceAdminPath('/admin/store?site_id=site_a&view=themes'), '/admin/store?site_id=site_a&view=themes');
+  assert.equal(resolveEcommerceAdminPath('/admin/store?view=platform'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
   for (const href of paths) {
