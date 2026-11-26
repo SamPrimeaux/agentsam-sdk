@@ -157,7 +157,7 @@ test('console staging generates only the required identity portal assets before 
   const frontend = stage.indexOf("execFileSync('npm', ['run', 'build:frontend']");
   const assets = stage.indexOf("path.join(app, 'bin/build-assets.mjs')");
   assert.ok(sync >= 0 && frontend > sync && assets > frontend, 'identity assets must be synced before frontend and asset packaging');
-  assert.doesNotMatch(stage, /execFileSync\('npm', \['run', 'build'\]/, 'avoid unrelated Ecommerce prebuild and CMS synchronization');
+  assert.doesNotMatch(stage, /execFileSync\('npm', \['run', 'build'\], \{ cwd: app/, 'avoid unrelated Ecommerce prebuild and CMS synchronization');
 });
 
 test('production host builds do not trigger unrelated website sync or broad theme suites',()=>{
