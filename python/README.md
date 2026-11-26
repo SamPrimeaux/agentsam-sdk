@@ -81,6 +81,10 @@ while JS-only operations return `sam_node_required` or
 
 Protocol: [`../protocol/README.md`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/protocol/README.md). 
 
+## Optional OpenCV video inspection
+
+The model-independent SAM media engine supports optional OpenCV for video frame sampling and visual-change scores. Install it in an isolated Python environment with `pip install -e '.[opencv]'` from `python/`. The regular Python SDK remains usable without NumPy or OpenCV. Use `agentsam_sdk.media.inspect_video()` for trusted local scripts; AgentSam's authenticated SAM host exposes `media.video.inspect` and `media.video.sample_frames` against existing owned media assets, when this optional engine is installed. See [SAM OpenCV media inspection](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/docs/sam/opencv-media.md) for setup, permissions, limits, and end-to-end examples.
+
 ## Portable lifecycle hooks
 
 `agentsam_sdk.hooks` implements the same `agentsam.hook.v1` envelope as the

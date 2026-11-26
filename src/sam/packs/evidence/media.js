@@ -10,11 +10,12 @@ const BIG = { maxBuffer: 32 * 1024 * 1024 };
  * decoder smoke check, not visual parity. Browser recordings often lack a duration header, so the
  * duration falls back to what the decoder actually read.
  */
-export function createFfprobeMedia({ ffprobe = 'ffprobe', ffmpeg = 'ffmpeg', decode = true, exec = defaultExec } = {}) {
+export function createFfprobeMedia({ ffprobe = 'ffprobe', ffmpeg = 'ffmpeg', decode = true, exec = defaultExec, probeTimeoutMs = null } = {}) {
   return {
     async probe({ path: file }) {
       if (typeof file !== 'string' || file.length === 0) throw evidenceError('evidence_media_path_required');
-      const { stdout } = await exec(ffprobe, ['-v', 'error', '-show_format', '-show_streams', '-of', 'json', file], BIG);
+      const { stdout } = await exec(ffprobe, ['-v', 'error', '-show_format', '-show_streams', '-of', 'json', file],
+        { ...BIG, ...(probeTimeoutMs ? { timeout: probeTimeoutMs } : {}) });
       const meta = JSON.parse(stdout);
       const streams = meta.streams ?? [];
       const video = streams.find((s) => s.codec_type === 'video');
