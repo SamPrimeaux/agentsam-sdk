@@ -16,6 +16,9 @@ function isTerminal(status) {
 
 const RUN_JOIN = `
   SELECT r.*,
+         (SELECT e.event_type FROM agentsam_agent_run_event e
+           WHERE e.run_id = r.id AND e.event_type = 'run.timed_out'
+           ORDER BY e.seq DESC LIMIT 1) AS terminal_event_type,
          s.state AS suspension_state, s.reason AS suspension_reason,
          s.wake_at_unix, s.wake_event, s.dependency_run_ids_json,
          s.resume_step_id, s.checkpoint_ref, s.expires_at_unix,
@@ -38,6 +41,7 @@ function mapSuspension(row) {
   };
 }
 
+/** @returns {import('@inneranimalmedia/agentsam-contracts').AgentRunV1 | null} */
 function mapRun(row) {
   if (!row) return null;
   const suspension = mapSuspension(row);
@@ -48,7 +52,9 @@ function mapRun(row) {
     sourceClient: row.source_client ?? undefined, surface: row.surface ?? undefined, mode: row.mode ?? undefined,
     modelKey: row.model_key ?? undefined, reasoningEffort: row.reasoning_effort ?? undefined,
     requestedServiceTier: row.requested_service_tier ?? undefined, actualServiceTier: row.actual_service_tier ?? undefined,
-    selectedBy: row.selected_by ?? undefined, status: suspension?.state || row.status, storageStatus: row.status,
+    selectedBy: row.selected_by ?? undefined,
+    status: row.terminal_event_type === 'run.timed_out' ? 'timed_out' : (suspension?.state || row.status),
+    storageStatus: row.status,
     cancelRequested: Boolean(row.cancel_requested), errorCode: row.error_code ?? undefined, errorMessage: row.error_message ?? undefined,
     modelCallCount: Number(row.model_call_count || 0), toolCallCount: Number(row.tool_call_count || 0),
     inputTokens: Number(row.input_tokens || 0), cachedInputTokens: Number(row.cached_input_tokens || 0),
@@ -205,6 +211,7 @@ export class DatabaseAgentControlClient {
     return { ...(await this.getRun(id)), cancelAccepted: true };
   }
 
+  /** @returns {Promise<import('@inneranimalmedia/agentsam-contracts').AgentRunReceiptV1 | null>} */
   async receipt(id) {
     const run = await this.getRun(id);
     if (!run) return null;
