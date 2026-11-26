@@ -758,3 +758,12 @@ button{cursor:pointer}
 .dcx-comment-pin{position:absolute;z-index:36;display:grid;place-items:center;width:27px;height:27px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;background:#f4c64b;color:#29231a;box-shadow:0 3px 10px #0004}.dcx-comment-pin.is-resolved{background:#a8b0ba;color:#27303b}.dcx-comment-pin:hover{transform:scale(1.08)}
 .dcx-canvas-zoom-wrap{position:relative}
 .dcx-menu-action:disabled{opacity:.42;cursor:not-allowed}.dcx-menu-action:disabled:hover{background:transparent;color:#dce1e8}.dcx-document-title-trigger{display:inline-flex;align-items:center;gap:7px;max-width:min(280px,28vw);min-height:32px;padding:0 9px;border:1px solid transparent;border-radius:7px;background:transparent;color:#f0f2f6;font-size:12px;font-weight:650}.dcx-document-title-trigger:hover{border-color:#3c4551;background:#252b33}.dcx-document-title-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dcx-menu-document-heading{padding:7px 9px 8px;color:#f0f2f6;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Real scroll extent, native document scale, and one shared viewport for every canvas. */
+.dcx-zoom-viewport{display:block;place-items:start;text-align:left;position:relative;padding:0;overflow:auto;overscroll-behavior:contain;overflow-anchor:none;scrollbar-width:thin;outline:none;touch-action:none}
+.dcx-zoom-viewport:focus-visible{outline:1px solid var(--accent,#8ca7dd);outline-offset:-1px}
+.dcx-zoom-world{position:relative;justify-self:start;align-self:start;margin:0;box-sizing:border-box;display:block;flex:none;min-width:0;min-height:0}
+.dcx-zoom-viewport .dcx-canvas-zoom-wrap{display:block;position:relative;transform:none;transition:none;flex:none}
+.dcx-zoom-viewport .dcx-editable-surface{width:100%;height:100%;max-height:none;max-width:none;margin:0}
+.dcx-zoom-viewport.is-hand,.dcx-zoom-viewport.is-hand .dcx-object{cursor:grab}
+.dcx-zoom-viewport.is-panning,.dcx-zoom-viewport.is-panning *{cursor:grabbing!important}

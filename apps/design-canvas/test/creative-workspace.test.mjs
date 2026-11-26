@@ -150,9 +150,10 @@ test('editor chrome exposes implemented actions rather than decorative reference
   for (const control of ['DocumentActionsMenu', 'CreationMenu', 'InsertMenu', 'ZoomControls', 'PresentMenu', 'ArtboardMenu']) {
     assert.ok(menus.includes('function ' + control), control + ' should be a reusable production control');
   }
-  for (const feature of ['SourcePanel', 'EditorTweaks', 'dcx-layer-row', 'snapToGrid', 'presentNotes', 'onShareArtifact', 'onSaveToLibrary']) {
+  for (const feature of ['SourcePanel', 'SelectionFormattingToolbar', 'dcx-layer-row', 'snapToGrid', 'presentNotes', 'onShareArtifact', 'onSaveToLibrary']) {
     assert.ok(source.includes(feature), feature + ' should be wired to the application');
   }
+  assert.doesNotMatch(source, /EditorTweaks|setInspectorTab/);
   assert.doesNotMatch(source, /Luma Studio|Telescope|fake checkout|Start free, stay for/);
 });
 

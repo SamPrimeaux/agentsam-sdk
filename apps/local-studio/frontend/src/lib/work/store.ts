@@ -275,6 +275,7 @@ type WorkState = {
   closeSideTab: (id: string, force?: boolean) => void;
   setActiveSideTab: (id: string) => void;
   setTabUrl: (id: string, url: string) => void;
+  setTabTitle: (id: string, title: string) => void;
   navigateBrowser: (id: string, delta: number) => void;
   setBrowserSrcdoc: (id: string, srcdoc: string, title?: string) => void;
   setConfirmDiscard: (id: string | null) => void;
@@ -1042,6 +1043,9 @@ export const useWorkStore = create<WorkState>()(
         localStudioRuntimeVisuals.releaseSurface(id);
       },
       setActiveSideTab: (id) => set({ activeSideTabId: id, sideOpen: true }),
+      setTabTitle: (id, title) => set((s) => ({
+        sideTabs: s.sideTabs.map((tab) => tab.id === id ? { ...tab, title } : tab),
+      })),
       setTabUrl: (id, url) =>
         set((s) => ({
           sideTabs: s.sideTabs.map((t) => {
