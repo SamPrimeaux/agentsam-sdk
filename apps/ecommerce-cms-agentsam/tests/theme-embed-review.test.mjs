@@ -173,5 +173,5 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
   }
   assert.match(core,/pagePickerCategory/);
   assert.match(core,/AgentSamThemeEditorHost/);
-  assert.match(core,/localShowcase/);
+  assert.match(core,/activeSectionOwner/);
 });
