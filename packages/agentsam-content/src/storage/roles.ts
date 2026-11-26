@@ -47,7 +47,7 @@ export function scoreStorageCandidate(
 
 export function rankStorageCandidates(
   candidates: Array<Omit<StorageCandidate, "confidence"> & { confidence?: number }>,
-  hints: ScoreHints = {},
+  hints: StorageDiscoveryHints = {},
 ): StorageCandidate[] {
   return candidates
     .map((c) => ({ ...c, confidence: scoreStorageCandidate(c, hints) }) as StorageCandidate)
