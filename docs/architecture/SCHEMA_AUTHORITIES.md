@@ -31,7 +31,7 @@ An APP may reference several independently versioned document schemas. A game su
 - **TypeScript:** `@inneranimalmedia/agentsam-contracts` owns portable wire/domain types; ACP runtime mappers reference them instead of inventing parallel interfaces.
 - **JSON Schema:** package-owned Draft 2020-12 schemas define serialized boundaries; `protocol/` contains exact compatibility mirrors.
 - **Runtime:** tool and operation registration validates embedded JSON Schema objects against Draft 2020-12 or Draft 7 meta-schemas through Ajv. This validates schema structure; external `$ref` resolution remains the owning schema-pack publisher's responsibility.
-- **Persistence:** `AgentRunStorageStatus` mirrors the constrained values in `migrations/runtime/0001_cli_runtime.sql`. Public `timed_out` is derived from the append-only `run.timed_out` event while storage remains `failed`; no destructive table rebuild is required.
+- **Persistence:** `AgentRunStorageStatus` mirrors the constrained values in `migrations/runtime/0001_cli_runtime.sql`. The ACP `recordAgentRunTimeout()` helper writes storage status `failed`, clears any suspension and appends an idempotent `run.timed_out` event; the public mapper then exposes lifecycle status `timed_out`. No table rebuild is required.
 - **Regression tests:** package tests validate actual activity projections and schema mirrors; ACP tests validate run/start/receipt responses; CAD tests reject unknown catalog IDs.
 
 ## IAMScene — observed publication drift
