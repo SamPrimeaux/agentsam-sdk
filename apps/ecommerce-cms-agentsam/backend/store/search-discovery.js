@@ -1,26 +1,8 @@
 /**
- * Public search-engine discovery files. FNF contributes its configured site
- * origin and real public catalog/routes; this module is not a crawl engine.
+ * Public search-engine discovery files for the CMS site resolved from the
+ * requested hostname. Each website publishes only its own pages and products.
  */
-import { getCompany } from "../lib/company.js";
-import { INDEXABLE_STORE_ROUTES } from "../lib/route-manifest.js";
-
-export function configuredSiteOrigin(company) {
-  const raw = String(company?.websiteUrl || "").trim();
-  if (!raw) return null;
-  let site;
-  try {
-    site = new URL(raw.includes("://") ? raw : `https://${raw}`);
-  } catch {
-    return null;
-  }
-  const host = site.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  const ipLiteral = host.includes(":") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
-  const localName = host === "localhost" || /\.(?:localhost|local|internal|test|invalid|example)$/.test(host);
-  const validHost = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(host);
-  if (site.protocol !== "https:" || site.username || site.password || site.port || ipLiteral || localName || !validHost) return null;
-  return `https://${host}`;
-}
+import { loadStorePreferences, normalizeSiteDomain } from "../admin/store.js";
 
 export function xmlEscape(value) {
   return String(value ?? "")
@@ -30,13 +12,14 @@ export function xmlEscape(value) {
     .replace(/"/g, "&quot;");
 }
 
-function textResponse(request, text, contentType, status = 200) {
+function textResponse(request, text, contentType, status = 200, extraHeaders = {}) {
   return new Response(request.method === "HEAD" ? null : text, {
     status,
     headers: {
       "content-type": contentType,
       "cache-control": "public, max-age=300, stale-while-revalidate=3600",
       "x-content-type-options": "nosniff",
+      ...extraHeaders,
     },
   });
 }
@@ -54,13 +37,23 @@ export async function handlePublicSearchDiscovery(request, env, url) {
     return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
   }
 
-  const company = await getCompany(env);
-  const origin = configuredSiteOrigin(company);
-  if (!origin) {
-    return textResponse(request, "Storefront HTTPS domain is not configured.\n", "text/plain; charset=utf-8", 503);
+  const sitePrefs = await loadStorePreferences(env, { hostname: url.hostname, allowCache: false });
+  const site = sitePrefs?.ok === true ? sitePrefs.site : null;
+  const domain = normalizeSiteDomain(site?.primary_domain);
+  const origin = site && domain ? url.origin : "";
+  const passwordProtected = sitePrefs?.ok === true && sitePrefs.settings?.passwordProtection === true;
+  const siteNoindex = sitePrefs?.ok === true && String(sitePrefs.seo?.robots || "").toLowerCase().includes("noindex");
+  if (!origin || !site) {
+    return textResponse(request, "This hostname is not connected to a CMS storefront.\n", "text/plain; charset=utf-8", 404);
   }
 
   if (url.pathname === "/robots.txt") {
+    if (passwordProtected) {
+      return textResponse(request, "User-agent: *\nDisallow: /\n", "text/plain; charset=utf-8", 200, {
+        "cache-control": "private, no-store",
+        "x-robots-tag": "noindex, nofollow",
+      });
+    }
     const body = [
       "User-agent: *",
       "Allow: /",
@@ -78,14 +71,27 @@ export async function handlePublicSearchDiscovery(request, env, url) {
     return textResponse(request, body, "text/plain; charset=utf-8");
   }
 
+  if (passwordProtected || siteNoindex) {
+    return textResponse(
+      request,
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n`,
+      "application/xml; charset=utf-8",
+      200,
+      { "cache-control": "private, no-store", "x-robots-tag": passwordProtected ? "noindex, nofollow" : "noindex, follow" },
+    );
+  }
+
   if (!env?.DB) return textResponse(request, "Sitemap is unavailable.\n", "text/plain; charset=utf-8", 503);
   try {
-    const products = await env.DB.prepare(
-      "SELECT slug, updated_at FROM products WHERE status = 'active' ORDER BY slug LIMIT 48000",
-    ).all();
+    const [products, pages] = await Promise.all([
+      env.DB.prepare("SELECT slug, updated_at FROM products WHERE site_id = ? AND status = 'active' ORDER BY slug LIMIT 48000").bind(site.id).all(),
+      env.DB.prepare("SELECT route_path FROM cms_pages WHERE site_id = ? AND status = 'published' AND slug <> 'site' AND lower(COALESCE(robots,'')) NOT LIKE '%noindex%' AND lower(COALESCE(json_extract(seo_json,'$.robots'),'')) NOT LIKE '%noindex%' ORDER BY sort_order,slug").bind(site.id).all(),
+    ]);
     const urls = new Map();
-    for (const route of INDEXABLE_STORE_ROUTES) {
-      urls.set(`${origin}${route.path}`, null);
+    for (const page of pages.results || []) {
+      const routePath = String(page.route_path || "").trim();
+      if (!routePath.startsWith("/") || routePath.startsWith("//") || /[?#\\\u0000-\u001f]/.test(routePath)) continue;
+      urls.set(`${origin}${routePath}`, null);
     }
     for (const product of products.results || []) {
       const slug = String(product.slug || "");

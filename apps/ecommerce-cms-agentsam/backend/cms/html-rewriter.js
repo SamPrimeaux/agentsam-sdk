@@ -4,6 +4,7 @@
  */
 
 import { PAGE_REGISTRY } from "./registry.js";
+import { resolveSeo } from "./seo.mjs";
 import {
   CmsSlotHandler,
   CmsSectionScopeHandler,
@@ -71,30 +72,45 @@ export function isMarketingHtmlRequest(pathname, assetPath) {
 
 async function buildHeadContext(env, slug, hostname) {
   const { loadStorePreferences } = await import("../admin/store.js");
-  const loadedPrefs = await loadStorePreferences(env, { hostname });
-  const prefs = loadedPrefs?.ok ? loadedPrefs.settings : {};
+  const loadedPrefs = await loadStorePreferences(env, { hostname, allowCache: false });
+  const site = loadedPrefs?.ok ? loadedPrefs.site : null;
+  let published = null;
+  let page = null;
 
-  let pageTitle = null;
   if (slug && slug !== "site") {
     try {
       const { getPublishedPage } = await import("./api.js");
-      const page = await getPublishedPage(env, slug);
-      pageTitle = page?.title || PAGE_REGISTRY[slug]?.title || null;
-    } catch {
-      /* prefs-only fallback */
+      published = await getPublishedPage(env, slug);
+    } catch { /* use the canonical page record or registry fallback */ }
+    if (site) {
+      try {
+        const { findSiteOwnedPage } = await import("./site-owned-page-adapter.mjs");
+        page = await findSiteOwnedPage(env, site, slug);
+      } catch { /* older installations may not have site-owned page rows */ }
     }
   }
 
-  const siteTitle = prefs.homeTitle || "";
-  const title =
-    pageTitle && slug !== "home" ? `${pageTitle} — ${siteTitle}` : siteTitle;
+  const fallbackTitle = published?.title || PAGE_REGISTRY[slug]?.title || "";
+  const fallbackPath = slug === "home" ? "/" : `/${String(slug || "").replace(/^\/+/, "")}`;
+  const seoPage = page || {
+    slug,
+    route_path: fallbackPath,
+    title: fallbackTitle,
+    status: published?.status === "published" || !published ? "published" : published.status,
+  };
+  const origin = hostname ? `https://${String(hostname).toLowerCase()}` : "";
+  const resolved = resolveSeo({ page: seoPage, site: site || {}, origin });
 
   return {
-    title,
-    description: prefs.metaDescription || "",
-    socialImageUrl: prefs.socialImageUrl || "",
-    siteName: siteTitle,
-    canonicalUrl: "",
+    title: resolved.title || fallbackTitle,
+    description: resolved.description || "",
+    socialImageUrl: resolved.og.image || "",
+    siteName: resolved.og.site_name || site?.name || "",
+    canonicalUrl: resolved.canonical || "",
+    robots: resolved.robots || "index,follow,max-image-preview:large",
+    twitterSite: resolved.twitter.site || "",
+    locale: resolved.og.locale || "",
+    jsonld: resolved.jsonld || [],
   };
 }
 
@@ -121,23 +137,28 @@ class HeadSeoAppendHandler {
     this.head = head;
   }
   element(el) {
-    const { title, description, socialImageUrl, canonicalUrl, siteName } = this.head;
+    const { title, description, socialImageUrl, canonicalUrl, siteName, robots, twitterSite, locale, jsonld = [] } = this.head;
     const imgTags = socialImageUrl
       ? `<meta property="og:image" content="${escapeAttr(socialImageUrl)}">
 <meta property="og:image:alt" content="${escapeAttr(title)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escapeAttr(socialImageUrl)}">`
       : `<meta name="twitter:card" content="summary">`;
+    const structuredData = jsonld.map((block) =>
+      `<script type="application/ld+json">${JSON.stringify(block).replace(/</g, "\\u003c")}</script>`
+    ).join("\n");
 
     el.append(
       `<meta name="cms-edge-seo" content="1">
 <meta name="description" content="${escapeAttr(description)}">
+<meta name="robots" content="${escapeAttr(robots || "index,follow")}">
 <meta property="og:type" content="website">
-${siteName ? `<meta property="og:site_name" content="${escapeAttr(siteName)}">\n` : ""}${canonicalUrl ? `<link rel="canonical" href="${escapeAttr(canonicalUrl)}">\n<meta property="og:url" content="${escapeAttr(canonicalUrl)}">\n` : ""}<meta property="og:title" content="${escapeAttr(title)}">
+${siteName ? `<meta property="og:site_name" content="${escapeAttr(siteName)}">\n` : ""}${canonicalUrl ? `<link rel="canonical" href="${escapeAttr(canonicalUrl)}">\n<meta property="og:url" content="${escapeAttr(canonicalUrl)}">\n` : ""}${locale ? `<meta property="og:locale" content="${escapeAttr(locale)}">\n` : ""}<meta property="og:title" content="${escapeAttr(title)}">
 <meta property="og:description" content="${escapeAttr(description)}">
 <meta name="twitter:title" content="${escapeAttr(title)}">
 <meta name="twitter:description" content="${escapeAttr(description)}">
-${imgTags}`,
+${twitterSite ? `<meta name="twitter:site" content="${escapeAttr(twitterSite)}">\n` : ""}${imgTags}
+${structuredData}`,
       { html: true }
     );
   }
