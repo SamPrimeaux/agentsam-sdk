@@ -15,6 +15,8 @@ test('embed catalog matches manifests and declares installable templates',()=>{
   for(const k of ['form_inline','form_popup','store_chat','grow_capture'])assert.ok(catalog.apps.some(x=>x.key===k),k);
   assert.equal(catalog.preview_only,false);
   assert.equal(catalog.installable,true);
+  assert.ok(catalog.apps.every(x=>Array.isArray(x.surfaces)&&x.surfaces.includes('storefront_embed')),
+    'Apps catalog contains storefront_embeds only');
   assert.equal(catalog.apps.find(x=>x.key==='newsletter_subscribe').default_config.double_opt_in,true);
 });
 test('packaged editor lists embeds and installs through the CMS catalog-resources API',{skip:!JSDOM&&'jsdom is not installed on this machine'},async()=>{
