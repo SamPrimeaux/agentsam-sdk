@@ -66,8 +66,9 @@ export async function registryStatus(requirements, get = fetch) {
   return { ready: results.every((r) => r.published), results };
 }
 
-export function appManifestSources() {
-  const root = read('package.json');
+export function appManifestSources(root = appRoot) {
+  const read = (p) => JSON.parse(readFileSync(resolve(root, p), 'utf8'));
+  const manifest = read('package.json');
   const paths = ['package.json'];
   for (const workspace of root.workspaces || []) {
     if (workspace.endsWith('/*')) {
