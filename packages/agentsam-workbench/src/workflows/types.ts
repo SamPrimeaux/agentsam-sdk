@@ -113,12 +113,20 @@ export type WorkflowToolOption = {
   label: string;
   description?: string;
   ready?: boolean;
+  capabilityKey?: string | null;
+  toolKey?: string | null;
+  handlerType?: string | null;
+  dispatchTarget?: string | null;
+  riskLevel?: string | null;
+  requiresApproval?: boolean;
 };
 
 export type WorkflowAgentProfileOption = {
   id: string;
   label: string;
   description?: string;
+  profileKey?: string | null;
+  modelKey?: string | null;
 };
 
 export type WorkflowValidationIssue = {
@@ -159,6 +167,15 @@ export type WorkflowRunStep = {
   errorMessage?: string | null;
   outputSummary?: string | null;
   approvalId?: string | null;
+  approvalStatus?: string | null;
+  capabilityKey?: string | null;
+  toolKey?: string | null;
+  authorizedOperation?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  resourceRevision?: string | null;
+  approvedBy?: string | null;
+  decisionReason?: string | null;
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;
