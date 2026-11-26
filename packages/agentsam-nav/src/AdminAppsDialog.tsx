@@ -45,10 +45,10 @@ export function AdminAppsDirectory({loadApps,installApp,removeApp,updateApp,onOp
         : error&&!apps.length ? <div className="as-apps-picker-state" role="alert"><p>{error}</p><button type="button" onClick={()=>refresh()}>Retry</button></div>
         : visible.length ? visible.map(app=><div className="as-apps-picker-item" key={app.key}>
             <span className="as-apps-picker-symbol" aria-hidden="true"><AdminAppMark app={app}/></span>
-            <div className="as-apps-picker-item-label"><strong>{app.label}</strong><small>{app.description||'Admin application'} · {app.installed?(app.enabled?'Installed':'Disabled'):'Not installed'}</small></div>
+            <div className="as-apps-picker-item-label"><strong>{app.label}</strong><small>{app.description||'Admin application'} · {app.installed?(app.enabled?(app.delivery?'Account enabled':'Installed'):'Disabled'):'Not installed'}</small></div>
             {confirmRemove===app.key ? <span className="as-apps-picker-actions"><span className="as-apps-picker-confirm-label">Remove from this account?</span><button type="button" onClick={()=>setConfirmRemove(null)}>Cancel</button><button type="button" disabled={Boolean(active)} onClick={()=>void perform(app,'remove')}>Remove</button></span>
               : app.installed ? <span className="as-apps-picker-actions">
-                  {app.enabled&&app.href?<button type="button" className="as-apps-picker-primary" onClick={()=>onOpenApp?.(app.href!)}>Open</button>:null}
+                  {app.enabled&&app.href?<button type="button" className="as-apps-picker-primary" onClick={()=>onOpenApp?.(app.href!,app)}>Open</button>:null}
                   {updateApp?<button type="button" disabled={Boolean(active)} onClick={()=>void perform(app,app.enabled?'disable':'enable')}>{app.enabled?'Disable':'Enable'}</button>:null}
                   {removeApp?<button type="button" disabled={Boolean(active)} onClick={()=>setConfirmRemove(app.key)}>Remove</button>:null}
                   {!updateApp&&!removeApp?<span className="as-apps-picker-status"><Check size={14}/> Installed</span>:null}

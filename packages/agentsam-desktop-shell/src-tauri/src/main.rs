@@ -77,6 +77,7 @@ fn main() {
             local_identity::identity_runtime_config,
             local_identity::identity_bridge,
             local_identity::studio_service_bridge,
+            local_identity::desktop_app_package,
             local_sqlite::local_sqlite_pick_database,
             local_sqlite::local_sqlite_pick_directory,
             local_content::local_content_bridge,

@@ -143,3 +143,15 @@ test("installed plugin screens resolve from the existing plugin installation con
   assert.deepEqual(plugins[0].screens.map(screen => screen.id), ["growth.workspace"]);
   assert.equal(plugins[0].screen_status, "registered");
 });
+
+
+test("independent package delivery belongs to the application catalog, not account config or host build", async () => {
+  const [approved, unapproved] = await listLauncherApps(listDb([
+    { id: "design-canvas", name: "Design Canvas", launch_url: "/admin/design-canvas", config_json: JSON.stringify({ runtime: { delivery: { kind: "npm-static", package: "@inneranimalmedia/agentsam-design-canvas" } } }), install_config_json: JSON.stringify({ runtime: { delivery: { package: "@inneranimalmedia/unrelated" } } }) },
+    { id: "other", name: "Other", launch_url: "/admin/other", config_json: JSON.stringify({ runtime: { delivery: { kind: "npm-static", package: "https://example.test/package.tgz" } } }) },
+  ]), "acct_123", []);
+  assert.deepEqual(approved.delivery, { kind: "npm-static", package: "@inneranimalmedia/agentsam-design-canvas" });
+  assert.equal(approved.installable, true);
+  assert.equal(approved.installed, false);
+  assert.equal(unapproved.delivery, null);
+});

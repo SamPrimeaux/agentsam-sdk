@@ -1821,7 +1821,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (!userId) return json({ok:false,error:"unauthorized"},401);
       try {
         const hostCatalog = await loadStudioNavigationCatalog(request, env);
-        return json({ok:true,apps:await listLauncherApps(env.DB,userId,hostCatalog.appManifests || [])});
+        return json({ok:true,account_id:userId,apps:await listLauncherApps(env.DB,userId,hostCatalog.appManifests || [])});
       } catch (error) {
         console.error("apps_manifest_catalog_unavailable", String(error?.message || error).slice(0,120));
         return json({ok:false,error:"apps_manifest_catalog_unavailable"},503);

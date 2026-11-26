@@ -14,7 +14,7 @@ function boundsOf(node: HTMLElement): Bounds | null {
   return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
 }
 
-export function EmbeddedBrowserViewport({ sessionId, url }: { sessionId: string; url: string }) {
+export function EmbeddedBrowserViewport({ sessionId, url, disposeOnUnmount = false }: { sessionId: string; url: string; disposeOnUnmount?: boolean }) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const lifecycle = useRef(0);
   const [failure, setFailure] = useState<string | null>(null);
@@ -29,6 +29,7 @@ export function EmbeddedBrowserViewport({ sessionId, url }: { sessionId: string;
     const token = ++lifecycle.current;
     let frame = 0;
     const hide = () => { void invoke('embedded_browser_hide', { sessionId }).catch(() => undefined); };
+    const dispose = () => { void invoke(disposeOnUnmount ? 'embedded_browser_close' : 'embedded_browser_hide', { sessionId }).catch(() => undefined); };
     const update = () => {
       frame = 0;
       if (disposed) return;
@@ -45,7 +46,7 @@ export function EmbeddedBrowserViewport({ sessionId, url }: { sessionId: string;
         .then(() => {
           started = true;
           if (disposed) {
-            if (lifecycle.current === token) hide();
+            if (lifecycle.current === token) dispose();
           } else if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) {
             hide();
           } else setFailure(null);
@@ -81,7 +82,7 @@ export function EmbeddedBrowserViewport({ sessionId, url }: { sessionId: string;
       document.removeEventListener('visibilitychange', visibility);
       hide();
     };
-  }, [sessionId, url]);
+  }, [sessionId, url, disposeOnUnmount]);
 
   return (
     <div className="as-embedded-browser-viewport" ref={nodeRef} data-native-browser-session={sessionId}>

@@ -98,6 +98,10 @@ export async function listLauncherApps(db, accountId, manifestCatalog = []) {
       screen_status: screens.length ? "registered" : declaredScreens.length ? "not_registered" : "manifest_missing",
       manifest_id: ownerManifest?.id || appRuntime.manifest_id || null,
       manifest_version: ownerManifest?.version || null,
+      // Explicit catalog-owned delivery; never infer installability from a route.
+      delivery: appRuntime.delivery?.kind === "npm-static" &&
+        /^@inneranimalmedia\/[a-z0-9][a-z0-9-]{0,99}$/.test(appRuntime.delivery?.package || "")
+        ? { kind: "npm-static", package: appRuntime.delivery.package } : null,
       surfaces,
       icon_url: row.icon_url || null,
       nav_icon: row.app_icon ? String(row.app_icon).slice(0, 40) : null,
