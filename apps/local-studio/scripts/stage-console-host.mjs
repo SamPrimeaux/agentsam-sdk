@@ -66,6 +66,9 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   }
   mkdirSync(destination, { recursive: true });
   cpSync(hostAdmin, destination, { recursive: true, force: true });
+  removeLegacyReviseAssets(destination, true);
+  const compiledProduct = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist/ecommerce-cms-agentsam' : '.output/public/ecommerce-cms-agentsam');
+  removeLegacyReviseAssets(compiledProduct);
   // Website theme previews are served by their owning Theme Store origin.
   // Keep stale SDK mirrors out of hosted and desktop release assets.
   const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
