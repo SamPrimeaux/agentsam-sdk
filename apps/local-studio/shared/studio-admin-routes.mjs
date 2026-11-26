@@ -58,7 +58,11 @@ export const STUDIO_ADMIN_PRERENDERED_ROUTES = Object.freeze([
   "/admin/media/models", "/admin/media/files",
 ]);
 
-/** Retired Structure URLs are compatibility redirects only, not app mounts. */
+/**
+ * Retired Structure URLs are compatibility redirects only, not app mounts.
+ * @param {string} pathname
+ * @param {URLSearchParams} search
+ */
 export function resolveRetiredStructurePath(pathname, search) {
   if (!['/structure', '/structure/', '/admin/structure', '/admin/structure/'].includes(pathname)) return null;
   if (search?.get?.('scope') === 'platform') return '/admin/settings/themes?view=navigation';
