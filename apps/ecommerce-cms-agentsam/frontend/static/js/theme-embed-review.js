@@ -620,8 +620,8 @@
       '<div class="ter-picker-launch"><button type="button" data-open-embed-picker>+ Add apps</button>'+
       '<a href="'+appStoreUrl+'" target="_blank" rel="noopener noreferrer">Browse App Store ↗</a></div>'+
       '<div class="ter-catalog-label">Installed on this page</div><div data-embed-installed role="group" aria-label="Installed storefront embeds"></div>'+
-      '<div class="ter-catalog-label">Available storefront components <span>Catalog</span></div>'+
-      '<div data-embed-list role="group" aria-label="Available storefront embed types"></div>'+
+      '<div class="ter-catalog-label">Available storefront embeds <span>Catalog</span></div>'+
+      '<div data-embed-list role="group" aria-label="Available storefront embeds"></div>'+
       '<p class="ter-catalog-foot">Templates become installed CMS instances with their own section and block identities.</p>');
     drawer.querySelector('[data-open-embed-picker]').addEventListener('click',openPicker);
     if(searchInput)searchInput.placeholder='Search storefront components';
