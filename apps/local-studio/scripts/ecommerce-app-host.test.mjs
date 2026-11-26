@@ -226,3 +226,15 @@ test('Ecommerce iframe always uses packaged product assets and one host-owned na
   assert.match(onlineStore, /resolveEcommerceAdminDestination\(href, siteId, window\.location\.origin\)/,
     'Online Store must use the canonical Local Studio route resolver for theme editor handoff');
 });
+
+test('native mobile Online Store separates overview and theme management while preserving site scope',()=>{
+ const page=fs.readFileSync(path.join(studio,'frontend/src/components/store/OnlineStorePage.tsx'),'utf8');
+ const route=fs.readFileSync(path.join(studio,'frontend/src/routes/(apps)/admin/store.tsx'),'utf8');
+ assert.match(route,/view: params\.view === 'themes'/);
+ assert.match(route,/<OnlineStorePage siteId=\{search.site_id\} view=\{search.view\}/);
+ assert.match(page,/width=\{1440\} height=\{1050\}/);
+ assert.match(page,/width=\{390\} height=\{620\}/);
+ assert.match(page,/role="switch" aria-label="Password protection"/);
+ assert.match(page,/expected_version:result.project.revision/);
+ assert.match(page,/const activeTheme = data.active_theme \|\| null/);
+});

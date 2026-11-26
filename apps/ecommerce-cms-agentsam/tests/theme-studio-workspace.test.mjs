@@ -59,7 +59,7 @@ test('desktop panel widths are bounded without changing draft content',()=>{
   assert.equal(clampPanelWidth('catalog',900,600),600);
   assert.throws(()=>clampPanelWidth('unknown',200),/Unknown/);
   const html=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
-  assert.match(html,/theme-editor-resize\.mjs/);
+  assert.match(html,/theme-studio-bootstrap\.mjs/); // bootstrap mounts the real editor and loads its resize module below
   const mounted=readFileSync(new URL('../frontend/theme-editor/mount.mjs',import.meta.url),'utf8');
   assert.match(mounted,/load\('\/admin\/js\/theme-editor-resize\.mjs'\)/);
   const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');

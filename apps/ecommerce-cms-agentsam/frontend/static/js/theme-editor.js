@@ -228,7 +228,7 @@
 
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
-              '<div class="te-page-popover" id="te-page-popover" hidden><div class="te-mobile-menu-heading"><span class="te-mobile-menu-grip" aria-hidden="true"></span><strong>Template menu</strong><button type="button" id="te-page-close" aria-label="Close template menu">×</button></div><input class="te-page-search" id="te-page-search" placeholder="Search pages, products, collections" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><div class="te-mobile-menu-heading"><span class="te-mobile-menu-grip" aria-hidden="true"></span><strong>Template menu</strong><button type="button" id="te-page-close" aria-label="Close template menu">×</button></div><input class="te-page-search" id="te-page-search" placeholder="Search templates" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',

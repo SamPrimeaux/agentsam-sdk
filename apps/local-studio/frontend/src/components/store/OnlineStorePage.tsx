@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { ArrowUpRight, ChevronDown, ChevronRight, Copy, Download, Eye, ExternalLink, File, Globe2, Lock, MoreHorizontal, Pencil, Plus, Settings2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { IconAction } from '@/components/ui/icon-action';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +20,7 @@ type StoreSite = { id: string; name?: string; title?: string; slug?: string; url
 type StoreTheme = {
   id: string; name?: string; version?: string; package_version?: string;
   snapshot_url?: string | null; preview_url?: string | null; edit_href?: string | null; site_id?: string;
-  last_saved?: string; updated_at?: string; created_at?: string; publish_ready?: boolean;
+  last_saved?: string; updated_at?: string; created_at?: string; publish_ready?: boolean; scope?: 'account'|'site';
 };
 type StorePayload = {
   ok?: boolean; error?: string;
@@ -168,16 +167,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
         <div className="col-span-2 flex flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
         {canPublish && <Button variant="outline" size="sm" onClick={() => setConfirming(true)} disabled={busy}>Publish</Button>}
         {edit && <InAppLink to={edit} className={cn(pill, primary)}>Edit theme</InAppLink>}
-        {theme.preview_url && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconAction variant="ghost" label={`More actions for ${theme.name || 'theme'}`} hint="Preview this theme"><MoreHorizontal className="size-4" /></IconAction>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-44">
-              <DropdownMenuItem onSelect={() => window.open(theme.preview_url!, '_blank', 'noopener')}>Preview in new tab</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <ThemeActions theme={theme} siteId={siteId} preview={publicPreviewUrl(theme.preview_url)} onChanged={onPublished}/>
         </div>
       </div>
       {confirming && (
@@ -264,7 +254,7 @@ function publicPreviewUrl(value?:string|null) {
   try {const url=new URL(value||'');return url.protocol==='https:'&&!url.username&&!url.password?url.href:null;}catch{return null;}
 }
 type PasswordSettings={passwordProtection:boolean;hasStorePassword:boolean};
-function StoreProtection({siteId, visibility}: {siteId:string;visibility?:string}) {
+function StoreProtection({siteId,onProtectionChange}: {siteId:string;onProtectionChange:(value:boolean)=>void}) {
   const [settings,setSettings]=useState<PasswordSettings|null>(null);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
@@ -274,10 +264,10 @@ function StoreProtection({siteId, visibility}: {siteId:string;visibility?:string
     const controller=new AbortController();
     setSettings(null);setMessage('');
     getJson<{settings?:PasswordSettings}>(endpoint,controller.signal).then(data=>{
-      if(!controller.signal.aborted&&typeof data.settings?.passwordProtection==='boolean')setSettings(data.settings);
+      if(!controller.signal.aborted&&typeof data.settings?.passwordProtection==='boolean'){setSettings(data.settings);onProtectionChange(data.settings.passwordProtection);}
     }).catch(()=>{});
     return()=>controller.abort();
-  },[endpoint]);
+  },[endpoint,onProtectionChange]);
   const toggle=async()=>{
     if(!settings||busy)return;
     const enabled=!settings.passwordProtection;
@@ -289,7 +279,7 @@ function StoreProtection({siteId, visibility}: {siteId:string;visibility?:string
       const result=await response.json();
       if(!response.ok||!result.ok||typeof result.settings?.passwordProtection!=='boolean')throw Error('save_failed');
       setSettings(result.settings);
-      window.dispatchEvent(new CustomEvent('agentsam:store-protection-changed',{detail:{siteId,protected:result.settings.passwordProtection}}));
+      onProtectionChange(result.settings.passwordProtection);
     }catch{setMessage('Could not update protection. Try again.');}finally{setBusy(false);}
   };
   return <section className="rounded-3xl border border-border bg-card p-4 shadow-sm">
@@ -309,15 +299,18 @@ function ThemeActions({theme,siteId,onChanged,preview}: {theme:StoreTheme;siteId
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const match=theme.edit_href?.match(EDITOR_PATH);
-  const projectId=match?.[2];
-  const ownerSite=theme.site_id||match?.[1];
-  const endpoint=projectId&&ownerSite?'/api/admin/cms/theme-projects/'+encodeURIComponent(projectId)+'?site_id='+encodeURIComponent(ownerSite):null;
+  const accountProject=theme.scope==='account'&&theme.edit_href?.startsWith('/admin/theme-editor?')?new URL(theme.edit_href,location.origin).searchParams.get('project'):null;
+  const projectId=match?.[2]||accountProject;
+  const ownerSite=accountProject?null:theme.site_id||match?.[1]||null;
+  const query=ownerSite?'?site_id='+encodeURIComponent(ownerSite):'';
+  const base=projectId&&/^[A-Za-z0-9_-]{1,160}$/.test(projectId)&&(accountProject||ownerSite===siteId)?'/api/admin/cms/theme-projects/'+encodeURIComponent(projectId):null;
+  const endpoint=base?base+query:null;
   async function execute(action:'rename'|'duplicate'|'download') {
-    if(!endpoint||!projectId||!ownerSite||busy)return;
+    if(!endpoint||!base||!projectId||busy)return;
     setBusy(true);setError('');
     try{
       if(action==='duplicate'){
-        const response=await fetch('/api/admin/cms/theme-projects/'+encodeURIComponent(projectId)+'/duplicate?site_id='+encodeURIComponent(ownerSite),{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'});
+        const response=await fetch(base+'/duplicate'+query,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'});
         const result=await response.json();if(!response.ok||!result.ok)throw Error('duplicate_failed');
         onChanged();
       } else {
@@ -346,7 +339,7 @@ function ThemeActions({theme,siteId,onChanged,preview}: {theme:StoreTheme;siteId
         {endpoint&&<>
           <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('rename')}><Pencil className="size-5"/>Rename</DropdownMenuItem>
           <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('duplicate')}><Copy className="size-5"/>Duplicate</DropdownMenuItem>
-          <DropdownMenuItem className="min-h-12" onSelect={()=>go('/admin/apps/ecommerce-cms-agentsam?'+new URLSearchParams({page:'/admin/theme-code-editor',project:projectId!,site_id:ownerSite!}))}>Edit code</DropdownMenuItem>
+          <DropdownMenuItem className="min-h-12" onSelect={()=>go('/admin/apps/ecommerce-cms-agentsam?'+new URLSearchParams({page:'/admin/theme-code-editor',project:projectId!,...(ownerSite?{site_id:ownerSite}:{})}))}>Edit code</DropdownMenuItem>
           <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('download')}><Download className="size-5"/>Download project JSON</DropdownMenuItem>
         </>}
       </DropdownMenuContent>
@@ -362,7 +355,7 @@ export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;vi
   const [tick, setTick] = useState(0);
   const [moreOpen,setMoreOpen]=useState(false);
   const [protectionOverride,setProtectionOverride]=useState<{siteId:string;protected:boolean}|null>(null);
-  useEffect(()=>{const listener=(event:Event)=>setProtectionOverride((event as CustomEvent).detail);window.addEventListener('agentsam:store-protection-changed',listener);return()=>window.removeEventListener('agentsam:store-protection-changed',listener);},[]);
+  const updateProtection=useCallback((value:boolean)=>{const id=data?.selected_site_id||siteId;if(id)setProtectionOverride({siteId:id,protected:value});},[data?.selected_site_id,siteId]);
   const reload = useCallback(() => setTick(value => value + 1), []);
 
   useEffect(() => {
@@ -477,7 +470,7 @@ export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;vi
 
       {!themesView&&<div className="grid gap-4">
         <InAppLink to={pages} className="flex min-h-14 items-center gap-3 rounded-full border border-border bg-card px-4 text-[17px] shadow-sm"><File className="size-6 text-muted-foreground"/>Pages<ChevronRight className="ml-auto size-4 text-muted-foreground"/></InAppLink>
-        <StoreProtection key={selectedId} siteId={selectedId} visibility={data.store?.visibility}/>
+        <StoreProtection key={selectedId} siteId={selectedId} onProtectionChange={updateProtection}/>
       </div>}
 
       {themesView&&<>
