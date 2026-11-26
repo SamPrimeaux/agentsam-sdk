@@ -73,7 +73,7 @@ export function appManifestSources(root = appRoot) {
   for (const workspace of manifest.workspaces || []) {
     if (workspace.endsWith('/*')) {
       const directory = workspace.slice(0, -2);
-      for (const item of readdirSync(resolve(appRoot, directory), { withFileTypes: true })) {
+      for (const item of readdirSync(resolve(root, directory), { withFileTypes: true })) {
         if (item.isDirectory()) paths.push(directory + '/' + item.name + '/package.json');
       }
     } else {
