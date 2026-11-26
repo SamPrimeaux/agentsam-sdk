@@ -12,8 +12,8 @@
   "id": "agentsam-identity",
   "install": [
     {
-      "command": "npm install @inneranimalmedia/agentsam-identity",
-      "package": "@inneranimalmedia/agentsam-identity",
+      "command": "npm install @inneranimalmedia/agentsam-sdk",
+      "package": "@inneranimalmedia/agentsam-sdk",
       "type": "npm"
     }
   ],
