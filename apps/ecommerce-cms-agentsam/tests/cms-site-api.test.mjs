@@ -204,7 +204,7 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
       env, new URL("https://cms.test/api/admin/cms/pages/our-story"), { accountId: "acct-a" },
     );
     const refreshedPage = (await refreshed.json()).page;
-    assert.equal(refreshedPage.sections[0].content.title, "A real editable page");
+    assert.equal(refreshedPage.sections[0].content.headline, "A real editable page");
     assert.equal(refreshedPage.sections[0].version, 2);
 
     const duplicate = await handleAdminCmsApi(
