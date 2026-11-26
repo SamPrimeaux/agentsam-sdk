@@ -264,7 +264,7 @@ function StoreProtection({siteId,onProtectionChange}: {siteId:string;onProtectio
     const controller=new AbortController();
     setSettings(null);setMessage('');
     getJson<{settings?:PasswordSettings}>(endpoint,controller.signal).then(data=>{
-      if(!controller.signal.aborted&&typeof data.settings?.passwordProtection==='boolean'){setSettings(data.settings);onProtectionChange(data.settings.passwordProtection);}
+      if(!controller.signal.aborted&&typeof data.settings?.passwordProtection==='boolean'&&typeof data.settings?.hasStorePassword==='boolean'){setSettings(data.settings);onProtectionChange(data.settings.passwordProtection);}
     }).catch(()=>{});
     return()=>controller.abort();
   },[endpoint,onProtectionChange]);
@@ -349,6 +349,7 @@ function ThemeActions({theme,siteId,onChanged,preview}: {theme:StoreTheme;siteId
 }
 
 export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;view?:'overview'|'themes' }) {
+  useEffect(()=>{document.body.classList.add('agentsam-native-store-route');return()=>document.body.classList.remove('agentsam-native-store-route');},[]);
   const [data, setData] = useState<StorePayload | null>(null);
   const [error, setError] = useState('');
   const [market, setMarket] = useState<MarketTheme[] | null>(null);

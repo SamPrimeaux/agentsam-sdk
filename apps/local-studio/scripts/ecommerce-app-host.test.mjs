@@ -28,7 +28,6 @@ const paths = [
   '/admin/analytics/health',
   '/admin/theme-editor?slug=home',
   '/admin/theme-editor?showcase=plain-jane&slug=journal-home',
-  '/admin/theme-editor?slug=home&catalog=revise',
   '/admin/theme-editor?new=1&site_id=site_a',
   '/admin/sites/site_a/pages/cmsp_home_a/editor',
   '/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet',
@@ -158,6 +157,7 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/store?view=platform'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=home&catalog=revise'), null, 'Retired catalog shortcut no longer resolves');
   for (const href of paths) {
     assert.equal(resolveEcommerceAdminPath(href), href, 'valid route changed: ' + href);
   }

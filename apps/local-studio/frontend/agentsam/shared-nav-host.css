@@ -208,3 +208,15 @@ body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-ex
 }
 
 @media(max-width:900px){body.agentsam-shared-navigation .console-workspace .as-nav-launch-dock{padding:4px;gap:3px;border-radius:999px}}
+
+@media(max-width:900px){
+ body.agentsam-shared-navigation.agentsam-native-store-route .console-topbar{display:none!important}
+ body.agentsam-shared-navigation.agentsam-native-store-route .console-body{flex:1;min-height:0;height:auto}
+ body.agentsam-shared-navigation.agentsam-native-store-route .console-sidenav.admin-sidebar{height:100%;max-height:100dvh}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"]{display:grid;grid-template-columns:54px repeat(4,minmax(44px,1fr)) 54px;gap:0;padding:4px;max-width:calc(100vw - 24px);border-radius:999px;isolation:isolate;background:transparent;border:0;box-shadow:none}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"]::before{content:"";position:absolute;inset:4px 58px;border:1px solid var(--nav-border);border-radius:999px;background:var(--nav-surface);box-shadow:0 4px 20px #0002;z-index:-1}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] button{min-width:44px;min-height:50px;border-radius:999px}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] button:is(:first-child,:last-child){border:1px solid var(--nav-border);background:var(--nav-surface);width:50px;box-shadow:0 4px 20px #0002}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] button:last-child{justify-self:end}
+ body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] .as-nav-launch-dock-icon svg{width:24px;height:24px}
+}
