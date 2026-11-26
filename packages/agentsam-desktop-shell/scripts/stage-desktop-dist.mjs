@@ -106,7 +106,9 @@ export function stageDesktopArtifact({ source, destination, manifest, repoRoot =
     // Temporary replacement state only; never retain a second product build.
     // If a filesystem failure also prevents rollback, retain the prior directory
     // in the transaction for recovery instead of deleting the last good build.
-    if (installed || !movedPrevious) rmSync(transaction, { recursive: true, force: true });
+    if (installed || !movedPrevious) {
+      rmSync(transaction, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
   }
 }
 export function stageDesktopFromArgs(args, { defaultManifest, defaultSource } = {}) {

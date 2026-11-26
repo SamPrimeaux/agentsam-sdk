@@ -23,69 +23,25 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, acceptDownloads: true });
 const jsErrors = [];
 page.on('pageerror', (error) => jsErrors.push(error.message));
-async function visit(url, marker) {
+async function visit(url, selector) {
   await page.goto(origin + '/index.html#' + url);
-  await page.locator('[data-studio-product="' + marker + '"]').waitFor({ timeout: 15000 });
+  await page.locator(selector).waitFor({ state: 'visible', timeout: 15000 });
 }
+// This static smoke has no account/provider session; it verifies fail-closed surfaces instead of fabricating writes.
 try {
-  await visit('/cms', 'cms-home');
-  assert.match(await page.locator('h1').first().innerText(), /Create, edit, and launch/i);
-  await visit('/campaigns', 'campaigns');
-  await page.getByRole('textbox', { name: 'New campaign name' }).fill('Desktop installation acceptance');
-  await page.getByRole('button', { name: 'Create campaign' }).click();
-  await page.getByText('Draft created on this installation.').waitFor();
-  await page.getByLabel('Goal / objective').fill('Introduce our fall collection');
-  await page.getByLabel('Audience').fill('Community subscribers');
-  await page.getByLabel('Headline', { exact: true }).fill('Built for the hours that matter');
-  await page.getByLabel('Email subject').fill('A new fall collection is here');
-  await page.getByRole('button', { name: 'Save draft' }).first().click();
-  await page.getByText('Draft saved on this installation.').waitFor();
-  await page.getByRole('button', { name: 'Build planning brief' }).click();
-  await page.getByText(/Evidence sources available:/).waitFor();
-  await page.reload();
-  await page.locator('[data-studio-product="campaigns"]').waitFor();
-  assert.equal(await page.getByLabel('Headline', { exact: true }).inputValue(), 'Built for the hours that matter');
-  assert.equal(await page.getByLabel('Email subject').inputValue(), 'A new fall collection is here');
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
-  const download = await downloadPromise;
-  assert.match(download.suggestedFilename(), /Desktop-installation-acceptance/);
-  await visit('/sites', 'sites');
-  await page.getByRole('textbox', { name: 'New site name' }).fill('Desktop sample site');
-  await page.getByRole('button', { name: 'Create site draft' }).click();
-  await page.frameLocator('iframe[title="Theme Editor"]').locator('.te-tree-row').first().waitFor({ timeout: 15000 });
-  await page.goto(origin + '/index.html#/themes');
-  await page.locator('[data-theme-id]').first().waitFor({ timeout: 15000 });
-  await page.goto(origin + '/index.html#/media');
-  await page.getByText('Content Studio', { exact: true }).first().waitFor({ timeout: 15000 });
-  await page.getByText('Drag files here, or click to choose').waitFor({ timeout: 15000 });
-  await page.locator('input[type="file"]').setInputFiles({
-    name: 'desktop-proof.txt',
-    mimeType: 'text/plain',
-    buffer: Buffer.from('An actual persisted media file, not a fake inventory card.'),
-  });
-  await page.getByText('desktop-proof.txt', { exact: true }).first().waitFor({ timeout: 15000 });
-  const savedBytes = await page.evaluate(async () => {
-    const request = indexedDB.open('agentsam-content-persistent-v1');
-    const db = await new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    const assets = await new Promise((resolve, reject) => {
-      const r = db.transaction('assets').objectStore('assets').getAll();
-      r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
-    });
-    const originals = await new Promise((resolve, reject) => {
-      const r = db.transaction('objects').objectStore('objects').getAll();
-      r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
-    });
-    db.close();
-    return { assets, originals };
-  });
-  assert.ok(savedBytes.assets.some((asset) => asset.filename === 'desktop-proof.txt' && asset.providerRefs?.length), 'asset metadata references stored bytes');
-  assert.ok(savedBytes.originals.some((item) => item.name === 'desktop-proof.txt' && item.bytes?.length > 0), 'original file bytes saved to durable IndexedDB');
-  await page.reload();
-  await page.getByText('desktop-proof.txt', { exact: true }).first().waitFor({ timeout: 15000 });
+  await page.goto(origin + '/index.html#/admin/store');
+  await page.getByText('Sign in required', { exact: true }).waitFor({ timeout: 15000 });
+  await page.getByText('Create or choose a store', { exact: true }).waitFor({ timeout: 15000 });
+
+  await visit('/admin/themes', '[data-theme-store-handoff]');
+  const themeStoreLink = page.getByRole('link', { name: 'Open Theme Store', exact: true });
+  await themeStoreLink.waitFor({ state: 'visible' });
+  assert.equal(await themeStoreLink.getAttribute('href'), 'https://themes.inneranimalmedia.com/');
+
+  await visit('/admin/media', '[data-studio-product="library"][data-library-view="media"]');
+  await page.getByRole('heading', { name: 'Library', exact: true }).waitFor({ state: 'visible' });
+  await page.getByText('Couldn’t load media', { exact: true }).waitFor({ timeout: 15000 });
+  await page.getByText('Open storage settings', { exact: true }).waitFor({ timeout: 15000 });
   assert.equal(jsErrors.length, 0, 'no uncaught client exceptions');
 } catch (error) {
   const state = await page.evaluate(() => ({ url: location.href, heading: document.body.innerText.slice(0, 850) })).catch(() => null);
@@ -95,4 +51,4 @@ try {
   await browser.close();
   await new Promise((resolveClose) => server.close(resolveClose));
 }
-console.log('[creator-suite] PASS CMS home, campaign create/save/brief/reload/export, site draft editor');
+console.log('[creator-suite] PASS Online Store auth gate, Theme Store handoff and Media authorization failure state');

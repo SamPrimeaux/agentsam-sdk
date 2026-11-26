@@ -9,9 +9,12 @@ if (!existsSync(indexPath)) {
   console.error("[desktop-smoke] desktop-dist missing; run build:desktop first");
   process.exit(2);
 }
-const apiBootstrapPath = join(root, "desktop-api-fetch.js");
 const desktopIndexHtml = readFileSync(indexPath, "utf8");
-if (!existsSync(apiBootstrapPath) || !desktopIndexHtml.includes('<script src="/desktop-api-fetch.js"></script>')) {
+const apiBootstrapSrc = desktopIndexHtml.match(/<script\b[^>]*\bsrc=["']([^"']*desktop-api-fetch\.js)["'][^>]*><\/script>/i)?.[1];
+const apiBootstrapPath = apiBootstrapSrc
+  ? (apiBootstrapSrc.startsWith("/") ? join(root, apiBootstrapSrc.slice(1)) : resolve(root, apiBootstrapSrc))
+  : null;
+if (!apiBootstrapPath || !existsSync(apiBootstrapPath)) {
   console.error("[desktop-smoke] authenticated desktop API bootstrap is missing from the host entrypoint");
   process.exit(2);
 }
