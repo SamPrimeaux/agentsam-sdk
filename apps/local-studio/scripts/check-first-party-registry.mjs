@@ -108,30 +108,46 @@ export function staleLockTarballs(lock, requirements, { allowWorkspaceLinks = tr
   return stale;
 }
 
-async function main() {
-  const manifests = appManifestSources();
+function argumentValue(args, name, fallback) {
+  const index = args.indexOf(name);
+  return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
+}
+
+async function main(args = process.argv.slice(2)) {
+  const selectedAppRoot = resolve(process.cwd(), argumentValue(args, '--app-root', appRoot));
+  const lockFile = argumentValue(args, '--lock-file', 'package-lock.json');
+  const standalone = args.includes('--standalone');
+  const manifests = appManifestSources(selectedAppRoot);
   const version = manifests[0].manifest.version;
-  const lock = read('package-lock.json');
-  const requirements = requiredPublishedPackages(manifests, lock);
+  const name = manifests[0].manifest.name || 'Application';
+  const lock = JSON.parse(readFileSync(resolve(selectedAppRoot, lockFile), 'utf8'));
+  const options = { appRoot: selectedAppRoot, allowWorkspaceLinks: !standalone };
+  const requirements = requiredPublishedPackages(manifests, lock, options);
   const registry = await registryStatus(requirements);
-  const stale = staleLockTarballs(lock, requirements);
+  const stale = staleLockTarballs(lock, requirements, options);
   const missing = registry.results.filter((r) => !r.published);
   const ready = registry.ready && stale.length === 0;
-  console.log('Local Studio first-party registry: ' +
+  console.log(name + ' first-party registry: ' +
     (registry.results.length - missing.length) + '/' + registry.results.length +
     ' exact dependencies published (app ' + version + ')');
   if (missing.length) console.log('Unpublished: ' + missing.map((r) => r.name + '@' + r.version).join(', '));
   if (stale.length) console.log('Stale app lock entries: ' + stale.join(', '));
-  if (process.argv.includes('--github-output') && process.env.GITHUB_OUTPUT) {
+  if (args.includes('--github-output') && process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, 'ready=' + ready + '\n');
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, ready
-      ? 'Local Studio exact first-party dependencies are published and lock-aligned.\n'
-      : 'DEFERRED: standalone Local Studio install needs all exact first-party packages published AND a refreshed committed lockfile.\n');
+    const summary = ready
+      ? name + ' exact first-party dependencies are published and lock-aligned.\n'
+      : [
+          'DEFERRED: ' + name + ' standalone install requires every exact first-party dependency published and a refreshed committed lockfile.',
+          missing.length ? 'Unpublished: ' + missing.map((r) => r.name + '@' + r.version).join(', ') : '',
+          stale.length ? 'Lock issues: ' + stale.join(', ') : '',
+          '',
+        ].filter(Boolean).join('\n') + '\n';
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   }
-  if (!ready) console.log('DEFERRED: use the approved publish-stable release workflow, then regenerate and commit the product lock.');
-  if (!ready && process.argv.includes('--require')) process.exitCode = 1;
+  if (!ready) console.log('DEFERRED: publish the already-staged first-party packages through the approved release workflow, then regenerate and commit the product lock.');
+  if (!ready && args.includes('--require')) process.exitCode = 1;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
