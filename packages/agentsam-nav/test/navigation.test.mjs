@@ -143,3 +143,31 @@ test('shared Apps navigation renders an add action even when no app is installed
   assert.match(html,/aria-label="Browse apps"/);
   assert.match(html,/title="Apps"/);
 });
+
+test('merchant navigation suppresses chat-only history and new-chat actions', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {value: {
+    showHistory:false,
+    destinations:[{id:'home',label:'Home',href:'/admin/home'}],
+    onCreateConversation:()=>{},
+    onNavigate:()=>{},
+    conversations:[{id:'chat-1',title:'A private chat'}],
+    projects:[{id:'project-1',name:'A work project'}],
+  }}, React.createElement(Nav.Sidenav)));
+  assert.doesNotMatch(html,/New chat|Pinned|Projects|Recents|View all|Search projects and conversations|A private chat|A work project/);
+});
+
+test('conversation navigation retains chat creation and history collections', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {value: {
+    showHistory:true,
+    destinations:[{id:'home',label:'Home',href:'/admin/home'}],
+    onCreateConversation:()=>{},
+    onNavigate:()=>{},
+    conversations:[{id:'chat-1',title:'A private chat'}],
+    projects:[{id:'project-1',name:'A work project'}],
+  }}, React.createElement(Nav.Sidenav)));
+  assert.match(html,/New chat/);
+  assert.match(html,/Pinned/);
+  assert.match(html,/Projects/);
+  assert.match(html,/Recents/);
+  assert.match(html,/A private chat/);
+});
