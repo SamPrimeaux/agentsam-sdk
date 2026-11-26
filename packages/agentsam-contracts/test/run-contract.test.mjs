@@ -110,7 +110,7 @@ test('run and activity wire schemas validate actual projections and storage voca
   const start = readSchema('run-start.v1.schema.json');
   const receipt = readSchema('run-receipt.v1.schema.json');
   const migration = fs.readFileSync(new URL('../../../migrations/runtime/0001_cli_runtime.sql', import.meta.url), 'utf8');
-  const storageStatusCheck = migration.match(/status TEXT NOT NULL DEFAULT 'queued'[\\s\\S]*?CHECK\\s*\\(status IN \\(([^)]+)\\)\\)/i);
+  const storageStatusCheck = migration.match(/status TEXT NOT NULL DEFAULT 'queued'[\s\S]*?CHECK\s*\(status IN \(([^)]+)\)\)/i);
   assert.ok(storageStatusCheck, 'runtime run migration must constrain storage status');
   const persistedStatuses = [...storageStatusCheck[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   assert.deepEqual(persistedStatuses, [...AGENT_RUN_STORAGE_STATUSES]);
