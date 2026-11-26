@@ -1,8 +1,8 @@
 -- Canonical AgentSam ACP persistence on inneranimalmedia-business D1.
 -- The existing agentsam_agent_run table remains the run authority. These
 -- tables add its append-only event journal, suspension/dependency projection,
--- and lease-aware durable queue. agentsam_request_queue remains the separate
--- legacy request inbox and is not a substitute for Queue Control.
+-- and lease-aware durable queue. agentsam_request_queue remains the existing
+-- stop-hook retry/background-drain queue; its consumer is separate and intact.
 
 ALTER TABLE agentsam_agent_run
   ADD COLUMN event_seq INTEGER NOT NULL DEFAULT -1;
