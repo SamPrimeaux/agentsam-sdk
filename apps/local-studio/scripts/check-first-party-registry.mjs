@@ -94,7 +94,10 @@ export function staleLockTarballs(lock, requirements, { allowWorkspaceLinks = tr
     const version = expected.get(name);
     if (!version) continue;
     seen.add(name);
-    if (pkg.link) continue;
+    if (pkg.link) {
+      if (!allowWorkspaceLinks) stale.push('workspace link cannot ship in standalone install ' + key);
+      continue;
+    }
     if (typeof pkg.version === 'string' && pkg.version !== version) {
       stale.push(key + '@' + pkg.version + ' (expected ' + version + ')');
     }
