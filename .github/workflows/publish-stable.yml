@@ -73,6 +73,7 @@ jobs:
           mkdir -p apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia
           ln -sfn "$GITHUB_WORKSPACE" apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia/agentsam-sdk
           node -e 'const p = require("./apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia/agentsam-sdk/package.json"); if (p.name !== "@inneranimalmedia/agentsam-sdk" || p.version !== require("./package.json").version) throw new Error("prepublish_sdk_source_link_mismatch"); console.log(`PREPUBLISH_SDK_SOURCE_LINK_PASS ${p.name}@${p.version}`)'
+          node --input-type=module -e 'const importer = new URL("./apps/ecommerce-cms-agentsam/backend/admin/store.js", import.meta.url); const resolved = import.meta.resolve("@inneranimalmedia/agentsam-sdk/identity/core/password-crypto", importer); if (!resolved.endsWith("/packages/identity/src/core/password-crypto.js")) throw new Error(`unexpected_sdk_identity_resolution: ${resolved}`); console.log(`PREPUBLISH_ECOMMERCE_IDENTITY_IMPORT_PASS ${resolved}`)'
       - name: Run incremental release verification (no full public-package test sweep)
         run: npm run verify:release:incremental
       - name: Publish pinned public dependencies and SDK
