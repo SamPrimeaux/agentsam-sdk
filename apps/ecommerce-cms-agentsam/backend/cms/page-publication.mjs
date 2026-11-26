@@ -95,14 +95,34 @@ async function selectPageAndDraft(env,accountId,siteId,slug,pageId) {
   const site=await selectOwnedPageSite(env,accountId,siteId);
   const page=await findSiteOwnedPage(env,site,slug,pageId);
   if (!page || page.slug !== slug || page.status === 'archived') return {error:'cms_page_not_found',status:404};
-  const row=await env.DB.prepare('SELECT draft_data FROM cms_page_drafts WHERE page_id=? AND user_id=? LIMIT 1').bind(page.id,accountId).first();
-  if (!row) return {error:'cms_page_draft_not_saved',status:409};
-  const draft=readObject(row.draft_data);
-  if (!draft.title || !safeSlug(draft.url_handle) || draft.url_handle === 'site' ||
-      !['visible','hidden'].includes(draft.visibility)) return {error:'cms_page_draft_invalid',status:409};
   if (page.requires_auth) return {error:'cms_page_auth_renderer_required',status:409};
+
+  // cms_pages + cms_page_sections are the canonical site-owned page model.
+  // cms_page_drafts is read only as an optional compatibility source for older
+  // body/SEO fields; newer rows may contain only {page_id, sections, updated_at}.
+  // Such rows are valid and must never block preview or publication.
+  const row=await env.DB.prepare('SELECT draft_data FROM cms_page_drafts WHERE page_id=? AND user_id=? LIMIT 1').bind(page.id,accountId).first();
+  const persisted=readObject(row?.draft_data);
+  const seo=readObject(page.seo_json);
+  const title=typeof persisted.title==='string'&&persisted.title.trim()
+    ? persisted.title : String(page.title||'').trim();
+  const draft={
+    title,
+    body_html:typeof persisted.body_html==='string'?persisted.body_html:'',
+    visibility:['visible','hidden'].includes(persisted.visibility)
+      ? persisted.visibility
+      : (page.status==='published'&&page.nav_visible!==0?'visible':'hidden'),
+    ...(safeSlug(persisted.url_handle)&&persisted.url_handle!=='site'
+      ? {url_handle:persisted.url_handle} : {}),
+    seo_title:typeof persisted.seo_title==='string'&&persisted.seo_title.trim()
+      ? persisted.seo_title : (typeof seo.title==='string'&&seo.title.trim()?seo.title:title),
+    seo_description:typeof persisted.seo_description==='string'
+      ? persisted.seo_description : (typeof seo.description==='string'?seo.description:''),
+    template_sku:typeof persisted.template_sku==='string'&&persisted.template_sku.trim()
+      ? persisted.template_sku : (page.template_sku||''),
+  };
   const nav=await env.DB.prepare("SELECT title,slug,route_path,nav_visible FROM cms_pages WHERE site_id=? AND status='published' AND nav_visible=1 AND requires_auth=0 ORDER BY sort_order ASC LIMIT 10").bind(site.id).all();
-  return {page,site,draft,rawDraft:row.draft_data,navigation:nav.results||[]};
+  return {page,site,draft,rawDraft:row?.draft_data??null,navigation:nav.results||[]};
 }
 export async function previewMerchantPage(env,accountId,siteId,slug,pageId,override=null) {
   try {
