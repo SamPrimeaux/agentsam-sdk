@@ -23,8 +23,8 @@ export function requiredPublishedPackages(manifests, lock = null, {
       for (const [name, version] of Object.entries(manifest[section] || {})) {
         if (!name.startsWith('@inneranimalmedia/') || local.has(name)) continue;
         if (version.startsWith('file:')) {
-          const packageDir = resolve(appRoot, dirname(path), version.slice(5));
-          const packagesRoot = resolve(appRoot, '../../packages');
+          const packageDir = resolve(root, dirname(path), version.slice(5));
+          const packagesRoot = resolve(root, '../../packages');
           const within = relative(packagesRoot, packageDir);
           if (!within || within === '..' || within.startsWith('..' + sep) || within.startsWith(sep)) {
             throw Error('untrusted_first_party_source_pin:' + name);
