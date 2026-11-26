@@ -36,7 +36,7 @@ export function requiredPublishedPackages(manifests, lock = null, {
           continue;
         }
         const sourceLink = lock?.packages?.['node_modules/' + name];
-        if (sourceLink?.link) {
+        if (sourceLink?.link && allowWorkspaceLinks) {
           const packageName = name.slice('@inneranimalmedia/'.length);
           const expected = '../../packages/' + packageName;
           if (sourceLink.resolved !== expected) throw Error('untrusted_first_party_lock_link:' + name);
