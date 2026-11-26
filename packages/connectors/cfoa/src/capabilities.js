@@ -1,42 +1,25 @@
 /**
  * Cloudflare API capability metadata and operation-level authorization rules.
  *
- * OAuth permission profiles are not defined here. A host injects its own
- * permission catalog into connector routes; this file describes provider
- * operations implemented by this package.
+ * OAuth scopes, permission products, and grant profiles are supplied by the
+ * owning plugin's host-injected permission catalog. This module contains
+ * operation metadata only; it does not define provider scope identifiers.
  */
 
-import {
-  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
-  CLOUDFLARE_PERMISSION_PRODUCTS,
-  listCloudflarePermissionProducts,
-  listCloudflarePermissionOptionsByCategory,
-  permissionProductsAsCapabilities,
-  assertPermissionCatalogCoversAllScopes,
-} from './permission-options.js';
-
-/**
- * Legacy baseline used by operation-level capability helpers only.
- * OAuth consent routes use baselineScopes from the injected host catalog.
- */
-export const CLOUDFLARE_BASELINE_SCOPES = Object.freeze([
-  'account-settings.read',
-  'user-details.read',
-  'memberships.read',
-  'offline_access',
-]);
+import { permissionProductsAsCapabilities } from './permission-options.js';
+import { normalizeProviderPermissionCatalog } from './scope-registry.js';
 
 /**
  * @typedef {object} CloudflareCapability
  * @property {string} id
  * @property {string} domain
  * @property {string} label
- * @property {string[]} oauthScopes — Cloudflare OAuth scope strings
+ * @property {string[]} oauthScopes — resolved from the host permission catalog
  * @property {string} permissionLabel — human dashboard path
  * @property {'generally_available'|'enterprise'|'enterprise_addon'|'subscription'} availability
  * @property {string} [availabilityNote]
  * @property {boolean} [zoneScoped]
- * @property {string[]} [optionalScopes]
+ * @property {boolean} [tokenRequired]
  */
 
 /** @type {Record<string, CloudflareCapability>} */
@@ -45,12 +28,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.workers',
     domain: 'compute',
     label: 'Workers',
-    oauthScopes: [
-      'workers-scripts.read',
-      'workers-scripts.write',
-      'workers-routes.read',
-      'workers-routes.write',
-    ],
     permissionLabel: 'Account → Workers Scripts → Edit',
     availability: 'generally_available',
   },
@@ -58,7 +35,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.d1',
     domain: 'data',
     label: 'D1',
-    oauthScopes: ['d1.read', 'd1.write'],
     permissionLabel: 'Account → D1 → Edit',
     availability: 'generally_available',
   },
@@ -66,12 +42,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.r2',
     domain: 'data',
     label: 'R2',
-    oauthScopes: [
-      'workers-r2.read',
-      'workers-r2.write',
-      'workers-r2-bucket-item.read',
-      'workers-r2-bucket-item.write',
-    ],
     permissionLabel: 'Account → Workers R2 Storage → Edit',
     availability: 'generally_available',
   },
@@ -80,7 +50,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     domain: 'data',
     label: 'Images',
     // From Local Studio OAuth scope catalog (Media → Images)
-    oauthScopes: ['images.read', 'images.write'],
     permissionLabel: 'Account → Cloudflare Images → Edit',
     availability: 'generally_available',
     capabilitySpecificTokenEnv: ['CLOUDFLARE_IMAGES_API_TOKEN'],
@@ -89,7 +58,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.stream',
     domain: 'data',
     label: 'Stream',
-    oauthScopes: ['stream.read', 'stream.write'],
     permissionLabel: 'Account → Stream → Edit',
     availability: 'generally_available',
   },
@@ -97,7 +65,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.vectorize',
     domain: 'data',
     label: 'Vectorize',
-    oauthScopes: ['vectorize.read', 'vectorize.write'],
     permissionLabel: 'Account → Vectorize → Edit',
     availability: 'generally_available',
   },
@@ -105,7 +72,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.mcp_portals',
     domain: 'compute',
     label: 'MCP Portals',
-    oauthScopes: ['mcp-portals.read', 'mcp-portals.write'],
     permissionLabel: 'Account → MCP Portals → Edit',
     availability: 'generally_available',
   },
@@ -113,7 +79,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.agents',
     domain: 'compute',
     label: 'Agents',
-    oauthScopes: ['cf-agents.write'],
     permissionLabel: 'Account → Agents → Edit',
     availability: 'generally_available',
   },
@@ -121,7 +86,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.pages',
     domain: 'web',
     label: 'Pages',
-    oauthScopes: ['page.read', 'page.write'],
     permissionLabel: 'Account → Pages → Edit',
     availability: 'generally_available',
   },
@@ -131,7 +95,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     label: 'Snippets',
     // Do NOT invent an OAuth scope string. API permission is Snippets Read/Write.
     // Until catalog exposes a verified identifier, treat as token_required for OAuth-only.
-    oauthScopes: [],
     tokenRequired: true,
     permissionLabel: 'Zone → Snippets → Edit (API: Snippets Read/Write)',
     availability: 'generally_available',
@@ -142,7 +105,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.queues',
     domain: 'compute',
     label: 'Queues',
-    oauthScopes: ['queues.read', 'queues.write'],
     permissionLabel: 'Account → Queues → Edit',
     availability: 'generally_available',
   },
@@ -150,7 +112,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.flags',
     domain: 'product',
     label: 'Flagship',
-    oauthScopes: ['flagship.read', 'flagship.write', 'flagship.evaluate'],
     permissionLabel: 'Account → Flagship → Edit',
     availability: 'generally_available',
   },
@@ -158,7 +119,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.hyperdrive',
     domain: 'data',
     label: 'Hyperdrive',
-    oauthScopes: ['query-cache.read', 'query-cache.write'],
     permissionLabel: 'Account → Hyperdrive → Edit',
     availability: 'generally_available',
   },
@@ -166,7 +126,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.email.sending',
     domain: 'email',
     label: 'Email Sending',
-    oauthScopes: ['email-sending.read', 'email-sending.write'],
     permissionLabel: 'Account → Email Sending → Edit',
     availability: 'generally_available',
   },
@@ -174,15 +133,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.email.routing',
     domain: 'email',
     label: 'Email Routing',
-    oauthScopes: [
-      'email-routing-account-rule.read',
-      'email-routing-address.read',
-      'email-routing-address.write',
-      'email-routing-rule.read',
-      'email-routing-rule.write',
-      'email-routing-suppression.read',
-      'email-routing-suppression.write',
-    ],
     permissionLabel: 'Account / Zone → Email Routing',
     availability: 'generally_available',
     zoneScoped: true,
@@ -191,11 +141,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.email.security',
     domain: 'email',
     label: 'Email Security',
-    oauthScopes: [
-      'cloud-email-security.read',
-      'cloud-email-security.write',
-      'email-security-dmarcreports.write',
-    ],
     permissionLabel: 'Account → Email Security',
     availability: 'generally_available',
   },
@@ -203,7 +148,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.workflows',
     domain: 'compute',
     label: 'Workflows',
-    oauthScopes: ['workers-scripts.read', 'workers-scripts.write'],
     permissionLabel: 'Account → Workers Scripts → Edit (Workflows)',
     availability: 'generally_available',
     availabilityNote: 'Durable multi-step executions; Free and Paid.',
@@ -212,7 +156,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.url_scanner',
     domain: 'security',
     label: 'URL Scanner',
-    oauthScopes: ['url-scanner.read', 'url-scanner.write'],
     permissionLabel: 'Account → URL Scanner → Edit',
     availability: 'generally_available',
   },
@@ -220,7 +163,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.resource_tags',
     domain: 'organization',
     label: 'Resource Tags',
-    oauthScopes: ['tag.read', 'tag.write'],
     permissionLabel: 'Account → Resource Tagging',
     availability: 'enterprise',
     availabilityNote: 'Account resource tagging API is Enterprise (beta).',
@@ -229,7 +171,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.tag_gateway',
     domain: 'web',
     label: 'Google Tag Gateway',
-    oauthScopes: ['zone.read', 'zone-settings.read', 'zone-settings.write'],
     permissionLabel: 'Zone → Zaraz / Google Tag Gateway (Zaraz Edit)',
     availability: 'generally_available',
     availabilityNote: 'Free. Zone-level. Requires Zaraz Admin / Domain Administrator for dashboard.',
@@ -239,7 +180,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.brand_protection',
     domain: 'security',
     label: 'Brand Protection',
-    oauthScopes: [],
     permissionLabel: 'Cloudforce One → Brand Protection',
     availability: 'subscription',
     availabilityNote: 'Requires Cloudforce One / Brand Protection subscription.',
@@ -248,7 +188,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.keyless_ssl',
     domain: 'tls',
     label: 'Keyless SSL',
-    oauthScopes: ['ssl-and-certificates.read', 'ssl-and-certificates.write'],
     permissionLabel: 'Zone → SSL and Certificates → Edit',
     availability: 'enterprise_addon',
     availabilityNote: 'Enterprise add-on. TLS private key stays on customer key server/HSM. TLS 1.3 unsupported for Keyless.',
@@ -258,7 +197,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.token_validation',
     domain: 'security',
     label: 'Token Validation (JWT)',
-    oauthScopes: ['account-api-gateway.read', 'account-api-gateway.write'],
     permissionLabel: 'Zone → API Gateway / Token Validation',
     availability: 'generally_available',
     zoneScoped: true,
@@ -267,7 +205,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.tunnels',
     domain: 'web',
     label: 'Tunnel',
-    oauthScopes: ['argotunnel.read', 'argotunnel.write', 'zone.read'],
     permissionLabel: 'Account → Cloudflare Tunnel',
     availability: 'generally_available',
   },
@@ -275,7 +212,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.workers_ai',
     domain: 'ai',
     label: 'Workers AI',
-    oauthScopes: ['ai.read', 'ai.write'],
     permissionLabel: 'Account → Workers AI → Edit',
     availability: 'generally_available',
   },
@@ -283,7 +219,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.ai_search',
     domain: 'ai',
     label: 'AI Search',
-    oauthScopes: ['ai-search.read', 'ai-search.write', 'ai-search.run', 'ai-search.index'],
     permissionLabel: 'Account → AI Search',
     availability: 'generally_available',
   },
@@ -291,7 +226,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.containers',
     domain: 'compute',
     label: 'Workers Containers',
-    oauthScopes: ['containers.read', 'containers.write'],
     permissionLabel: 'Account → Workers Containers',
     availability: 'generally_available',
   },
@@ -299,7 +233,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.secrets_store',
     domain: 'security',
     label: 'Secrets Store',
-    oauthScopes: ['secrets-store.read', 'secrets-store.write'],
     permissionLabel: 'Account → Secrets Store',
     availability: 'generally_available',
   },
@@ -307,7 +240,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.browser_rendering',
     domain: 'compute',
     label: 'Browser Rendering',
-    oauthScopes: ['browser-rendering.read', 'browser-rendering.write'],
     permissionLabel: 'Account → Browser Rendering',
     availability: 'generally_available',
   },
@@ -315,7 +247,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.basin.read',
     domain: 'data',
     label: 'Basin Analytics (read-only)',
-    oauthScopes: ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'],
     permissionLabel: 'Account → Pipelines, R2 Catalog and R2 Catalog SQL → Read',
     availability: 'generally_available',
   },
@@ -323,7 +254,6 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.pipelines',
     domain: 'data',
     label: 'Pipelines',
-    oauthScopes: ['pipelines.read', 'pipelines.write', 'pipelines.send'],
     permissionLabel: 'Account → Pipelines',
     availability: 'generally_available',
   },
@@ -331,75 +261,118 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     id: 'cloudflare.kv',
     domain: 'data',
     label: 'Workers KV',
-    oauthScopes: ['workers-kv-storage.read', 'workers-kv-storage.write'],
     permissionLabel: 'Account → Workers KV Storage',
     availability: 'generally_available',
   },
 };
 
-/** Curated product capabilities + every Local Studio scope as offerable `cloudflare.perm.*`. */
-export const CLOUDFLARE_CAPABILITIES = Object.freeze({
-  ...CLOUDFLARE_CAPABILITIES_CURATED,
-  ...permissionProductsAsCapabilities(),
-});
+/**
+ * Compatibility metadata export. OAuth scope arrays are deliberately empty
+ * here; use getCloudflareCapability(id, permissionCatalog) for resolved grants.
+ */
+export const CLOUDFLARE_CAPABILITIES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(CLOUDFLARE_CAPABILITIES_CURATED).map(([id, capability]) => [
+      id,
+      { ...capability, oauthScopes: [] },
+    ]),
+  ),
+);
 
-/** Legacy feature → scope map (kept for docs / workers_deploy callers). */
+/** Legacy feature → capability mapping. Scope strings come from the plugin catalog. */
 export const CLOUDFLARE_CAPABILITY_SCOPES = Object.freeze({
   workers_deploy: {
-    scopes: ['workers-scripts.write'],
     why: 'Deploy Workers for the connected account (Workers Scripts Edit).',
     capability_id: 'cloudflare.workers',
   },
   d1_inspect: {
-    scopes: ['d1.read'],
     why: 'Inspect D1 databases bound to the deployable.',
     capability_id: 'cloudflare.d1',
   },
   r2_inspect: {
-    scopes: ['workers-r2.read'],
     why: 'Inspect R2 buckets bound to the deployable.',
     capability_id: 'cloudflare.r2',
   },
   worker_logs: {
-    scopes: ['workers-scripts.read'],
     why: 'Read Worker script metadata/logs for postdeploy health.',
     capability_id: 'cloudflare.workers',
   },
 });
 
-export function listCloudflareCapabilities() {
-  return Object.values(CLOUDFLARE_CAPABILITIES);
+function resolveCatalog(input) {
+  if (!input) return null;
+  if (input.availableScopes instanceof Set && Array.isArray(input.capabilities)) return input;
+  return normalizeProviderPermissionCatalog(input, 'cloudflare');
 }
 
-export function getCloudflareCapability(id) {
-  return CLOUDFLARE_CAPABILITIES[id] || null;
+function capabilityFromCatalog(id, catalog) {
+  const metadata = CLOUDFLARE_CAPABILITIES_CURATED[id] || null;
+  const registered = catalog?.capabilities?.find((capability) => capability.id === id) || null;
+  const product = permissionProductsAsCapabilities(catalog)[id] || null;
+  if (!metadata && !registered && !product) return null;
+
+  const label = metadata?.label || registered?.label || product?.label || id;
+  const scopes = registered?.scopes || product?.oauthScopes || [];
+  return {
+    ...(metadata || {}),
+    ...(product || {}),
+    id,
+    domain: metadata?.domain || registered?.domain || product?.domain || 'cloudflare',
+    label,
+    oauthScopes: [...new Set(Array.isArray(scopes) ? scopes : [])],
+    permissionLabel: metadata?.permissionLabel
+      || product?.permissionLabel
+      || (registered ? `Cloudflare → ${label}` : null),
+    availability: metadata?.availability || 'generally_available',
+  };
+}
+
+export function listCloudflareCapabilities(permissionCatalog = null) {
+  const catalog = resolveCatalog(permissionCatalog);
+  const productCapabilities = permissionProductsAsCapabilities(catalog);
+  const ids = new Set([
+    ...Object.keys(CLOUDFLARE_CAPABILITIES_CURATED),
+    ...(catalog?.capabilities || []).map((capability) => capability.id),
+    ...Object.keys(productCapabilities),
+  ]);
+  return [...ids]
+    .map((id) => capabilityFromCatalog(id, catalog))
+    .filter(Boolean);
+}
+
+export function getCloudflareCapability(id, permissionCatalog = null) {
+  return capabilityFromCatalog(id, resolveCatalog(permissionCatalog));
 }
 
 /**
- * Scopes for OAuth authorize / upgrade.
- * @param {{ capabilities?: string[], includeBaseline?: boolean, generallyAvailableOnly?: boolean }} [opts]
+ * Resolve scopes for selected operation capabilities from the plugin-owned
+ * permission catalog. Without a catalog, no OAuth scopes are inferred.
+ *
+ * @param {{ capabilities?: string[], includeBaseline?: boolean, generallyAvailableOnly?: boolean, permissionCatalog?: object }} [opts]
  */
 export function scopesForCapabilities(opts = {}) {
+  const catalog = resolveCatalog(opts.permissionCatalog);
+  if (!catalog) return [];
   const includeBaseline = opts.includeBaseline !== false;
   const gaOnly = opts.generallyAvailableOnly !== false;
   const ids = Array.isArray(opts.capabilities) ? opts.capabilities : [];
-  const set = new Set(includeBaseline ? CLOUDFLARE_BASELINE_SCOPES : []);
+  const scopes = new Set(includeBaseline ? catalog.baselineScopes : []);
   for (const id of ids) {
-    const cap = CLOUDFLARE_CAPABILITIES[id];
-    if (!cap) continue;
-    if (gaOnly && cap.availability !== 'generally_available') continue;
-    for (const s of cap.oauthScopes || []) set.add(s);
+    const capability = capabilityFromCatalog(id, catalog);
+    if (!capability) continue;
+    if (gaOnly && capability.availability !== 'generally_available') continue;
+    for (const scope of capability.oauthScopes || []) scopes.add(scope);
   }
-  return [...set];
+  return [...scopes];
 }
 
 /**
  * Compare granted scopes to a capability.
  * @returns {{ capability_id, label, status: 'authorized'|'needs_authorization'|'unavailable'|'unknown', missing_scopes, permissionLabel, availability }}
  */
-export function assessCapabilityAuthorization(capabilityId, grantedScopes = []) {
-  const cap = CLOUDFLARE_CAPABILITIES[capabilityId];
-  if (!cap) {
+export function assessCapabilityAuthorization(capabilityId, grantedScopes = [], permissionCatalog = null) {
+  const capability = capabilityFromCatalog(capabilityId, resolveCatalog(permissionCatalog));
+  if (!capability) {
     return {
       capability_id: capabilityId,
       label: capabilityId,
@@ -409,65 +382,64 @@ export function assessCapabilityAuthorization(capabilityId, grantedScopes = []) 
       availability: null,
     };
   }
-  // Token-only APIs cannot be authorized by checking OAuth scopes. An empty
-  // oauthScopes array must never turn an arbitrary grant into "authorized".
-  if (cap.tokenRequired) {
+
+  const requiredScopes = capability.oauthScopes || [];
+  // Token-only APIs and capabilities absent from the OAuth catalog require a
+  // live probe. An empty scope list must never imply OAuth authorization.
+  if (capability.tokenRequired || requiredScopes.length === 0) {
     return {
-      capability_id: cap.id,
-      label: cap.label,
+      capability_id: capability.id,
+      label: capability.label,
       status: 'unknown',
       missing_scopes: [],
-      permissionLabel: cap.permissionLabel,
-      availability: cap.availability,
-      availability_note: cap.availabilityNote || null,
-      token_required: true,
+      permissionLabel: capability.permissionLabel,
+      availability: capability.availability,
+      availability_note: capability.availabilityNote || null,
+      token_required: Boolean(capability.tokenRequired),
       probe_required: true,
     };
   }
-  if (cap.availability === 'subscription' || cap.availability === 'enterprise_addon') {
-    // Plan/subscription gates are probed live — scope presence alone is not enough.
-    const granted = new Set((grantedScopes || []).map(String));
-    const missing = (cap.oauthScopes || []).filter((s) => !granted.has(s));
+
+  const granted = new Set((grantedScopes || []).map(String));
+  const missing = requiredScopes.filter((scope) => !granted.has(scope));
+  if (capability.availability === 'subscription' || capability.availability === 'enterprise_addon') {
     return {
-      capability_id: cap.id,
-      label: cap.label,
+      capability_id: capability.id,
+      label: capability.label,
       status: missing.length ? 'needs_authorization' : 'unknown',
       missing_scopes: missing,
-      permissionLabel: cap.permissionLabel,
-      availability: cap.availability,
-      availability_note: cap.availabilityNote || null,
+      permissionLabel: capability.permissionLabel,
+      availability: capability.availability,
+      availability_note: capability.availabilityNote || null,
       probe_required: true,
     };
   }
-  const granted = new Set((grantedScopes || []).map(String));
-  // API tokens often aren't enumerated as OAuth scopes — treat empty granted as unknown.
   if (!grantedScopes?.length) {
     return {
-      capability_id: cap.id,
-      label: cap.label,
+      capability_id: capability.id,
+      label: capability.label,
       status: 'unknown',
-      missing_scopes: [...(cap.oauthScopes || [])],
-      permissionLabel: cap.permissionLabel,
-      availability: cap.availability,
-      availability_note: cap.availabilityNote || null,
+      missing_scopes: [...requiredScopes],
+      permissionLabel: capability.permissionLabel,
+      availability: capability.availability,
+      availability_note: capability.availabilityNote || null,
       probe_required: true,
     };
   }
-  const missing = (cap.oauthScopes || []).filter((s) => !granted.has(s));
   return {
-    capability_id: cap.id,
-    label: cap.label,
+    capability_id: capability.id,
+    label: capability.label,
     status: missing.length ? 'needs_authorization' : 'authorized',
     missing_scopes: missing,
-    permissionLabel: cap.permissionLabel,
-    availability: cap.availability,
-    availability_note: cap.availabilityNote || null,
+    permissionLabel: capability.permissionLabel,
+    availability: capability.availability,
+    availability_note: capability.availabilityNote || null,
   };
 }
 
-export function capabilityAuthorizationMatrix(grantedScopes = [], capabilityIds = null) {
-  const ids = capabilityIds || Object.keys(CLOUDFLARE_CAPABILITIES);
-  return ids.map((id) => assessCapabilityAuthorization(id, grantedScopes));
+export function capabilityAuthorizationMatrix(grantedScopes = [], capabilityIds = null, permissionCatalog = null) {
+  const ids = capabilityIds || listCloudflareCapabilities(permissionCatalog).map((capability) => capability.id);
+  return ids.map((id) => assessCapabilityAuthorization(id, grantedScopes, permissionCatalog));
 }
 
 /** Structured remediation when CF returns 403 / missing permission. */
@@ -476,31 +448,34 @@ export function cloudflarePermissionRemediation({
   operation = null,
   httpStatus = null,
   providerMessage = null,
+  permissionCatalog = null,
 } = {}) {
-  const cap = capabilityId ? CLOUDFLARE_CAPABILITIES[capabilityId] : null;
+  const capability = capabilityId
+    ? capabilityFromCatalog(capabilityId, resolveCatalog(permissionCatalog))
+    : null;
   return {
     ok: false,
     error: 'cloudflare_permission_denied',
     operation: operation || null,
     http_status: httpStatus,
     provider_message: providerMessage,
-    capability_id: cap?.id || capabilityId,
-    permission_required: cap?.permissionLabel || null,
-    availability: cap?.availability || null,
-    availability_note: cap?.availabilityNote || null,
-    oauth_scopes: cap?.oauthScopes || [],
+    capability_id: capability?.id || capabilityId,
+    permission_required: capability?.permissionLabel || null,
+    availability: capability?.availability || null,
+    availability_note: capability?.availabilityNote || null,
+    oauth_scopes: capability?.oauthScopes || [],
     remediation: {
       actions: [
-        cap ? `Authorize ${cap.label}` : 'Authorize required Cloudflare permission',
+        capability ? `Authorize ${capability.label}` : 'Authorize required Cloudflare permission',
         'Show required permissions',
         'Cancel',
       ],
-      authorize_hint: cap
-        ? `agentsam cloudflare permissions authorize --capability ${cap.id}`
+      authorize_hint: capability
+        ? `agentsam cloudflare permissions authorize --capability ${capability.id}`
         : 'agentsam cloudflare permissions',
-      learn: cap?.availability === 'enterprise_addon'
+      learn: capability?.availability === 'enterprise_addon'
         ? 'Cloudflare → SSL/TLS → Keyless SSL (Enterprise add-on)'
-        : cap?.availability === 'subscription'
+        : capability?.availability === 'subscription'
           ? 'Cloudflare → Cloudforce One → Brand Protection'
           : null,
     },
