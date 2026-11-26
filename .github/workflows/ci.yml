@@ -442,11 +442,6 @@ jobs:
         run: |
           mkdir -p node_modules/@inneranimalmedia
           ln -sfn "$GITHUB_WORKSPACE" node_modules/@inneranimalmedia/agentsam-sdk
-      - name: Reuse root dependencies for Ecommerce monorepo build
-        run: |
-          rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
-          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
-          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
       - name: Verify hosted CMS account isolation and degraded status
         run: |
           node --test \
@@ -458,6 +453,18 @@ jobs:
             packages/connectors/cfoa/tests/capabilities.test.mjs
       - name: Install Local Studio build dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+      - name: Reuse root and Local Studio dependencies for Ecommerce monorepo build
+        run: |
+          rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
+          mkdir -p node_modules/@types
+          for package in node react react-dom; do
+            if [ -d "apps/local-studio/node_modules/@types/$package" ]; then
+              rm -rf "node_modules/@types/$package"
+              ln -s "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/$package" "node_modules/@types/$package"
+            fi
+          done
       - name: Assemble hosted Local Studio Worker and assets
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output
