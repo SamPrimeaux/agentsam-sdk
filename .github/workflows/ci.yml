@@ -453,27 +453,17 @@ jobs:
             packages/connectors/cfoa/tests/capabilities.test.mjs
       - name: Install Local Studio build dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
-      - name: Reuse root and Local Studio dependencies for Ecommerce monorepo build
+      - name: Reuse root dependencies for Ecommerce backend tests
         run: |
           rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
           ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
-          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
-          mkdir -p node_modules/@types
-          for package in node react react-dom; do
-            if [ -d "apps/local-studio/node_modules/@types/$package" ]; then
-              rm -rf "node_modules/@types/$package"
-              ln -s "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/$package" "node_modules/@types/$package"
-            fi
-          done
-          # analytics-ui is built from its own workspace directory before Vite.
-          # Give its compiler the React runtime and declarations that its own
-          # package.json declares, even when the Ecommerce frontend installs
-          # its isolated nested dependency tree.
-          mkdir -p packages/analytics-ui/node_modules/@types
-          ln -sfn "$GITHUB_WORKSPACE/apps/local-studio/node_modules/react" packages/analytics-ui/node_modules/react
-          ln -sfn "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/react" packages/analytics-ui/node_modules/@types/react
-          test -f packages/analytics-ui/node_modules/react/package.json
-          test -f packages/analytics-ui/node_modules/@types/react/index.d.ts
+          # Do not symlink frontend/node_modules to the shared root. The
+          # Local Studio staging script runs the frontend's own locked npm ci
+          # when its isolated dependency tree is absent; npm ci must never
+          # receive a symlink to (and remove) the root workspace node_modules.
+          test -f node_modules/react/package.json
+          test -f node_modules/@types/react/index.d.ts
+          test -f node_modules/@inneranimalmedia/analytics-ui/package.json
       - name: Assemble hosted Local Studio Worker and assets
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output
