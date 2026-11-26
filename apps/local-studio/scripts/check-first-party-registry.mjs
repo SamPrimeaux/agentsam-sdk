@@ -83,7 +83,7 @@ export function appManifestSources(root = appRoot) {
   return paths.map((path) => ({ path, manifest: read(path) }));
 }
 
-export function staleLockTarballs(lock, requirements) {
+export function staleLockTarballs(lock, requirements, { allowWorkspaceLinks = true } = {}) {
   const expected = new Map(requirements.map(({ name, version }) => [name, version]));
   const seen = new Set();
   const stale = [];
