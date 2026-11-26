@@ -112,8 +112,8 @@ async function selectPageAndDraft(env,accountId,siteId,slug,pageId) {
     visibility:['visible','hidden'].includes(persisted.visibility)
       ? persisted.visibility
       : (page.status==='published'&&page.nav_visible!==0?'visible':'hidden'),
-    ...(safeSlug(persisted.url_handle)&&persisted.url_handle!=='site'
-      ? {url_handle:persisted.url_handle} : {}),
+    ...(typeof persisted.url_handle==='string'&&persisted.url_handle.trim()
+      ? {url_handle:persisted.url_handle.trim()} : {}),
     seo_title:typeof persisted.seo_title==='string'&&persisted.seo_title.trim()
       ? persisted.seo_title : (typeof seo.title==='string'&&seo.title.trim()?seo.title:title),
     seo_description:typeof persisted.seo_description==='string'
