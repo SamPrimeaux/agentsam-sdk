@@ -151,10 +151,13 @@ test('production host builds regenerate and stage all included apps; scoped buil
   assert.match(scripts['build:included:all'],/node scripts\/build-included-apps\.mjs --all/);
 });
 
-test('console staging runs the complete Ecommerce build lifecycle before copying CMS assets', () => {
+test('console staging generates only the required identity portal assets before existing build steps', () => {
   const stage = fs.readFileSync(path.join(LOCAL_STUDIO, 'scripts', 'stage-console-host.mjs'), 'utf8');
-  assert.match(stage, /execFileSync\('npm', \['run', 'build'\], \{ cwd: app, stdio: 'inherit' \}\)/);
-  assert.doesNotMatch(stage, /build:frontend|bin\/build-assets\.mjs/);
+  const sync = stage.indexOf("execFileSync('npm', ['run', 'sync:identity-portals']");
+  const frontend = stage.indexOf("execFileSync('npm', ['run', 'build:frontend']");
+  const assets = stage.indexOf("path.join(app, 'bin/build-assets.mjs')");
+  assert.ok(sync >= 0 && frontend > sync && assets > frontend, 'identity assets must be synced before frontend and asset packaging');
+  assert.doesNotMatch(stage, /execFileSync\('npm', \['run', 'build'\]/, 'avoid unrelated Ecommerce prebuild and CMS synchronization');
 });
 
 test('production host builds do not trigger unrelated website sync or broad theme suites',()=>{
