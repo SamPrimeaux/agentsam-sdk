@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-merch",
-  "version": "2.6.18",
+  "version": "2.6.19",
   "description": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
   "type": "module",
   "files": [
@@ -35,6 +35,10 @@
     },
     "./collection-showcase.css": "./src/collection-showcase.css",
     "./adapters/completeful": "./src/adapters-completeful.js",
+    "./product-spine": {
+      "types": "./src/product-spine.d.ts",
+      "import": "./src/product-spine.js"
+    },
     "./profiles/*": "./profiles/*",
     "./transforms": {
       "types": "./src/index.d.ts",

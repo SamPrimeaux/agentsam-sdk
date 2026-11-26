@@ -22,7 +22,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-merch",
-  "purpose": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
+  "purpose": "Provider-neutral product identity, inventory source classification, manufacturing profiles, print preflight, derivative planning, and collection-lab primitives for AgentSam.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-merch",
@@ -39,5 +39,5 @@
   "status": "unknown",
   "topics": [],
   "use_when": [],
-  "version": "2.6.15"
+  "version": "2.6.19"
 }
