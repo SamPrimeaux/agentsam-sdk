@@ -559,7 +559,8 @@
         source:'CMS stock',preset:row.sku,rendererPreset:row.rendererKey,
         category:row.category||'Sections',catalog:row,
       }));
-    return [...stock,...native];
+    const stockIds=new Set(stock.map(item=>item.id));
+    return [...stock,...native.filter(item=>!stockIds.has(item.id))];
   }
 
   async function setTheme(nextTheme) {
