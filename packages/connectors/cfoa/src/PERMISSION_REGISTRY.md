@@ -28,6 +28,7 @@ The normalized catalog fields are:
 
 - baselineScopes: identity and refresh scopes required for this provider connection.
 - defaultPacks: packs requested when the user starts a connection without explicit pack or capability IDs.
+- defaultCapabilities: capability IDs requested by default when no explicit pack or capability selection is supplied.
 - allowFullCatalogOptIn: an explicit opt-in switch for the special all pack; disabled unless the host enables it.
 - aliases: optional compatibility aliases, each expanding to one or more canonical pack IDs.
 - packs: provider-specific permission profiles; each profile owns its scopes and associated capability IDs.

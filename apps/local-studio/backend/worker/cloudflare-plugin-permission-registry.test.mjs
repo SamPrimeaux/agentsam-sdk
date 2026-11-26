@@ -20,7 +20,8 @@ test('host adapter reads the configured Cloudflare provider plugin permission au
                   oauth_permissions: {
                     version: 1,
                     baseline_scopes: ['offline_access'],
-                    default_packs: ['watch'],
+                    default_packs: [],
+                    default_capabilities: ['cloudflare.r2'],
                     allow_full_catalog_opt_in: true,
                     aliases: { media: ['store', 'create'] },
                     packs: [
@@ -45,7 +46,8 @@ test('host adapter reads the configured Cloudflare provider plugin permission au
   assert.equal(catalog.pluginId, 'plg_root');
   assert.equal(catalog.pluginKey, 'agentsam-mcp');
   assert.deepEqual(catalog.baselineScopes, ['offline_access']);
-  assert.deepEqual(catalog.defaultPacks, ['watch']);
+  assert.deepEqual(catalog.defaultPacks, []);
+  assert.deepEqual(catalog.defaultCapabilities, ['cloudflare.r2']);
   assert.equal(catalog.allowFullCatalogOptIn, true);
   assert.deepEqual(catalog.packs.find((pack) => pack.id === 'store').scopes, ['d1.read', 'd1.write']);
   assert.ok(catalog.availablePermissions.some((permission) => permission.scope === 'images.write'));

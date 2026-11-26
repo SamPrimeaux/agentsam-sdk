@@ -263,6 +263,7 @@ async function dispatchFamily(args, options) {
         provider: catalog.provider || 'cloudflare',
         baseline_scopes: catalog.baseline_scopes || [],
         default_packs: catalog.default_packs || [],
+        default_capabilities: catalog.default_capabilities || [],
         full_catalog_opt_in: catalog.full_catalog_opt_in === true,
         aliases: catalog.aliases || {},
         feature_packs: packs,

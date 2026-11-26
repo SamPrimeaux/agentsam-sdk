@@ -170,6 +170,36 @@ describe('cloudflare connector', () => {
     assert.equal((await rejected.json()).error, 'cloudflare_permission_pack_unavailable');
   });
 
+  it('uses host-declared default capabilities when no explicit pack or capability is selected', async () => {
+    const defaultCapabilityRegistry = {
+      async getOAuthPermissionCatalog() {
+        return {
+          baselineScopes: ['offline_access'],
+          defaultPacks: [],
+          defaultCapabilities: ['cloudflare.r2'],
+          capabilities: [{ id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] }],
+          packs: [],
+        };
+      },
+    };
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+      { permissionRegistry: defaultCapabilityRegistry },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.ok(body.scopes.includes('workers-r2.read'));
+    assert.ok(body.scopes.includes('workers-r2.write'));
+    assert.ok(!body.scopes.includes('workers-observability.read'));
+  });
+
   it('supports an explicit full-catalog opt-in without making it a default', async () => {
     const response = await handleCloudflareConnectionRequest(
       new Request('https://agentsam.example/api/connections/cloudflare/start?packs=all', {

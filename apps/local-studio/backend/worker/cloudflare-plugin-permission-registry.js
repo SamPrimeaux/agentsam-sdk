@@ -67,6 +67,7 @@ export function createPluginOAuthPermissionRegistry(env, options = {}) {
       }));
       const baselineScopes = unique(source.baseline_scopes);
       const defaultPacks = unique(source.default_packs);
+      const defaultCapabilities = unique(source.default_capabilities);
       const aliases = source.aliases && typeof source.aliases === 'object' ? source.aliases : {};
       const scopeCategories = new Map();
       for (const pack of packs) {
@@ -111,6 +112,7 @@ export function createPluginOAuthPermissionRegistry(env, options = {}) {
         version: Number(source.version),
         baselineScopes,
         defaultPacks,
+        defaultCapabilities,
         aliases,
         allowFullCatalogOptIn: source.allow_full_catalog_opt_in === true,
         packs,

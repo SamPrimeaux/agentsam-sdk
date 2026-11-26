@@ -8,7 +8,8 @@ import {
 const catalog = {
   ok: true,
   provider: 'cloudflare',
-  default_packs: ['store', 'build', 'create'],
+  default_packs: [],
+  default_capabilities: ['cloudflare.workers', 'cloudflare.d1'],
   full_catalog_opt_in: true,
   aliases: { media: ['store', 'create'], data: ['store'] },
   registered_packs: [
@@ -41,11 +42,13 @@ test('omitting packs leaves default selection to the host plugin catalog', () =>
   const plan = buildCloudflareBrowserOAuthStartUrl({
     hostOrigin: 'https://agentsam.example',
     defaultPacks: catalog.default_packs,
+    defaultCapabilities: catalog.default_capabilities,
     packCatalog: catalog.registered_packs,
   });
   const url = new URL(plan.authorize_url);
   assert.equal(url.searchParams.has('packs'), false);
-  assert.deepEqual(plan.packs, ['store', 'build', 'create']);
+  assert.deepEqual(plan.packs, []);
+  assert.deepEqual(plan.capabilities, ['cloudflare.workers', 'cloudflare.d1']);
 });
 
 test('pack listing is fetched from the authenticated host registry', async () => {
@@ -63,6 +66,7 @@ test('pack listing is fetched from the authenticated host registry', async () =>
   assert.match(requests[0].url, /api\/connections\/cloudflare\/permissions$/);
   assert.equal(requests[0].init.headers.authorization, 'Bearer aak_test');
   assert.deepEqual(result.packs.map((pack) => pack.pack_id), ['watch', 'store', 'build', 'create']);
+  assert.deepEqual(result.default_capabilities, ['cloudflare.workers', 'cloudflare.d1']);
 });
 
 test('explicit all permission selection is accepted only when the host enables it', async () => {

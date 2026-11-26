@@ -63,6 +63,7 @@ export function normalizeProviderPermissionCatalog(input, providerKey = 'cloudfl
   }
   const baselineScopes = strings(input.baselineScopes ?? input.baseline_scopes);
   const defaultPacks = strings(input.defaultPacks ?? input.default_packs).map((id) => id.toLowerCase());
+  const defaultCapabilities = strings(input.defaultCapabilities ?? input.default_capabilities);
   const available = normalizePermissions(input.availablePermissions ?? input.available_permissions);
   const allScopes = new Set([
     ...baselineScopes,
@@ -84,6 +85,7 @@ export function normalizeProviderPermissionCatalog(input, providerKey = 'cloudfl
     pluginKey: input.pluginKey || input.plugin_key || null,
     baselineScopes,
     defaultPacks,
+    defaultCapabilities,
     aliases,
     allowFullCatalogOptIn: input.allowFullCatalogOptIn === true || input.allow_full_catalog_opt_in === true,
     packs,
@@ -162,7 +164,11 @@ export function resolvePermissionScopes(catalog, { packs = [], capabilities = []
       capabilities: catalog.capabilities.map((capability) => capability.id),
     };
   }
-  const effectivePacks = requestedPacks.length ? requestedPacks : (requestedCapabilities.length ? [] : catalog.defaultPacks);
+  const useDefaults = !requestedPacks.length && !requestedCapabilities.length;
+  const effectivePacks = requestedPacks.length ? requestedPacks : (useDefaults ? catalog.defaultPacks : []);
+  const effectiveCapabilities = requestedCapabilities.length
+    ? requestedCapabilities
+    : (useDefaults ? catalog.defaultCapabilities : []);
   const expanded = expandPackIds(catalog, effectivePacks);
   if (expanded.unknown.length) {
     return { ok: false, error: 'cloudflare_permission_pack_unavailable', unknown_packs: expanded.unknown };
@@ -178,19 +184,19 @@ export function resolvePermissionScopes(catalog, { packs = [], capabilities = []
       unknown_capabilities: [...new Set(unknownPackCapabilities)],
     };
   }
-  const unknownCapabilities = requestedCapabilities.filter((id) => !capabilityMap.has(id));
+  const unknownCapabilities = effectiveCapabilities.filter((id) => !capabilityMap.has(id));
   if (unknownCapabilities.length) {
     return { ok: false, error: 'cloudflare_capability_unavailable', unknown_capabilities: unknownCapabilities };
   }
   const scopes = new Set(catalog.baselineScopes);
-  const resolvedCapabilities = new Set(requestedCapabilities);
+  const resolvedCapabilities = new Set(effectiveCapabilities);
   const packMap = new Map(catalog.packs.map((pack) => [pack.id, pack]));
   for (const id of expanded.packs) {
     const pack = packMap.get(id);
     for (const scope of pack?.scopes || []) scopes.add(scope);
     for (const capability of pack?.capabilities || []) resolvedCapabilities.add(capability);
   }
-  for (const id of requestedCapabilities) {
+  for (const id of effectiveCapabilities) {
     for (const scope of capabilityMap.get(id)?.scopes || []) scopes.add(scope);
   }
   return {

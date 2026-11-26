@@ -105,8 +105,10 @@ export function buildCloudflareBrowserOAuthStartUrl(options = {}) {
   const packs = (options.packs || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean);
   const capabilities = (options.capabilities || []).map((c) => String(c).trim()).filter(Boolean);
   const defaultPacks = (options.defaultPacks || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean);
+  const defaultCapabilities = (options.defaultCapabilities || []).map((c) => String(c).trim()).filter(Boolean);
   const aliases = options.aliases || {};
   const effectivePacks = packs.length ? expandPackAliases(packs, aliases) : defaultPacks;
+  const effectiveCapabilities = capabilities.length ? capabilities : (packs.length ? [] : defaultCapabilities);
   const packCatalog = Array.isArray(options.packCatalog) ? options.packCatalog : [];
   const byId = new Map(packCatalog.map((pack) => [pack.pack_id || pack.id, pack]));
   const hostOrigin = options.hostOrigin || resolveLocalStudioHostOrigin({
@@ -130,7 +132,7 @@ export function buildCloudflareBrowserOAuthStartUrl(options = {}) {
     path_kind: 'app_host_connections',
     packs: effectivePacks,
     requested_packs: packs,
-    capabilities,
+    capabilities: effectiveCapabilities,
     scope_count: null,
     scopes: [],
     packs_detail: effectivePacks.map((id) => {
@@ -199,6 +201,7 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
       kind: 'agentsam_cf_browser_oauth',
       provider: catalog.provider,
       default_packs: catalog.default_packs || [],
+      default_capabilities: catalog.default_capabilities || [],
       full_catalog_opt_in: catalog.full_catalog_opt_in === true,
       aliases: catalog.aliases || {},
       packs: catalog.registered_packs || [],
@@ -236,6 +239,7 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     packs: args.packs,
     capabilities: args.capabilities,
     defaultPacks: catalog.default_packs,
+    defaultCapabilities: catalog.default_capabilities,
     aliases,
     packCatalog: catalog.registered_packs,
     issuer: options.issuer,

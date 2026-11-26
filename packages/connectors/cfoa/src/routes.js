@@ -405,6 +405,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       })),
       baseline_scopes: catalog.baselineScopes,
       default_packs: catalog.defaultPacks,
+      default_capabilities: catalog.defaultCapabilities,
       full_catalog_opt_in: catalog.allowFullCatalogOptIn,
       aliases: catalog.aliases,
       available_capabilities: catalog.capabilities,
