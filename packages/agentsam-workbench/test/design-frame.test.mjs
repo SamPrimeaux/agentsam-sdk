@@ -78,6 +78,6 @@ test("different specialist engines enter identical shell contract without being 
   );
   assert.match(html, /data-design-kind="movie"/);
   assert.match(html, /Native MovieMode timeline/);
-  assert.match(html, /Open assistant/);
+  assert.match(html, /Show AgentSam/);
   assert.doesNotMatch(html, /Contextual AgentSam assistant/);
 });

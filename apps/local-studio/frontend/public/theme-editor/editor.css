@@ -4337,8 +4337,10 @@ body.agentsam-open [data-mini-agentsam] { display:none!important; }
   .theme-studio .te-save-actions>#te-save {height:44px;min-width:56px;border-radius:999px;padding-inline:12px;}
   .theme-studio .te-save-caret {display:none;}
   .theme-studio .te-preview-bar:not(:has(#te-import-live:not([hidden]))) {display:none;}
-  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree {inset:auto 0 0!important;background:var(--te-panel);border-color:var(--te-border);}
-  .theme-studio[data-mobile-pane="sections"] .te-mobile-sheet-head {padding:0 14px 8px;}
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree {inset:auto 0 0!important;height:min(42%,340px)!important;max-height:52%!important;border-radius:22px 22px 0 0!important;background:var(--te-panel);border:1px solid var(--te-border);}
+  .theme-studio[data-mobile-pane="sections"] .te-mobile-sheet-grip {display:flex;}
+  .theme-studio[data-mobile-pane="sections"] [data-sheet-expand="sections"] {display:none;}
+  .theme-studio[data-mobile-pane="sections"] .te-mobile-sheet-head {padding:0 14px 6px;border-radius:22px 22px 0 0;}
   .theme-studio .te-mobile-sheet-head__row {min-height:44px;height:auto;font-size:16px;}
   .theme-studio .te-mobile-sheet-head__row button {width:44px;height:44px;border-radius:999px;}
   .theme-studio .te-tree-row__main,.theme-studio .te-field-row__main,.theme-studio .te-block-row__main {min-height:48px;}
@@ -4447,3 +4449,17 @@ body.agentsam-open [data-mini-agentsam] { display:none!important; }
   }
   .theme-studio .te-mobile-node-menu button.is-destructive {color:var(--te-danger,#d53b36);}
 }
+
+/* Preserve the usable preview while either mobile editing sheet is open. */
+@media(max-width:900px){
+ .theme-studio .theme-editor-panel {height:min(42%,340px)!important;max-height:52%!important;}
+ .theme-studio[data-mobile-sheet="compact"] :is(.theme-studio-tree,.theme-editor-panel) {height:min(26%,210px)!important;}
+ .theme-studio[data-mobile-sheet="expanded"] :is(.theme-studio-tree,.theme-editor-panel) {height:min(52%,420px)!important;max-height:52%!important;}
+ .theme-studio .theme-studio-canvas,.theme-studio .te-preview-device,.theme-studio .theme-editor-preview {min-width:0!important;width:100%!important;max-width:100%!important;min-height:0!important;}
+ .theme-studio .theme-editor-preview {display:block;box-sizing:border-box;}
+ .theme-studio .te-page-popover {position:fixed!important;left:8px!important;right:8px!important;top:64px!important;width:auto!important;max-width:none!important;transform:none!important;max-height:65dvh;z-index:9999;}
+}
+/* The existing toolbar menu is portaled to body; keep the root theme tokens. */
+body > .te-toolbar-dropdown {background:var(--te-panel);color:var(--te-text);border-color:var(--te-border);}
+body > .te-toolbar-dropdown > button {color:var(--te-text);background:transparent;}
+body > .te-toolbar-dropdown > button:hover {background:var(--te-soft);}

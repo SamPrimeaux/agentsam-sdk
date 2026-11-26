@@ -217,7 +217,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | APP ID | Manifest name | Package | CLI binary |
 | --- | --- | --- | --- |
 | `cad-creator` | AgentSam CAD Creator | `@inneranimalmedia/agentsam-cad-creator` | `bin/agentsam-cad-creator.mjs` |
-| `design-canvas` | AgentSam Design Canvas | `@inneranimalmedia/agentsam-design-canvas` | `bin/agentsam-design-canvas.mjs` |
+| `design-canvas` | AgentSam Design | `@inneranimalmedia/agentsam-design-canvas` | `bin/agentsam-design-canvas.mjs` |
 | `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | `@inneranimalmedia/ecommerce-cms-agentsam` | `bin/ecommerce.mjs` |
 | `goalguru` | AgentSam GoalGuru | `@inneranimalmedia/agentsam-goalguru` | — |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
