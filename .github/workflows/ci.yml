@@ -417,6 +417,19 @@ jobs:
           cache: npm
       - name: Install root dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Ecommerce CMS test-only dependency
+        run: |
+          jsdom_version="$(node -p 'require("./apps/ecommerce-cms-agentsam/package.json").devDependencies.jsdom')"
+          test_deps="$RUNNER_TEMP/ecommerce-cms-test-deps"
+          mkdir -p "$test_deps"
+          printf '{"private":true}\n' > "$test_deps/package.json"
+          npm install --prefix "$test_deps" --no-save --package-lock=false --install-strategy=nested --ignore-scripts --no-audit --no-fund "jsdom@$jsdom_version"
+          # Keep test-only dependencies out of the root workspace reifier.
+          # Nested install keeps jsdom's own dependency tree beside the package.
+          if [ ! -e "$GITHUB_WORKSPACE/node_modules/jsdom/package.json" ]; then
+            ln -s "$test_deps/node_modules/jsdom" "$GITHUB_WORKSPACE/node_modules/jsdom"
+          fi
+          JSDOM_EXPECTED_VERSION="$jsdom_version" node -e 'const p=require("./node_modules/jsdom/package.json"); if(p.version!==process.env.JSDOM_EXPECTED_VERSION) throw new Error("ecommerce_jsdom_version_mismatch")'
       - name: Build packaged portable contracts
         run: npm run build:contracts
       - name: Check Ecommerce standalone npm prerequisites
@@ -453,18 +466,17 @@ jobs:
             packages/connectors/cfoa/tests/capabilities.test.mjs
       - name: Install Local Studio build dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
-      - name: Reuse root and Local Studio dependencies for Ecommerce monorepo build
+      - name: Reuse root dependencies for Ecommerce backend tests
         run: |
           rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
           ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
-          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
-          mkdir -p node_modules/@types
-          for package in node react react-dom; do
-            if [ -d "apps/local-studio/node_modules/@types/$package" ]; then
-              rm -rf "node_modules/@types/$package"
-              ln -s "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/$package" "node_modules/@types/$package"
-            fi
-          done
+          # Do not symlink frontend/node_modules to the shared root. The
+          # Local Studio staging script runs the frontend's own locked npm ci
+          # when its isolated dependency tree is absent; npm ci must never
+          # receive a symlink to (and remove) the root workspace node_modules.
+          test -f node_modules/react/package.json
+          test -f node_modules/@types/react/index.d.ts
+          test -f node_modules/@inneranimalmedia/analytics-ui/package.json
       - name: Assemble hosted Local Studio Worker and assets
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output
