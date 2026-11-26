@@ -33,7 +33,7 @@
     "preverify:cms": "node scripts/compile-portable-styles.mjs",
     "sync:identity-portals": "node scripts/sync-identity-portals.mjs",
     "sync:identity-migration": "node scripts/sync-identity-migration.mjs",
-    "test:storefront-identity": "node --test tests/storefront-identity-migration.test.mjs tests/storefront-identity-portals.test.mjs tests/customer-account-portal-registry.test.mjs tests/storefront-access-gate.test.mjs",
+    "test:storefront-identity": "node --test tests/storefront-identity-migration.test.mjs tests/storefront-identity-portals.test.mjs tests/customer-account-portal-registry.test.mjs tests/storefront-access-gate.test.mjs tests/storefront-identity-package-boundary.test.mjs",
     "sync:theme-embed-catalog": "node scripts/sync-theme-embed-catalog.mjs"
   },
   "dependencies": {
