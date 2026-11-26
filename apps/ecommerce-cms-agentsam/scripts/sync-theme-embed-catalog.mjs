@@ -22,6 +22,8 @@ const apps = [];
 for (const file of manifests) {
   const manifest = JSON.parse(await readFile(file, 'utf8'));
   for (const embed of manifest.storefront_embeds || []) {
+    if (embed.installable === false || !Array.isArray(embed.surfaces) ||
+        !embed.surfaces.includes('storefront_embed')) continue;
     if (!embed.key || apps.some(entry => entry.key === embed.key)) throw Error('Duplicate or invalid embed: ' + embed.key);
     apps.push({
       key: embed.key, name: embed.name, icon: embed.icon, tagline: embed.tagline,
