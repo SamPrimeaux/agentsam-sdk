@@ -38,6 +38,9 @@ const workPackageRoot = resolvePath(
 const idePackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-ide", import.meta.url)),
 );
+const designCanvasPackageRoot = resolvePath(
+  fileURLToPath(new URL("../design-canvas", import.meta.url)),
+);
 const workbenchSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
 );
@@ -398,6 +401,10 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-analytics$/,
         replacement: resolvePath(analyticsPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-design-canvas\/react$/,
+        replacement: resolvePath(designCanvasPackageRoot, "src/index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-workbench\/capabilities$/,

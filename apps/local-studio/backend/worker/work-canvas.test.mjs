@@ -25,6 +25,36 @@ test('route recognition is narrow and validates nested documents and responsive 
  assert.equal(validateCanvasDocument({...doc,artboards:[{...board(),nodes:[{...node(),style:{background:'url(https://evil.example)'}}]}]}),false);
  assert.equal(validateCanvasDocument({...doc,artboards:[{...board(),nodes:[{...node(),responsive:{390:{width:320,style:{fontSize:24}}}}]}]}),true);
 });
+test('creative workspace artifacts persist through the same private Canvas artifact and list filter',async t=>{
+ const h=canvasStorageFixture();t.after(h.close);
+ await create(h); // An existing legacy Canvas remains outside the creative gallery.
+ const creativeId='canvas_creative-aabbccddeeff';
+ const artifact={
+  id:creativeId,type:'slides',name:'Brand Guidelines',createdAt:new Date().toISOString(),
+  updatedAt:new Date().toISOString(),workspace:'slides',
+  data:{slides:[{id:'slide_1234567890abcdef',name:'Cover',background:'#ffffff',objects:[{id:'object_1234567890abcdef',type:'text',name:'Title',x:30,y:30,w:400,h:80,text:'Brand Guidelines'}],notes:'',comments:[]}]}
+ };
+ const document={
+  ...blankCanvasDocument(),name:artifact.name,host:'slides',
+  artboards:[{id:'slide_1234567890abcdef',name:'Cover',x:0,y:0,width:1200,height:675,background:'#ffffff',nodes:[node()]}],
+  creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact}
+ };
+ const created=await call(h,'POST','',{id:creativeId,document});
+ assert.equal(created.status,201);
+ const payload=await created.json();
+ assert.equal(payload.canvas.creativeSchema,'agentsam.creative-workspace.v1');
+ assert.equal(payload.canvas.creativeType,'slides');
+ const list=await (await call(h,'GET','?workspace=creative')).json();
+ assert.deepEqual(list.canvases.map(item=>item.id),[creativeId]);
+ const reopened=await call(h,'GET','/'+creativeId);
+ assert.equal(reopened.status,200);
+ assert.deepEqual((await reopened.json()).document.creativeWorkspace.artifact,artifact);
+ const row=await h.DB.prepare('SELECT metadata_json FROM agentsam_artifacts WHERE id=?').bind(creativeId).first();
+ assert.equal(JSON.parse(row.metadata_json).creativeSchema,'agentsam.creative-workspace.v1');
+ const mismatched={...document,creativeWorkspace:{...document.creativeWorkspace,artifact:{...artifact,id:'canvas_different-aabbccddeeff'}}};
+ assert.equal(validateCanvasDocument(mismatched),true);
+ assert.equal((await call(h,'PUT','/'+creativeId,{document:mismatched},payload.canvas.contentHash)).status,400);
+});
 test('create is private, idempotent and exact durable bytes reopen',async t=>{
  const h=canvasStorageFixture();t.after(h.close);
  const a=await create(h);

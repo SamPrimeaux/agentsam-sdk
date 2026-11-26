@@ -23,7 +23,7 @@ import { NewTabStage } from "@/components/workbench/new-tab-stage";
 import { ItemStage } from "@/components/workbench/item-stage";
 import { StageIcon, TabItemIcon } from "@/components/workbench/stage-icons";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
-import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
+import { CreativeWorkspaceStage } from "@/components/workbench/creative-workspace-stage";
 import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
 import { MovieModeSurface } from "@/components/media/MovieModeSurface";
 import { DatabaseStage } from "@/components/workbench/database-stage";
@@ -293,7 +293,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         ) : <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage tab={tab} /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
-        {tab?.kind === "design" ? <CanvasEntryStage tab={tab} /> : null}
+        {tab?.kind === "design" ? <CreativeWorkspaceStage tab={tab} /> : null}
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}

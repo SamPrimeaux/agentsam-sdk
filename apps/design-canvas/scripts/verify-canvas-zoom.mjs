@@ -1,0 +1,56 @@
+import { spawn } from 'node:child_process';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const profile=await mkdtemp(join(tmpdir(),'agentsam-zoom-chrome-'));
+const previewPort = process.env.CANVAS_TEST_PORT || '4189';
+const previewScript = fileURLToPath(new URL('../bin/agentsam-design-canvas.mjs', import.meta.url));
+const server=spawn(process.execPath,[previewScript,'preview',previewPort],{stdio:'ignore'});
+const chrome=spawn(process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',['--headless=new','--no-first-run','--no-default-browser-check','--disable-gpu','--remote-debugging-port=0','--user-data-dir='+profile,'--window-size=1440,900','about:blank'],{stdio:'ignore'});
+let ws;
+try {
+ let port;
+ for(let i=0;i<50;i++){try{port=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]);if(port)break;}catch{}await sleep(100);}
+ assert.ok(port,'Chrome debugging endpoint');
+ const pages=await (await fetch('http://127.0.0.1:'+port+'/json/list')).json();
+ ws=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);
+ await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
+ let next=0;const pending=new Map();const exceptions=[];
+ ws.onmessage=e=>{const msg=JSON.parse(e.data);if(msg.id){const x=pending.get(msg.id);if(x){pending.delete(msg.id);msg.error?x.reject(new Error(JSON.stringify(msg.error))):x.resolve(msg.result);}} else if(msg.method==='Runtime.exceptionThrown')exceptions.push(msg.params.exceptionDetails.text+' '+(msg.params.exceptionDetails.exception?.description||''));};
+ const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++next;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
+ const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
+ async function waitFor(expression){for(let i=0;i<50;i++){if(await evaluate(expression))return;await sleep(100);}throw Error('Missing: '+expression);}
+ await call('Runtime.enable');await call('Page.enable');
+ await call('Page.navigate',{url:'http://127.0.0.1:'+previewPort+'/'});
+ await waitFor("!!document.querySelector('.dcx-create-tile.slides')");
+ await evaluate("document.querySelector('.dcx-create-tile.slides').click()");
+ await waitFor("!!document.querySelector('.dcx-zoom-viewport .dcx-editable-surface')");
+ await sleep(500);
+ const geom=()=>evaluate("(()=>{const v=document.querySelector('.dcx-zoom-viewport'),a=v.querySelector('.dcx-editable-surface'),vr=v.getBoundingClientRect(),ar=a.getBoundingClientRect();return {x:ar.x,y:ar.y,w:ar.width,h:ar.height,vx:vr.x,vy:vr.y,vw:v.clientWidth,vh:v.clientHeight,sx:v.scrollLeft,sy:v.scrollTop};})()");
+ const a=await geom();console.log('fit',a);
+ assert.ok(Math.abs(a.x+a.w/2-(a.vx+a.vw/2))<3,'horizontal fit centered');
+ assert.ok(Math.abs(a.y+a.h/2-(a.vy+a.vh/2))<3,'vertical fit centered');
+ const x=Math.round(a.x+a.w*.65),y=Math.round(a.y+a.h*.35);
+ await call('Input.dispatchMouseEvent',{type:'mouseWheel',x,y,deltaX:0,deltaY:-120});await sleep(300);
+ const b=await geom();console.log('wheel zoom',b);
+ assert.ok(b.w>a.w*1.15,'mouse wheel zoomed in');
+ assert.ok(Math.abs((x-a.x)/a.w-(x-b.x)/b.w)<.012,'horizontal cursor anchoring');
+ assert.ok(Math.abs((y-a.y)/a.h-(y-b.y)/b.h)<.012,'vertical cursor anchoring');
+ await call('Input.dispatchMouseEvent',{type:'mouseWheel',x,y,deltaX:0,deltaY:-60,modifiers:2});await sleep(250);
+ const c=await geom();assert.ok(c.w>b.w,'pinch modifier zoomed');
+ await call('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'middle',buttons:4,clickCount:1});
+ await call('Input.dispatchMouseEvent',{type:'mouseMoved',x:x+70,y:y+35,button:'middle',buttons:4});
+ await call('Input.dispatchMouseEvent',{type:'mouseReleased',x:x+70,y:y+35,button:'middle',buttons:0,clickCount:1});await sleep(150);
+ const d=await geom();console.log('pan',d);
+ assert.ok(Math.abs(c.sx-d.sx-70)<3,'middle-drag horizontal pan');
+ assert.ok(Math.abs(c.sy-d.sy-35)<3,'middle-drag vertical pan');
+ await evaluate("document.querySelector('.dcx-zoom-viewport').focus()");
+ await call('Input.dispatchKeyEvent',{type:'keyDown',key:'0',code:'Digit0'});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'0',code:'Digit0'});await sleep(300);
+ const e=await geom();console.log('fit reset',e);
+ assert.ok(Math.abs(e.w-a.w)<3 && Math.abs(e.x-a.x)<3 && Math.abs(e.y-a.y)<3,'fit reset');
+ assert.deepEqual(exceptions,[]);
+ console.log('PASS: real Chrome wheel, cursor anchor, pinch-event, middle-drag, and fit reset; no runtime exceptions');
+} finally {ws?.close();chrome.kill();server.kill();await sleep(300);await rm(profile,{recursive:true,force:true}).catch(()=>{});}

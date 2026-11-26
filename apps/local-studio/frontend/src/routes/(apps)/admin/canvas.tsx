@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
+import { CreativeWorkspaceStage } from "@/components/workbench/creative-workspace-stage";
 import { useWorkStore } from "@/lib/work/store";
 
 type CanvasSearch = { canvas?: string; host?: string; site_id?: string; template?: string; library?: "sources" };
@@ -48,6 +49,6 @@ function CanvasPage() {
     setTabId(id);
   }, [hydrated, search]);
   return <div className="h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-background" data-design-workspace="canvas">
-    {tab ? <CanvasEntryStage tab={tab} openSources={search.library === "sources"} /> : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
+    {tab ? (search.site_id || (search.host && !["slides","design","code","system","whiteboard"].includes(search.host)) ? <CanvasEntryStage tab={tab} openSources={search.library === "sources"} /> : <CreativeWorkspaceStage tab={tab} />) : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
   </div>;
 }
