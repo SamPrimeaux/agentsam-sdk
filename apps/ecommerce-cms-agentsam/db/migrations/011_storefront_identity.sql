@@ -1,4 +1,4 @@
--- GENERATED FILE. Source of truth: @inneranimalmedia/agentsam-identity portable D1 migrations.
+-- GENERATED FILE. Source of truth: @inneranimalmedia/agentsam-sdk/identity portable D1 migrations.
 
 -- The host Ecommerce accounts table is merchant-owned; migration 008_identity_accounts.sql is intentionally excluded.
 
