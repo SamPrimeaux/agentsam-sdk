@@ -184,6 +184,20 @@ export function createAgentControlHttpHandler({
         return json(run, 202);
       }
 
+      if (action === 'timeout') {
+        requireMethod(request, ['POST']);
+        if (typeof adapter.timeout !== 'function') {
+          return json(errorBody(Object.assign(new Error('timeout_not_supported'), { code: 'timeout_not_supported' })), 501);
+        }
+        const run = await adapter.timeout(runId, await readJson(request));
+        if (!run) {
+          const error = new Error(`run_not_found:${runId}`);
+          error.code = 'run_not_found';
+          throw error;
+        }
+        return json(run, 202);
+      }
+
       if (action === 'receipt') {
         requireMethod(request, ['GET']);
         const receipt = await adapter.receipt(runId);

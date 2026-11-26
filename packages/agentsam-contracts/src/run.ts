@@ -1,8 +1,8 @@
 import type { AgentRun, AgentRunStatus } from './agent';
 
-/** Exact status vocabulary accepted by migrations/runtime/0001_cli_runtime.sql. */
+/** Exact persisted status vocabulary accepted by the canonical D1 agentsam_agent_run table. */
 export const AGENT_RUN_STORAGE_STATUSES = [
-  'queued', 'running', 'paused', 'completed', 'failed', 'partial', 'cancelled',
+  'queued', 'running', 'completed', 'failed', 'partial', 'cancelled',
 ] as const;
 export type AgentRunStorageStatus = typeof AGENT_RUN_STORAGE_STATUSES[number];
 

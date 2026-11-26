@@ -23,9 +23,9 @@ export interface AgentInput {
 }
 
 export const AGENT_RUN_MODES = ['ask', 'plan', 'agent', 'debug', 'multitask'] as const;
-export const AGENT_RUN_SELECTED_BY = ['manual', 'automatic', 'fallback'] as const;
+export const AGENT_RUN_SELECTED_BY = ['manual', 'thompson', 'fallback'] as const;
 export const AGENT_RUN_STATUSES = [
-  'queued', 'running', 'paused', 'waiting_external', 'waiting_child',
+  'queued', 'running', 'waiting_external', 'waiting_child',
   'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
   'partial', 'completed', 'cancelled', 'failed', 'timed_out',
 ] as const;

@@ -10,6 +10,8 @@ export {
   appendAgentRunEvent,
   recordAgentRunTimeout,
   createLocalQueueControl,
+  createDatabaseQueueControl,
+  createD1QueueControl,
   spawnChildRun,
   reconcileParentAfterChildTerminal,
 } from './dependencies.js';

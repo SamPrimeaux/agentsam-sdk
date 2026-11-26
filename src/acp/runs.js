@@ -31,6 +31,7 @@ export async function createRootRun(database, {
   priority = 'normal',
   sourceClient = 'agentsam-acp',
   surface = 'control-plane',
+  queueControl = null,
 } = {}) {
   if (!database || typeof database.prepare !== 'function') {
     throw new TypeError('database with prepare() is required');
@@ -50,7 +51,7 @@ export async function createRootRun(database, {
       id, account_id, conversation_id, source_client, surface, mode, model_key,
       reasoning_effort, requested_service_tier, selected_by, status,
       created_at_unix, updated_at_unix
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'automatic', 'queued', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'fallback', 'queued', ?, ?)
   `).bind(
     id,
     account,
@@ -89,8 +90,8 @@ export async function createRootRun(database, {
     createdAt: now,
   });
 
-  const queueControl = createLocalQueueControl(database);
-  const queued = await queueControl.enqueue(
+  const queue = queueControl || createLocalQueueControl(database);
+  const queued = await queue.enqueue(
     {
       kind: 'agent.run',
       account_id: account,

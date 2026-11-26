@@ -41,6 +41,7 @@ export class SqliteQueueAdapter {
     database,
     leaseOwner = 'sqlite-' + process.pid,
     leaseTtlSeconds = 60,
+    provider = 'sqlite',
   } = {}) {
     if (!database || typeof database.prepare !== 'function') {
       throw new TypeError('database with prepare() is required');
@@ -48,6 +49,7 @@ export class SqliteQueueAdapter {
     this.database = database;
     this.leaseOwner = clean(leaseOwner) || ('sqlite-' + process.pid);
     this.leaseTtlSeconds = Math.max(1, Number(leaseTtlSeconds) || 60);
+    this.provider = clean(provider) || 'sqlite';
   }
 
   async publish(queue, job) {
@@ -61,7 +63,7 @@ export class SqliteQueueAdapter {
 
     if (existing && existing.id !== job.id) {
       return {
-        provider: 'sqlite',
+        provider: this.provider,
         queue: physicalQueue,
         accepted: 0,
         deduplicated: true,
@@ -120,7 +122,7 @@ export class SqliteQueueAdapter {
       now,
     ).run();
 
-    return { provider: 'sqlite', queue: physicalQueue, accepted: 1, deduplicated: false };
+    return { provider: this.provider, queue: physicalQueue, accepted: 1, deduplicated: false };
   }
 
   async publishBatch(queue, jobs) {
@@ -131,7 +133,7 @@ export class SqliteQueueAdapter {
       accepted += Number(result.accepted || 0);
       if (result.deduplicated) deduplicated += 1;
     }
-    return { provider: 'sqlite', queue, accepted, deduplicated };
+    return { provider: this.provider, queue, accepted, deduplicated };
   }
 
   async pull(queue, max = 1, {
@@ -207,7 +209,7 @@ export class SqliteQueueAdapter {
       now,
       id,
     ).run();
-    return { provider: 'sqlite', job_id: id, status, updated: changes(update) };
+    return { provider: this.provider, job_id: id, status, updated: changes(update) };
   }
 
   async release(jobOrId, {
@@ -225,7 +227,7 @@ export class SqliteQueueAdapter {
     const update = await this.database.prepare(sql).bind(
       status, available_at, now, id
     ).run();
-    return { provider: 'sqlite', job_id: id, status, updated: changes(update), available_at };
+    return { provider: this.provider, job_id: id, status, updated: changes(update), available_at };
   }
 
   async get(id) {
@@ -251,7 +253,7 @@ export class SqliteQueueAdapter {
   async ensureTopology(topology) {
     await this.database.prepare('SELECT id FROM agentsam_queue_job LIMIT 1').all();
     return {
-      provider: 'sqlite',
+      provider: this.provider,
       created: [],
       existing: [...new Set(Object.values(topology?.routes || {}))],
     };

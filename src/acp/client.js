@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createLocalSqliteDatabase } from '../local/sqlite.js';
 import { applyRuntimeMigrations } from '../local/migrations.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
-import { spawnChildRun } from './dependencies.js';
+import { appendAgentRunEvent, recordAgentRunTimeout, spawnChildRun } from './dependencies.js';
 import { createRootRun } from './runs.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
@@ -87,23 +87,49 @@ async function withLocalDb(cwd, fn) {
   try { await applyRuntimeMigrations(db); return await fn(db); } finally { db.close(); }
 }
 
+async function readRunRow(database, accountId, id) {
+  const owner = clean(accountId);
+  const query = database.prepare(
+    RUN_JOIN + (owner ? ' WHERE r.id = ? AND r.account_id = ? LIMIT 1' : ' WHERE r.id = ? LIMIT 1')
+  );
+  return owner ? query.bind(id, owner).first() : query.bind(id).first();
+}
+
 export class DatabaseAgentControlClient {
-  constructor({ database, kind = 'database' } = {}) {
+  constructor({
+    database,
+    kind = 'database',
+    accountId = null,
+    queueControl = null,
+    onTimeout = null,
+    requireAccount = false,
+  } = {}) {
     if (!database || typeof database.prepare !== 'function') {
       throw new TypeError('database with prepare() is required');
     }
     this.database = database;
     this.kind = clean(kind) || 'database';
+    this.accountId = clean(accountId) || null;
+    this.queueControl = queueControl;
+    this.onTimeout = typeof onTimeout === 'function' ? onTimeout : null;
+    this.requireAccount = Boolean(requireAccount);
   }
 
   async getRun(id) {
-    return mapRun(await this.database.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first());
+    return mapRun(await readRunRow(this.database, this.accountId, id));
   }
 
   async start(input = {}) {
+    const accountId = this.accountId || clean(input.account_id ?? input.accountId) || null;
+    if (this.requireAccount && !accountId) {
+      const error = new Error('authenticated_account_required');
+      error.code = 'authenticated_account_required';
+      error.status = 401;
+      throw error;
+    }
     return createRootRun(this.database, {
       runId: input.run_id ?? input.runId ?? null,
-      accountId: input.account_id ?? input.accountId ?? null,
+      accountId,
       conversationId: input.conversation_id ?? input.conversationId ?? null,
       objective: input.objective ?? '',
       role: input.role ?? 'lead',
@@ -116,22 +142,31 @@ export class DatabaseAgentControlClient {
       priority: input.priority ?? 'normal',
       sourceClient: input.source_client ?? input.sourceClient ?? 'agentsam-acp',
       surface: input.surface ?? 'control-plane',
+      queueControl: this.queueControl,
     });
   }
 
   async events(id, { after = -1, limit = 200 } = {}) {
+    const accountClause = this.accountId ? ' AND r.account_id = ?' : '';
+    const params = this.accountId
+      ? [id, this.accountId, Math.max(-1, Number(after)), Math.max(1, Math.min(1000, Number(limit)))]
+      : [id, Math.max(-1, Number(after)), Math.max(1, Math.min(1000, Number(limit)))];
     const result = await this.database.prepare(`
-      SELECT * FROM agentsam_agent_run_event
-      WHERE run_id = ? AND seq > ?
-      ORDER BY seq ASC LIMIT ?
-    `).bind(id, Math.max(-1, Number(after)), Math.max(1, Math.min(1000, Number(limit)))).all();
+      SELECT e.*
+      FROM agentsam_agent_run_event e
+      JOIN agentsam_agent_run r ON r.id = e.run_id
+      WHERE e.run_id = ?${accountClause} AND e.seq > ?
+      ORDER BY e.seq ASC LIMIT ?
+    `).bind(...params).all();
     return (result.results || []).map(mapEvent);
   }
 
   async tree(id) {
+    const rootFilter = this.accountId ? 'id = ? AND account_id = ?' : 'id = ?';
+    const rootParams = this.accountId ? [id, this.accountId] : [id];
     const result = await this.database.prepare(`
       WITH RECURSIVE descendants(id, depth, path) AS (
-        SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE id = ?
+        SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE ${rootFilter}
         UNION ALL
         SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','
         FROM agentsam_agent_run child
@@ -148,7 +183,7 @@ export class DatabaseAgentControlClient {
       JOIN agentsam_agent_run r ON r.id = descendants.id
       LEFT JOIN agentsam_agent_run_suspension s ON s.run_id = r.id
       ORDER BY descendants.depth, r.created_at_unix, r.id
-    `).bind(id).all();
+    `).bind(...rootParams).all();
     const rows = result.results || [];
     if (!rows.length) return null;
     const byId = new Map(rows.map((row) => [
@@ -167,7 +202,7 @@ export class DatabaseAgentControlClient {
     return spawnChildRun(this.database, {
       parentRunId: id,
       childRunId: input.child_run_id ?? input.childRunId ?? null,
-      accountId: input.account_id ?? input.accountId ?? null,
+      accountId: this.accountId || input.account_id || input.accountId || null,
       objective: input.objective ?? '',
       role: input.role ?? input.role_slug ?? null,
       workItemId: input.work_item_id ?? input.workItemId ?? null,
@@ -178,37 +213,73 @@ export class DatabaseAgentControlClient {
       runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
       metadata: input.metadata ?? {},
       priority: input.priority ?? 'normal',
+      queueControl: this.queueControl,
     });
   }
 
   async cancel(id) {
-    const row = await this.database.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first();
+    const row = await readRunRow(this.database, this.accountId, id);
     if (!row) return null;
     const run = mapRun(row);
     if (isTerminal(run.status)) return { ...run, cancelAccepted: false };
 
-    await this.database.prepare(
-      'UPDATE agentsam_agent_run SET cancel_requested=1, updated_at_unix=unixepoch() WHERE id=?'
-    ).bind(id).run();
-    const seqRow = await this.database.prepare(
-      'SELECT COALESCE(MAX(seq), -1) + 1 AS next_seq FROM agentsam_agent_run_event WHERE run_id=?'
-    ).bind(id).first();
-    await this.database.prepare(`
-      INSERT OR IGNORE INTO agentsam_agent_run_event (
-        event_id, run_id, parent_run_id, seq, event_type, phase, label,
-        source_kind, evidence_json, dedupe_key
-      ) VALUES (?, ?, ?, ?, 'run.cancel_requested', 'recover', ?, 'sam', ?, ?)
-    `).bind(
-      `evt_${randomUUID()}`,
-      id,
-      row.parent_run_id || null,
-      Number(seqRow?.next_seq || 0),
-      'Cancellation requested',
-      JSON.stringify({ requested_by: 'user' }),
-      `cancel:${id}`,
-    ).run();
+    const update = this.accountId
+      ? this.database.prepare('UPDATE agentsam_agent_run SET cancel_requested=1, updated_at_unix=unixepoch() WHERE id=? AND account_id=?').bind(id, this.accountId)
+      : this.database.prepare('UPDATE agentsam_agent_run SET cancel_requested=1, updated_at_unix=unixepoch() WHERE id=?').bind(id);
+    await update.run();
+    await appendAgentRunEvent(this.database, {
+      runId: id,
+      parentRunId: row.parent_run_id || null,
+      eventType: 'run.cancel_requested',
+      phase: 'recover',
+      label: 'Cancellation requested',
+      sourceKind: 'sam',
+      evidence: { requested_by: 'user' },
+      dedupeKey: `cancel:${id}`,
+    });
 
     return { ...(await this.getRun(id)), cancelAccepted: true };
+  }
+
+  async timeout(id, input = {}) {
+    const row = await readRunRow(this.database, this.accountId, id);
+    if (!row) return null;
+    const errorCode = clean(input.error_code ?? input.errorCode) || 'run_timeout';
+    const errorMessage = clean(input.error_message ?? input.errorMessage) || 'Agent run timed out';
+    const createdAt = Number.isFinite(Number(input.created_at_unix ?? input.createdAt))
+      ? Math.trunc(Number(input.created_at_unix ?? input.createdAt))
+      : Math.floor(Date.now() / 1000);
+    const result = await recordAgentRunTimeout(this.database, {
+      runId: id,
+      accountId: this.accountId,
+      errorCode,
+      errorMessage,
+      createdAt,
+    });
+    const updatedRow = await readRunRow(this.database, this.accountId, id);
+    if (!updatedRow) return null;
+
+    let analytics = null;
+    if (this.onTimeout && result.status === 'timed_out') {
+      try {
+        analytics = await this.onTimeout({
+          run: updatedRow,
+          event: result.event,
+          errorCode,
+          createdAt,
+          result,
+        });
+      } catch (error) {
+        analytics = { ok: false, error: String(error?.message || error).slice(0, 240) };
+      }
+    }
+
+    return {
+      ...mapRun(updatedRow),
+      timeoutRecorded: Boolean(result.recorded),
+      timeout: result,
+      analytics,
+    };
   }
 
   /** @returns {Promise<import('@inneranimalmedia/agentsam-contracts').AgentRunReceiptV1 | null>} */
@@ -268,6 +339,7 @@ export class LocalAgentControlClient {
   getRun(id) { return this.#withClient((client) => client.getRun(id)); }
   start(input = {}) { return this.#withClient((client) => client.start(input)); }
   events(id, options = {}) { return this.#withClient((client) => client.events(id, options)); }
+  timeout(id, input = {}) { return this.#withClient((client) => client.timeout(id, input)); }
   tree(id) { return this.#withClient((client) => client.tree(id)); }
   spawn(id, input = {}) { return this.#withClient((client) => client.spawn(id, input)); }
   cancel(id) { return this.#withClient((client) => client.cancel(id)); }
@@ -307,17 +379,27 @@ export class HttpAgentControlClient {
     return this.request(`/v1/runs/${encodeURIComponent(id)}/spawn`, { method: 'POST', body: JSON.stringify(input) });
   }
   cancel(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: '{}' }); }
+  timeout(id, input = {}) {
+    return this.request(`/v1/runs/${encodeURIComponent(id)}/timeout`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
   receipt(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/receipt`); }
 }
 
 export function createAgentControlClient({
   cwd = process.cwd(),
   url = process.env.AGENTSAM_CONTROL_PLANE_URL || '',
-  token = process.env.AGENTSAM_CONTROL_PLANE_TOKEN || '',
+  token = process.env.AGENTSAM_CONTROL_PLANE_TOKEN || process.env.AGENTSAM_API_KEY || '',
   local = false,
   fetchImpl = globalThis.fetch,
 } = {}) {
-  return clean(url) && !local
-    ? new HttpAgentControlClient({ baseUrl: url, token, fetchImpl })
-    : new LocalAgentControlClient({ cwd });
+  if (local) return new LocalAgentControlClient({ cwd });
+  if (clean(url)) return new HttpAgentControlClient({ baseUrl: url, token, fetchImpl });
+  const error = new Error(
+    'agentsam_control_plane_url_required: set AGENTSAM_CONTROL_PLANE_URL or pass --local for an explicit development database',
+  );
+  error.code = 'agentsam_control_plane_url_required';
+  throw error;
 }
