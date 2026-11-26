@@ -53,6 +53,7 @@
             <button type="button" class="is-active" data-section-link="access"><span class="sp-nav-icon">⌑</span><span>Access</span></button>
             <button type="button" data-section-link="search"><span class="sp-nav-icon">⌕</span><span>Search & sharing</span></button>
             <button type="button" data-section-link="identity"><span class="sp-nav-icon">◈</span><span>Storefront identity</span></button>
+            <button type="button" data-section-link="navigation"><span class="sp-nav-icon">☷</span><span>Navigation</span></button>
             <button type="button" data-section-link="announcement"><span class="sp-nav-icon">▤</span><span>Announcement</span></button>
             <button type="button" data-section-link="discovery"><span class="sp-nav-icon">◎</span><span>Search discovery</span></button>
             <div class="sp-nav-footnote">Settings apply to the selected website only.</div>
@@ -237,9 +238,18 @@
               </article>
             </section>
 
+            <section class="sp-section" id="section-navigation" data-section="navigation">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">04 / NAVIGATION</div>
+                <h2>Website menus</h2>
+                <p>Manage published header and footer menus for this website using the existing CMS navigation records.</p>
+              </div>
+              <div class="sp-card" id="preferences-navigation" data-site-id=""><p class="sp-menu-panel sp-menu-muted" role="status">Select a website to load its menus.</p></div>
+            </section>
+
             <section class="sp-section" id="section-announcement" data-section="announcement">
               <div class="sp-section-heading">
-                <div class="sp-section-kicker">04 / ANNOUNCEMENT</div>
+                <div class="sp-section-kicker">05 / ANNOUNCEMENT</div>
                 <h2>Announcement banner</h2>
                 <p>Share a short, timely message across your storefront without editing every page.</p>
               </div>
@@ -269,7 +279,7 @@
 
             <section class="sp-section" id="section-discovery" data-section="discovery">
               <div class="sp-section-heading">
-                <div class="sp-section-kicker">05 / DISCOVERY</div>
+                <div class="sp-section-kicker">06 / DISCOVERY</div>
                 <h2>Search discovery</h2>
                 <p>Check the public files search engines use to discover your published pages and products.</p>
               </div>
@@ -325,5 +335,6 @@
     `);
   </script>
   <script src="/admin/js/preferences.js"></script>
+  <script src="/admin/js/preferences-navigation.js" defer></script>
 </body>
 </html>

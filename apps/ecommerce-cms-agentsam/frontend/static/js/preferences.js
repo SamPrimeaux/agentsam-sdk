@@ -16,6 +16,8 @@
     loading: true,
     loadedSiteId: null,
     checking: false,
+    navigationDirty: false,
+    navigationSaving: false,
     availableAssets: [],
     pickerKind: "social",
   };
@@ -41,11 +43,11 @@
     const controls = $("preferences-controls");
     if (controls) controls.disabled = busy || !ready;
     const select = $("site-select");
-    if (select) select.disabled = busy || state.checking || state.sites.length < 2;
+    if (select) select.disabled = busy || state.checking || state.navigationSaving || state.sites.length < 2;
     const fallback = $("save-preferences-fallback");
     if (fallback) {
       fallback.hidden = typeof window.publishDockEdit === "function";
-      fallback.disabled = busy || !ready || !state.dirty;
+      fallback.disabled = busy || state.navigationSaving || !ready || !state.dirty;
       fallback.textContent = state.saving ? "Saving…" : "Save changes";
     }
     const retry = $("retry-preferences");
@@ -63,7 +65,7 @@
       active: true,
       hint: `${state.site?.name || "Website"} preferences`,
       dirty: true,
-      canSave: !state.saving && !state.loading && state.loadedSiteId === state.siteId,
+      canSave: !state.saving && !state.loading && !state.navigationSaving && state.loadedSiteId === state.siteId,
       saveLabel: state.saving ? "Saving…" : "Save changes",
       onSave: savePreferences,
       discardHref: window.location.pathname + window.location.search,
@@ -329,7 +331,7 @@
   }
 
   async function savePreferences() {
-    if (!state.dirty || state.saving || state.loading || state.loadedSiteId !== state.siteId) return;
+    if (!state.dirty || state.saving || state.loading || state.navigationSaving || state.loadedSiteId !== state.siteId) return;
     let settings;
     try { settings = collectSettings(); }
     catch (error) { notify(error.message, "error"); throw error; }
@@ -366,7 +368,9 @@
   }
 
   async function loadOverview() {
+    const selectedSiteId = state.siteId;
     const overview = await adminFetch(`/api/admin/store/online${siteQuery()}`);
+    if (selectedSiteId !== state.siteId) return;
     state.overview = overview;
     renderSiteContext();
   }
@@ -378,6 +382,7 @@
     ]);
     state.loadedSiteId = state.siteId;
     applySettings(data);
+    $("preferences-navigation").dataset.siteId = state.siteId;
     await refreshCrawlerDashboard();
   }
 
@@ -425,6 +430,9 @@
     state.loading = true;
     state.loadedSiteId = null;
     state.dirty = false;
+    state.navigationDirty = false;
+    state.navigationSaving = false;
+    $("preferences-navigation").dataset.siteId = "";
     $("store-password").value = "";
     $("store-password-confirm").value = "";
     $("prefs-assets-dialog")?.close();
@@ -442,12 +450,12 @@
   }
 
   async function switchSite(nextSiteId) {
-    if (state.loading || state.saving || state.checking || !state.sites.some(site => site.id === nextSiteId)) {
+    if (state.loading || state.saving || state.checking || state.navigationSaving || !state.sites.some(site => site.id === nextSiteId)) {
       $("site-select").value = state.siteId || "";
       return;
     }
     if (nextSiteId === state.siteId) return;
-    if (state.dirty && !window.confirm("You have unsaved changes. Switch websites and discard them?")) {
+    if ((state.dirty || state.navigationDirty) && !window.confirm("You have unsaved changes. Switch websites and discard them?")) {
       $("site-select").value = state.siteId;
       return;
     }
@@ -736,8 +744,14 @@
     bindColorPair("announcement-text-color", "announcement-text-color-text");
     $("crawler-refresh-btn")?.addEventListener("click", refreshCrawlerDashboard);
 
+    window.addEventListener("agentsam:preferences-navigation-activity", (event) => {
+      if (event.detail?.siteId !== state.siteId || state.loadedSiteId !== state.siteId) return;
+      state.navigationDirty = event.detail.dirty === true;
+      state.navigationSaving = event.detail.saving === true;
+      publishDockState();
+    });
     window.addEventListener("beforeunload", (event) => {
-      if (!state.dirty) return;
+      if (!state.dirty && !state.navigationDirty && !state.saving && !state.navigationSaving) return;
       event.preventDefault();
       event.returnValue = "";
     });
