@@ -87,7 +87,7 @@ test('site-owned pages preview and publish from canonical cms_pages when the dra
 
   const preview=await previewMerchantPage(env,'owner1','site_one','work/fuelnfreetime',pageId);
   assert.equal(preview.ok,true,JSON.stringify(preview));
-  assert.match(preview.html,/<h1>Fuel N Free Time<\\/h1>/);
+  assert.ok(preview.html.includes('<h1>Fuel N Free Time</h1>'));
   assert.match(preview.html,/noindex,nofollow/);
 
   const published=await publishMerchantPage(env,'owner1','site_one','work/fuelnfreetime',pageId);
