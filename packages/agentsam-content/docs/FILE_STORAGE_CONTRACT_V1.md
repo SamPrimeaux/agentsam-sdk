@@ -30,7 +30,7 @@ An authorization decision or UI's Connected badge is not proof of valid byte acc
 
 ## Migration / compatibility
 
-Existing `ContentAsset.providerRefs` lacking `targetId` remain readable by legacy content systems; the file service deliberately does **not** guess which customer bucket or device holds them. Hosts must resolve and attach a valid `targetId` using verified connection and provider context before file-level actions. This prevents ambiguous bucket selection and cross-account routing. Existing CoPro IndexedDB media and legacy browser assets remain intact; no automatic destructive migration is run by this package.
+Existing `ContentAsset.providerRefs` lacking `targetId` remain readable by legacy content systems; the file service deliberately does **not** guess which customer bucket or device holds them. Hosts must resolve and attach a valid `targetId` from an active `r2_storage_routes` → `r2_buckets` route or the relevant provider/device authority before file-level actions. This prevents ambiguous bucket selection and cross-account routing. Existing CoPro IndexedDB media and legacy browser assets remain intact; no automatic destructive migration is run by this package.
 
 ## Remaining host implementation gates (Phase 2+)
 
