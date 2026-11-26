@@ -81,7 +81,7 @@ if (!existsSync(path.join(appModules, '@inneranimalmedia/section-library/package
     cwd: app, stdio: 'inherit',
   });
 }
-execFileSync(process.execPath, [path.join(app, 'bin/build-assets.mjs')], { cwd: app, stdio: 'inherit' });
+execFileSync('npm', ['run', 'build'], { cwd: app, stdio: 'inherit' });
 for (const name of ['admin/home.html', 'admin/store.html', 'admin/js/shell.js', 'admin/css/console.css', 'admin/theme-editor.html']) {
   if (!existsSync(path.join(source, name))) throw new Error('Missing packaged console asset: ' + name);
 }
