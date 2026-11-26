@@ -118,8 +118,6 @@ CREATE TABLE IF NOT EXISTS agentsam_tools (
   tool_key TEXT,
   capability_key TEXT,
   handler_key TEXT,
-  route_key TEXT,
-  workflow_key TEXT,
   task_type TEXT DEFAULT 'tool_use',
   domain TEXT DEFAULT 'general',
   capability_tier TEXT DEFAULT 'common',
