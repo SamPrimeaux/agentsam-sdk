@@ -267,11 +267,33 @@ test('run projection validates durable suspension detail', async (t) => {
   assert.equal(validateRunReceipt(receipt), true, schemaAjv.errorsText(validateRunReceipt.errors));
 });
 
-test('timeout event exposes timed_out lifecycle status while storage remains failed', async (t) => {
-  const root = await fixture(t, { childStatus:'failed', timeoutChild:true });
+test('timeout persistence records a terminal event and projects timed_out over failed storage', async (t) => {
+  const root = await fixture(t, { suspendChild:true });
+  const db = await createLocalSqliteDatabase(runtimeDatabasePath(root));
+  try {
+    const first = await recordAgentRunTimeout(db, {
+      runId:'arun_child', errorCode:'deadline_exceeded',
+      errorMessage:'Child exceeded its deadline', createdAt:102,
+    });
+    assert.equal(first.recorded, true);
+    assert.equal(first.status, 'timed_out');
+    assert.equal(first.storageStatus, 'failed');
+    const repeated = await recordAgentRunTimeout(db, {
+      runId:'arun_child', errorCode:'deadline_exceeded',
+      errorMessage:'Child exceeded its deadline', createdAt:103,
+    });
+    assert.equal(repeated.recorded, false);
+  } finally { db.close(); }
+
   const client = new LocalAgentControlClient({ cwd: root });
   const run = await client.getRun('arun_child');
   assert.equal(run.status, 'timed_out');
   assert.equal(run.storageStatus, 'failed');
+  assert.equal(run.errorCode, 'deadline_exceeded');
+  assert.equal(run.errorMessage, 'Child exceeded its deadline');
+  assert.equal(run.suspension, null);
   assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
+  const receipt = await client.receipt('arun_child');
+  assert.equal(receipt.eventCount, 2);
+  assert.equal(validateRunReceipt(receipt), true, schemaAjv.errorsText(validateRunReceipt.errors));
 });
