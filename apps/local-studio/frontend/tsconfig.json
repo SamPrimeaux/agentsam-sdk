@@ -113,6 +113,9 @@
       ],
       "@inneranimalmedia/copro-media": [
         "../../../packages/copro-media/src/index.d.ts"
+      ],
+      "@inneranimalmedia/agentsam-design-canvas/react": [
+        "../../../apps/design-canvas/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,
