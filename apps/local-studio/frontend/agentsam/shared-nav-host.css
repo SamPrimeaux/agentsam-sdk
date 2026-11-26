@@ -206,3 +206,5 @@ body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-ex
  body.agentsam-shared-navigation:has(.as-nav-mobile-push-shell[data-open="true"]) .console-workspace{pointer-events:none}
  body.agentsam-shared-navigation:has(.as-nav-launch-dock[aria-label="Store navigation"]) .console-main{padding-bottom:max(84px,env(safe-area-inset-bottom,0px))}
 }
+
+@media(max-width:900px){body.agentsam-shared-navigation .console-workspace .as-nav-launch-dock{padding:4px;gap:3px;border-radius:999px}}

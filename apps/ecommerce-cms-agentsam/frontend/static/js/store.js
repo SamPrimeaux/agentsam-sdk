@@ -22,7 +22,7 @@ renderShell("/admin/store", `
     <dialog class="online-store-more-sheet" id="store-more-sheet" aria-labelledby="store-more-title">
       <header><h2 id="store-more-title">More options</h2><button type="button" id="store-more-close" aria-label="Close more options">×</button></header>
       <a href="/admin/store?view=themes" data-store-route>Manage all themes</a>
-      <a href="#theme-product-marketplace">Discover themes</a>
+      <a href="/admin/store?view=themes#theme-product-marketplace" data-store-route>Discover themes</a>
       <a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a>
     </dialog>
 

@@ -50,6 +50,6 @@ test('mobile store uses the selected site preferences contract and existing them
   assert.match(storeJs,/settings:\{passwordProtection:enabled\}/);
   assert.match(storeJs,/!settings\.hasStorePassword/);
   assert.match(storeJs,/Remove password protection for this website/);
-  assert.match(storeJs,/href="#store-themes-heading"/);
+  assert.match(storeJs,/href="\/admin\/store\?view=themes"/);
   assert.match(storeJs,/role="switch" aria-label="Password protection"/);
 });

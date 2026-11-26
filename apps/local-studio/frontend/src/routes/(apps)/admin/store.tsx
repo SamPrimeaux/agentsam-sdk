@@ -10,6 +10,7 @@ import { OnlineStorePage } from '@/components/store/OnlineStorePage';
  */
 export const Route = createFileRoute('/(apps)/admin/store')({
   validateSearch: (params: Record<string, unknown>) => ({
+    view: params.view === 'themes' ? 'themes' as const : undefined,
     site_id: typeof params.site_id === 'string' ? params.site_id : undefined,
     theme_sku: typeof params.theme_sku === 'string' ? params.theme_sku : undefined,
     theme_version: typeof params.theme_version === 'string' ? params.theme_version : undefined,
@@ -24,6 +25,6 @@ export const Route = createFileRoute('/(apps)/admin/store')({
     // /admin/sites executes one authenticated install request without previews.
     if (selected) return <Navigate to="/admin/sites" search={selected} replace />;
     if (search.stock) return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
-    return <OnlineStorePage siteId={search.site_id} />;
+    return <OnlineStorePage siteId={search.site_id} view={search.view} />;
   },
 });
