@@ -417,6 +417,10 @@ jobs:
           cache: npm
       - name: Install root dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Ecommerce CMS test-only dependency
+        run: |
+          jsdom_version="$(node -p 'require("./apps/ecommerce-cms-agentsam/package.json").devDependencies.jsdom')"
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund "jsdom@$jsdom_version"
       - name: Build packaged portable contracts
         run: npm run build:contracts
       - name: Check Ecommerce standalone npm prerequisites
