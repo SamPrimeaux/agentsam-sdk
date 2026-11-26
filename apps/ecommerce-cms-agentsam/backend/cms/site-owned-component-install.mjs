@@ -105,8 +105,11 @@ export async function installSiteOwnedStockOrEmbed(env,accountId,slug,siteId,pag
   if(packaged?.registry_required&&!registered)return error('cms_embed_registration_required',409);
   const embed=registered||packaged;
   if(registered) {
-    try {await readRegisteredEmbedRuntime(registered,env.EMBED_ARTIFACT_FETCH||fetch);}
-    catch(e){return error(String(e.message||e),503);}
+    try {
+      const runtime=await readRegisteredEmbedRuntime(registered,env.EMBED_ARTIFACT_FETCH||fetch);
+      if(runtime.previewOnly || registered.registration.previewOnly)
+        return error('cms_embed_release_preview_only',409);
+    } catch(e){return error(String(e.message||e),503);}
   }
   if(embed) {
     prepared=prepareEmbedInstance(embed,body.settings||body.config||{});
