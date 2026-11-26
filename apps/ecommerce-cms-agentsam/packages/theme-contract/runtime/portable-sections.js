@@ -10,46 +10,6 @@
  */
 (function (scope) {
   const f = (key, label, type = "text") => ({ key, label, type });
-  const heroFields = [
-    f("eyebrow", "Eyebrow"), f("headline", "Headline"),
-    f("subheadline", "Description", "textarea"),
-    f("imageUrl", "Background / side image", "media"),
-    f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
-    f("ctaPrimary.openInNewTab", "Open in new tab", "boolean"),
-  ];
-  const cards = [
-    f("title", "Heading"),
-    f("text", "Description", "textarea"),
-  ];
-  const imageCard = {
-    key: "collection-card", label: "Collection", repeatable: true, min: 0, max: 12,
-    fields: [f("name", "Name"), f("imageUrl", "Image", "media"), f("href", "Link", "link")],
-    defaultContent: { name: "New collection", imageUrl: "", href: "/shop" },
-  };
-  const detailCard = {
-    key: "detail-card", label: "Item", repeatable: true, min: 0, max: 12,
-    fields: [f("name", "Heading"), f("description", "Description", "textarea")],
-    defaultContent: { name: "New item", description: "Edit this description." },
-  };
-  const faqCard = {
-    key: "faq-item", label: "Question", repeatable: true, min: 0, max: 16,
-    fields: [f("question", "Question"), f("answer", "Answer", "textarea")],
-    defaultContent: { question: "Your question", answer: "Your answer." },
-  };
-  const buttonBlock = {
-    key: "button", label: "Button", category: "Basic", definitionKey: "button",
-    repeatable: true, min: 0, max: 4,
-    fields: [
-      f("label", "Label"),
-      f("href", "Link", "link"),
-      { key: "variant", label: "Style", type: "select", options: [
-        { label: "Solid", value: "solid" },
-        { label: "Outline", value: "outline" },
-        { label: "Text", value: "text" },
-      ] },
-    ],
-    defaultContent: { label: "Explore", href: "/shop", variant: "solid" },
-  };
   const spec = (id, label, family, fields, block = null, options = {}) => Object.freeze({
     id, label, type: family, family, source: id.split("/")[0],
     templateKey: "portable", preset: id,
