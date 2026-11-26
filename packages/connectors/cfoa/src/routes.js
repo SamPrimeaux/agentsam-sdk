@@ -455,8 +455,15 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       selectedAccountId ? { connectionId: selectedAccountId } : {},
     ).catch(() => null);
     const alreadyGranted = existingConnection && !existingConnection.account_selection_required
-      ? await activeGrantedScopes(env, ownerId, 'cloudflare', existingConnection.connectionId)
+      ? await activeGrantedScopes(options.permissionRegistry, {
+        ownerId,
+        providerKey: 'cloudflare',
+        accountIdentifier: existingConnection.connectionId,
+      })
       : [];
+    if (alreadyGranted === null) {
+      return json({ ok: false, error: 'cloudflare_granted_scope_registry_unavailable' }, 503);
+    }
     const scopes = [...new Set([...alreadyGranted, ...selection.scopes])];
     const saved = await saveOAuthState(env, {
       state,
