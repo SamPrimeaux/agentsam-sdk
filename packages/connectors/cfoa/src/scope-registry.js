@@ -219,16 +219,30 @@ export function filterToRegistry(scopes, catalog) {
   return strings(scopes).filter((scope) => catalog.availableScopes.has(scope));
 }
 
-/** Scopes already granted on the active connection; additions stay on that account. */
-export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflare', accountIdentifier = '') {
-  if (!env?.DB?.prepare || !ownerId || !accountIdentifier) return [];
+/**
+ * Scopes already granted on the active connection; additions stay on that account.
+ * The host owns the token store and supplies this provider-neutral reader.
+ *
+ * Returns null when the host cannot verify grants. Callers must fail closed rather
+ * than silently replacing an existing account's grants with a narrower selection.
+ */
+export async function activeGrantedScopes(permissionRegistry, {
+  ownerId,
+  providerKey = 'cloudflare',
+  accountIdentifier = '',
+} = {}) {
+  if (!ownerId || !accountIdentifier) return null;
+  const reader = permissionRegistry?.getActiveGrantedScopes;
+  if (typeof reader !== 'function') return null;
   try {
-    const row = await env.DB.prepare(
-      'SELECT scopes FROM user_oauth_tokens WHERE account_id = ? AND provider = ? ' +
-      'AND account_identifier = ? AND is_active = 1 AND revoked_at IS NULL LIMIT 1',
-    ).bind(ownerId, providerKey, accountIdentifier).first();
-    return String(row?.scopes || '').split(/\s+/).filter(Boolean);
+    const values = await reader.call(permissionRegistry, {
+      ownerId,
+      providerKey,
+      accountIdentifier,
+    });
+    if (values == null) return null;
+    return strings(Array.isArray(values) ? values : String(values).split(/\s+/));
   } catch {
-    return [];
+    return null;
   }
 }

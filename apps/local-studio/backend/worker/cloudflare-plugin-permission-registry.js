@@ -120,6 +120,19 @@ export function createPluginOAuthPermissionRegistry(env, options = {}) {
         availablePermissions: [...permissionRows.values()].sort((a, b) => a.scope.localeCompare(b.scope)),
       };
     },
+    async getActiveGrantedScopes({ ownerId, providerKey, accountIdentifier } = {}) {
+      if (!env?.DB?.prepare || !ownerId || !providerKey || !accountIdentifier) return null;
+      try {
+        const row = await env.DB.prepare(
+          'SELECT scopes FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)=LOWER(?) ' +
+          'AND account_identifier=? AND is_active=1 AND revoked_at IS NULL LIMIT 1',
+        ).bind(String(ownerId), String(providerKey), String(accountIdentifier)).first();
+        if (!row) return [];
+        return unique(String(row.scopes || '').split(/\s+/));
+      } catch {
+        return null;
+      }
+    },
   };
 }
 

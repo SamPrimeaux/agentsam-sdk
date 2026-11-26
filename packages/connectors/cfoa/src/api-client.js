@@ -75,6 +75,7 @@ export class CloudflareApiClient {
     connectionId = null,
     grantedScopes = [],
     capabilityId = null,
+    permissionCatalog = null,
     fetchImpl = globalThis.fetch,
     env = process.env,
   } = {}) {
@@ -85,6 +86,7 @@ export class CloudflareApiClient {
     this.connectionId = connectionId;
     this.grantedScopes = Array.isArray(grantedScopes) ? grantedScopes : [];
     this.capabilityId = capabilityId;
+    this.permissionCatalog = permissionCatalog;
     this.fetchImpl = bindFetchImpl(fetchImpl);
   }
 
@@ -224,6 +226,7 @@ export class CloudflareApiClient {
         operation,
         httpStatus: res.status,
         providerMessage: message,
+        permissionCatalog: this.permissionCatalog,
       })
       : null;
     return new CloudflareApiError(message, {
@@ -302,6 +305,7 @@ export async function createCloudflareApiClient(opts = {}) {
     connectionId: cred.connectionId,
     grantedScopes: cred.grantedScopes,
     capabilityId: opts.capabilityId || null,
+    permissionCatalog: opts.permissionCatalog || null,
     fetchImpl: opts.fetchImpl,
     env: {},
   });

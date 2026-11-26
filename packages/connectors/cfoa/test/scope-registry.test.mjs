@@ -132,22 +132,37 @@ test('available permissions are distinct from actual grants', () => {
   assert.deepEqual(filterToRegistry(['d1.read', 'invented.write'], catalog), ['d1.read']);
 });
 
-test('active grants are read from the connector token store and remain account-scoped', async () => {
-  let query = '';
-  const env = {
-    DB: {
-      prepare(sql) {
-        query = sql;
-        return {
-          bind(...args) {
-            assert.deepEqual(args, ['user-1', 'cloudflare', 'account-1']);
-            return { first: async () => ({ scopes: 'd1.read images.read' }) };
-          },
-        };
-      },
+test('active grants are read through the host adapter and remain account-scoped', async () => {
+  let request = null;
+  const permissionRegistry = {
+    async getActiveGrantedScopes(input) {
+      request = input;
+      return ['d1.read', 'images.read'];
     },
   };
-  assert.deepEqual(await activeGrantedScopes(env, 'user-1', 'cloudflare', 'account-1'), ['d1.read', 'images.read']);
-  assert.match(query, /user_oauth_tokens/);
-  assert.doesNotMatch(query, /agentsam_plugins|agentsam_provider_scopes/);
+  assert.deepEqual(await activeGrantedScopes(permissionRegistry, {
+    ownerId: 'user-1',
+    providerKey: 'cloudflare',
+    accountIdentifier: 'account-1',
+  }), ['d1.read', 'images.read']);
+  assert.deepEqual(request, {
+    ownerId: 'user-1',
+    providerKey: 'cloudflare',
+    accountIdentifier: 'account-1',
+  });
+});
+
+test('active grants fail closed when the host cannot verify the existing account grant', async () => {
+  assert.equal(await activeGrantedScopes({}, {
+    ownerId: 'user-1',
+    providerKey: 'cloudflare',
+    accountIdentifier: 'account-1',
+  }), null);
+  assert.equal(await activeGrantedScopes({
+    async getActiveGrantedScopes() { return null; },
+  }, {
+    ownerId: 'user-1',
+    providerKey: 'cloudflare',
+    accountIdentifier: 'account-1',
+  }), null);
 });

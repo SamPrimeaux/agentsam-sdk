@@ -11,7 +11,6 @@ export const CLOUDFLARE_FIXTURE_CLIENT_ID = 'sillynotreal';
 export const CLOUDFLARE_OAUTH_REVOKE_URL = 'https://dash.cloudflare.com/oauth2/revoke';
 
 export {
-  CLOUDFLARE_BASELINE_SCOPES,
   CLOUDFLARE_CAPABILITIES,
   CLOUDFLARE_CAPABILITY_SCOPES,
   listCloudflareCapabilities,
@@ -24,7 +23,6 @@ export {
 
 export {
   CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
-  CLOUDFLARE_PERMISSION_PRODUCTS,
   listCloudflarePermissionProducts,
   listCloudflarePermissionOptionsByCategory,
   assertPermissionCatalogCoversAllScopes,

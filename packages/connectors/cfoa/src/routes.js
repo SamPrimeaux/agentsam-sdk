@@ -306,13 +306,16 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
  * @param {Request} request
  * @param {object} env
  * @param {{
- *   permissionRegistry?: { getOAuthPermissionCatalog(providerKey: string): Promise<object|null> },
+ *   permissionRegistry?: {
+ *     getOAuthPermissionCatalog(providerKey: string): Promise<object|null>,
+ *     getActiveGrantedScopes(input: { ownerId: string, providerKey: string, accountIdentifier: string }): Promise<string[]|null>,
+ *   },
  *   app?: { id: string },
  *   routeRegistry?: object,
  *   loginPath?: string,
  * }} [options]
- *   The host injects its own provider permission catalog adapter. The connector
- *   package never reads the host plugin table or assumes a persistence schema.
+ *   The host injects its provider permission catalog and active-grant reader.
+ *   The connector package never reads the host plugin table or provider-scope table.
  *   Host MUST supply app + routeRegistry for session owner resolution.
  */
 export async function handleCloudflareConnectionRequest(request, env, options = {}) {
@@ -455,8 +458,15 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       selectedAccountId ? { connectionId: selectedAccountId } : {},
     ).catch(() => null);
     const alreadyGranted = existingConnection && !existingConnection.account_selection_required
-      ? await activeGrantedScopes(env, ownerId, 'cloudflare', existingConnection.connectionId)
+      ? await activeGrantedScopes(options.permissionRegistry, {
+        ownerId,
+        providerKey: 'cloudflare',
+        accountIdentifier: existingConnection.connectionId,
+      })
       : [];
+    if (alreadyGranted === null) {
+      return json({ ok: false, error: 'cloudflare_granted_scope_registry_unavailable' }, 503);
+    }
     const scopes = [...new Set([...alreadyGranted, ...selection.scopes])];
     const saved = await saveOAuthState(env, {
       state,
