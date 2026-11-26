@@ -1,5 +1,7 @@
 import { AGENT_AUTHORITY_TYPES } from './authority';
 import type { AgentAuthorityRequirement } from './authority';
+import { assertAgentJsonSchema } from './json-schema';
+import type { AgentJsonSchema } from './json-schema';
 
 export const AGENT_TOOL_SIDE_EFFECT_LEVELS = [
   'none',
@@ -33,7 +35,6 @@ export interface AgentCapability {
   metadata?: Record<string, unknown>;
 }
 
-export type AgentJsonSchema = Record<string, unknown>;
 export type AgentToolSideEffectLevel = typeof AGENT_TOOL_SIDE_EFFECT_LEVELS[number];
 export type AgentToolRiskLevel = typeof AGENT_TOOL_RISK_LEVELS[number];
 export type AgentToolReceiptMode = typeof AGENT_TOOL_RECEIPT_MODES[number];
@@ -135,6 +136,7 @@ export function assertAgentToolDefinition(value: unknown): asserts value is Agen
   }
   for (const field of ['inputSchema','outputSchema']) {
     if (!isRecord(value[field])) throw new TypeError(`tool ${toolKey} requires object ${field}`);
+    assertAgentJsonSchema(value[field], `tool ${toolKey} ${field}`);
   }
   assertEnum(value.riskLevel,AGENT_TOOL_RISK_LEVELS,'riskLevel',toolKey);
   assertEnum(value.sideEffectLevel,AGENT_TOOL_SIDE_EFFECT_LEVELS,'sideEffectLevel',toolKey);
