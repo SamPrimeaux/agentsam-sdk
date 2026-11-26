@@ -26,32 +26,12 @@ export interface StorageCandidate {
   source?: string;
 }
 
-/** A persisted mapping: what the project chose for a role. */
-export interface StorageRoleBinding {
-  provider: StorageProviderKind;
-  binding?: string;
-  bucket?: string;
-  path?: string;
-  accountId?: string;
-  publicBaseUrl?: string;
-}
-
-export type StorageRoleMap = Partial<Record<StorageRole, StorageRoleBinding>>;
-
-export interface ScoreHints {
-  /** Role the caller is trying to fill. */
-  role?: StorageRole;
-  /** Binding names the app is already known to use for a role. */
+export interface StorageDiscoveryHints {
+  /** Explicit bindings already declared by the local application. */
   knownBindings?: string[];
-  /** Number of current content records pointing at this store. */
+  /** Number of current local development records pointing at this store. */
   recordCount?: number;
 }
-
-const ROLE_NAME_HINTS: Record<string, RegExp> = {
-  website_assets: /(website|site)?[-_ ]?(assets|media|content)/i,
-  archive: /archive|backup|cold/i,
-  generated_assets: /generated|studio|output/i,
-};
 
 /** Simple, explainable scoring. No magic; callers still confirm with the user. */
 export function scoreStorageCandidate(
