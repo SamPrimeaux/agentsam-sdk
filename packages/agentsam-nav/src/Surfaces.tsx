@@ -548,8 +548,8 @@ function SidenavContents() {
 }
 
 export function NavSidenav() {
-  const { open, isMobile, isPeeking, peekable, setPeeking, toggle, menu, resizable, width, setWidth } = useNav();
-  const mobileDrawerRef = useRef<HTMLElement | null>(null);
+  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, toggle, menu, resizable, width, setWidth } = useNav();
+  const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
   const wasMobileOpen = useRef(false);
   const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
