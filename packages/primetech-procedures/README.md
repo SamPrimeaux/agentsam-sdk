@@ -15,14 +15,55 @@ PrimeTech Procedures is **not** another agent, scheduler, terminal, shell provid
 
 These are workflow categories, **not claims that every procedure exists today**. New operations graduate only with a manifest, source owner, tests, real outputs and receipts.
 
-## Existing procedure examples
+## Included procedures (working runtime implementations)
 
-- `repo.asset.inventory@0.1.0`: bounded, read-only native source inventory. Files: FCStd, IFC, Blender, STEP, DXF, SVG, GLB and related formats. Produces hashes, explicit truncation and deterministic JSON.
-- `cad.motor-bearing-end-plate`: specialist native CAD/CAM review candidate whose own README describes the parametric revision and verification boundaries. CAM outputs remain simulation/review-only, not approved machine-control instructions.
+| Procedure | Runtime | Result |
+|---|---|---|
+| `repo.asset.inventory@0.1.0` | `python` | Bounded, read-only native CAD/BIM/scene source inventory with file hashes and explicit truncation |
+| `repo.git.status@0.1.0` | `bash` | Actual read-only Git worktree counts for tracked changes and untracked files |
+| `arch.assembly.calculate@0.1.0` | `sam_operation` | Calls `arch.assembly.thickness` and reports exact summed thickness from supplied layers; **not** a building-code approval |
+| `media.asset.preflight@0.1.0` | `native_tool` | Invokes the host-bound `media.asset.inspect` operation against an owned asset and reports the stored bytes/hash |
+| `media.image.optimize-asset@0.1.0` | `native_tool` | **Approved write:** optimizes an installation-owned image, saves a new derivative and keeps the original unchanged; requires operator approval |
+| `cad.motor-bearing-end-plate@0.1.0` | `python` | Specialist FreeCAD/CAM review candidate with a source-inclusive delivery bundle; CAM is simulation/review-only and not approved for machining |
+
+The catalog lists **packaged** procedures. An actual host can run one only when its required operation/tool is available, with a trusted project root and appropriate authorization. **Procedures are not read-only:** native and SAM writes are allowed when a real executor is installed and the host approves the effect. Additional SAM operations discovered from procedure manifests are not automatically granted privileged access; the SDK shell only auto-exposes extra read-only core operations. Already installed and explicitly authorized write operations such as `media.image.optimize` remain usable. Catalog availability is not proof of an installed native engine.
+
+## Runtime kinds and verification
+
+- **`python`**: validated package-local `.py` entrypoint invoked through the existing authorized `sam.superbash` lane, with pinned arguments and interpreter candidates.
+- **`bash`**: validated package-local Bash entrypoint invoked through the same authorized SAM operation, receiving one schema-validated JSON argument. Users cannot submit arbitrary scripts or substitute an entrypoint.
+- **`sam_operation`**: manifest pins `runtime.operation`; the authenticated SAM host invokes that exact registered operation, not a shell. The operation must also appear in the manifest's declared capabilities.
+- **`native_tool`**: manifest pins `runtime.tool_key`; an authorized host must bind both `invokeNativeTool` and `isNativeToolAvailable`. In the SDK shell, installed SAM native-media operations are reused rather than wrapped in a new engine.
+
+All kinds enforce input/output schemas, check the exact requested version, record manifest and (where applicable) entrypoint hashes, and emit a verified receipt. Direct SAM/native operations preserve the upstream operation receipt ID; file-based runners preserve the script execution hash and exit status.
+
+`verification.kind = output_schema` validates the returned structured payload. `fixture_suite` and `native_validation` require the host to supply `verifyProcedureOutput({ manifest, projectRoot, input, output, execution })` and return `{ kind, ok: true, evidence }`. Missing/failed verification is **a failed procedure**, not a success badge. The host is responsible for checking actual native files, geometry or fixtures where required; output-schema validation alone is not an independent engineering sign-off.
+
+Example for an **already authorized, scoped host** (not a new executor):
+
+```js
+import { createProcedureCatalog, createPrimeTechProcedureHandler } from '@inneranimalmedia/primetech-procedures';
+
+const handler = createPrimeTechProcedureHandler({
+  catalog: createProcedureCatalog(),
+  projectRoot: trustedProjectRoot,
+  invokeSamOperation: (name, input) => samHost.invoke(name, input),
+  isCapabilityAvailable: name => samHost.canInvoke(name),
+  invokeNativeTool: (name, input) => samHost.invoke(name, input),
+  isNativeToolAvailable: name => samHost.canInvoke(name),
+  authorizeProcedure: request => approvals.authorize(request),
+  verifyProcedureOutput: request => nativeVerification.verify(request),
+});
+
+const receipt = await handler({ id: 'arch.assembly.calculate', version: '0.1.0',
+  input: { layers: [{ name: 'sheet', thickness_in: 0.5 }, { name: 'stud', thickness_in: 3.5 }] } });
+```
+
+Those `samHost`, `approvals`, and `nativeVerification` values are supplied by an existing installation; the package does **not** provision them. The AgentSam interactive CLI binds eligible read-only packaged SAM operations and already installed native-media operations automatically, subject to its session and approval policies. The hosted Cloudflare Worker requires its own explicit SAM/native host bindings; a D1 tool record alone is not an executor.
 
 ## Python is a first-class SDK participant
 
-The PyPI distribution is **`agentsam-sdk`**; the Python namespace is `agentsam_sdk`. Public PyPI is currently 0.1.0, while SDK source declares 0.2.0 and already contains `agentsam_sdk.procedures.ProcedureClient`, plus native OCCT and FreeCAD host utilities.
+The PyPI distribution is **`agentsam-sdk`**; the Python namespace is `agentsam_sdk`. The SDK source includes `agentsam_sdk.procedures.ProcedureClient` and native OCCT/FreeCAD host utilities. Check the currently published PyPI wheel before making an installed Python release a procedure dependency.
 
 Use the existing Python `ProcedureClient` and the existing canonical SAM operation. Do **not** build a separate privileged Python execution framework. Its injected invoker is host-owned and authorization-scoped:
 
@@ -58,4 +99,4 @@ python3.12 -m unittest discover -s packages/primetech-procedures/test -v
 python3 -m unittest discover -s python/tests -v
 ```
 
-The package is private until its own portability and packaging gates pass. Publishing a PyPI API or an npm procedure wrapper is not evidence that host installation, cloud bindings or deployed execution have been completed.
+The npm package is configured as public in `package.json`, but release availability and clean-install portability must be verified separately. Publishing a PyPI API or npm wrapper is not evidence that host installation, cloud bindings, or deployed execution have been completed.

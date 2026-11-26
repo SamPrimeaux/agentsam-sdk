@@ -29,7 +29,7 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { createMcpD1Bridge } from '../capabilities/mcp-d1-bridge.js';
-import { createPrimeTechProcedureHandler } from '../../packages/primetech-procedures/src/index.js';
+import { createPrimeTechProcedureHandler, createProcedureCatalog } from '../../packages/primetech-procedures/src/index.js';
 import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
@@ -694,12 +694,19 @@ async function runInteractiveModelTurn(prompt, state) {
     fetchImpl: state.providerFetchImpl,
   });
   const trustedSamIdentity = await resolveShellSamIdentity({state});
+  const procedureCatalog = createProcedureCatalog();
+  const procedureOperationIds = procedureCatalog.list().flatMap(row => {
+    if (!row.available) return [];
+    const runtime = procedureCatalog.get(row.id, row.version).manifest.runtime;
+    return runtime.kind === 'sam_operation' ? [runtime.operation] : [];
+  });
   const samAdapter = createShellSamAdapter({
-    state, trustedIdentity: trustedSamIdentity,
+    state, trustedIdentity: trustedSamIdentity, procedureOperationIds,
     authorize: request => approveToolExecution(request, state),
   });
   const procedureProjectRoot = path.resolve(state.cwd);
-  const procedureHandler = samAdapter?.canInvoke?.('sam.superbash') ? createPrimeTechProcedureHandler({
+  const procedureHandler = samAdapter ? createPrimeTechProcedureHandler({
+    catalog: procedureCatalog,
     projectRoot: procedureProjectRoot,
     receiptDir: path.join(procedureProjectRoot, '.agentsam', 'receipts'),
     invokeSamOperation: async (operation, input) => {
@@ -707,6 +714,11 @@ async function runInteractiveModelTurn(prompt, state) {
       return samAdapter.invoke(operation, input);
     },
     isCapabilityAvailable: operation => samAdapter.canInvoke(operation) === true,
+    invokeNativeTool: async (tool, input) => {
+      if (!samAdapter.canInvoke(tool)) return { ok: false, error: { code: 'native_tool_unavailable' } };
+      return samAdapter.invoke(tool, input);
+    },
+    isNativeToolAvailable: tool => samAdapter.canInvoke(tool) === true,
     authorizeProcedure: async request => (await approveToolExecution({
       capability_id: 'primetech.procedure.run',
       input: { id: request.id, version: request.version, input_sha256: request.input_sha256 },

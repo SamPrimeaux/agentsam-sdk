@@ -9,6 +9,9 @@ const VERSION_RE = /^\d+\.\d+\.\d+$/;
 const EFFECTS = new Set(['read', 'local_write', 'project_write', 'export', 'external_action']);
 const VERIFICATION_KINDS = new Set(['output_schema', 'fixture_suite', 'native_validation']);
 const PYTHON_EXECUTABLE_RE = /^python3(?:\.\d+)?$/;
+const RUNTIME_KINDS = new Set(['python', 'bash', 'sam_operation', 'native_tool']);
+const OPERATION_ID_RE = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$/;
+const DIRECT_EXECUTION_DENYLIST = new Set(['primetech.procedure.run', 'sam.superbash', 'terminal.exec']);
 
 export class PrimetechProcedureError extends Error {
   constructor(code, message = code, details = undefined) {
@@ -144,19 +147,51 @@ export function validateProcedureManifest(manifest) {
     errors.push({ path: '$.runtime', code: 'procedure_runtime_object_required' });
   } else {
     const runtime = manifest.runtime;
-    if (!['python', 'bash', 'sam_operation', 'native_tool'].includes(runtime.kind)) errors.push({ path: '$.runtime.kind', code: 'procedure_runtime_kind_invalid' });
-    if (typeof runtime.entrypoint !== 'string' || !runtime.entrypoint || path.isAbsolute(runtime.entrypoint) || runtime.entrypoint.split(/[\\/]/).includes('..') || runtime.entrypoint.includes('\0')) {
-      errors.push({ path: '$.runtime.entrypoint', code: 'procedure_entrypoint_invalid' });
+    const kind = runtime.kind;
+    if (!RUNTIME_KINDS.has(kind)) errors.push({ path: '$.runtime.kind', code: 'procedure_runtime_kind_invalid' });
+    const fileRuntime = kind === 'python' || kind === 'bash';
+    if (fileRuntime && !manifest.capabilities?.includes('sam.superbash')) {
+      errors.push({ path: '$.capabilities', code: 'procedure_shell_capability_not_declared' });
     }
-    if (typeof runtime.min_python !== 'string' || !/^\d+\.\d+$/.test(runtime.min_python)) errors.push({ path: '$.runtime.min_python', code: 'procedure_min_python_invalid' });
-    if (!Array.isArray(runtime.dependencies) || runtime.dependencies.some(item => typeof item !== 'string')) errors.push({ path: '$.runtime.dependencies', code: 'procedure_dependencies_invalid' });
-    if (runtime.interpreter_candidates !== undefined && (
-      !Array.isArray(runtime.interpreter_candidates) || runtime.interpreter_candidates.length < 1 ||
-      runtime.interpreter_candidates.length > 8 ||
-      runtime.interpreter_candidates.some(item => typeof item !== 'string' || !PYTHON_EXECUTABLE_RE.test(item)) ||
-      new Set(runtime.interpreter_candidates).size !== runtime.interpreter_candidates.length
-    )) errors.push({ path: '$.runtime.interpreter_candidates', code: 'procedure_interpreter_candidates_invalid' });
-    const runtimeAllowed = new Set(['kind', 'entrypoint', 'min_python', 'dependencies', 'interpreter_candidates']);
+    if (fileRuntime) {
+      if (typeof runtime.entrypoint !== 'string' || !runtime.entrypoint || path.isAbsolute(runtime.entrypoint) ||
+          runtime.entrypoint.split(/[\\/]/).includes('..') || runtime.entrypoint.includes('\0')) {
+        errors.push({ path: '$.runtime.entrypoint', code: 'procedure_entrypoint_invalid' });
+      }
+    } else if (runtime.entrypoint !== undefined) {
+      errors.push({ path: '$.runtime.entrypoint', code: 'procedure_runtime_entrypoint_not_applicable' });
+    }
+    if (kind === 'sam_operation') {
+      if (typeof runtime.operation !== 'string' || !OPERATION_ID_RE.test(runtime.operation) ||
+          DIRECT_EXECUTION_DENYLIST.has(runtime.operation) || !manifest.capabilities?.includes(runtime.operation)) {
+        errors.push({ path: '$.runtime.operation', code: 'procedure_runtime_operation_invalid' });
+      }
+    } else if (runtime.operation !== undefined) {
+      errors.push({ path: '$.runtime.operation', code: 'procedure_runtime_operation_not_applicable' });
+    }
+    if (kind === 'native_tool') {
+      if (typeof runtime.tool_key !== 'string' || !OPERATION_ID_RE.test(runtime.tool_key) ||
+          DIRECT_EXECUTION_DENYLIST.has(runtime.tool_key) || !manifest.capabilities?.includes(runtime.tool_key)) {
+        errors.push({ path: '$.runtime.tool_key', code: 'procedure_runtime_tool_invalid' });
+      }
+    } else if (runtime.tool_key !== undefined) {
+      errors.push({ path: '$.runtime.tool_key', code: 'procedure_runtime_tool_not_applicable' });
+    }
+    if (kind === 'python') {
+      if (typeof runtime.min_python !== 'string' || !/^\d+\.\d+$/.test(runtime.min_python)) errors.push({ path: '$.runtime.min_python', code: 'procedure_min_python_invalid' });
+      if (runtime.interpreter_candidates !== undefined && (
+        !Array.isArray(runtime.interpreter_candidates) || runtime.interpreter_candidates.length < 1 ||
+        runtime.interpreter_candidates.length > 8 ||
+        runtime.interpreter_candidates.some(item => typeof item !== 'string' || !PYTHON_EXECUTABLE_RE.test(item)) ||
+        new Set(runtime.interpreter_candidates).size !== runtime.interpreter_candidates.length
+      )) errors.push({ path: '$.runtime.interpreter_candidates', code: 'procedure_interpreter_candidates_invalid' });
+    } else if (runtime.min_python !== undefined || runtime.interpreter_candidates !== undefined) {
+      errors.push({ path: '$.runtime', code: 'procedure_python_config_not_applicable' });
+    }
+    if (runtime.dependencies !== undefined && (!Array.isArray(runtime.dependencies) || runtime.dependencies.some(item => typeof item !== 'string'))) {
+      errors.push({ path: '$.runtime.dependencies', code: 'procedure_dependencies_invalid' });
+    }
+    const runtimeAllowed = new Set(['kind', 'entrypoint', 'operation', 'tool_key', 'min_python', 'dependencies', 'interpreter_candidates']);
     for (const key of Object.keys(runtime)) if (!runtimeAllowed.has(key)) errors.push({ path: '$.runtime.' + key, code: 'procedure_runtime_additional_property_not_allowed' });
   }
   if (!isObject(manifest.input_schema) || !isObject(manifest.output_schema) || manifest.input_schema.type !== 'object' || manifest.output_schema.type !== 'object') {
@@ -210,13 +245,15 @@ function loadProcedure(root, id, requestedVersion = undefined) {
   if (requestedVersion !== undefined && requestedVersion !== manifest.version) {
     throw new PrimetechProcedureError('primetech_procedure_version_not_found');
   }
-  const lexicalEntry = path.resolve(realDir, manifest.runtime.entrypoint);
-  if (!inside(realDir, lexicalEntry)) throw new PrimetechProcedureError('primetech_procedure_entrypoint_outside_package');
-  let entrypointPath;
-  try { entrypointPath = fs.realpathSync(lexicalEntry); }
-  catch { throw new PrimetechProcedureError('primetech_procedure_entrypoint_not_found'); }
-  if (!inside(realDir, entrypointPath) || !fs.statSync(entrypointPath).isFile()) {
-    throw new PrimetechProcedureError('primetech_procedure_entrypoint_outside_package');
+  let entrypointPath = null;
+  if (manifest.runtime.kind === 'python' || manifest.runtime.kind === 'bash') {
+    const lexicalEntry = path.resolve(realDir, manifest.runtime.entrypoint);
+    if (!inside(realDir, lexicalEntry)) throw new PrimetechProcedureError('primetech_procedure_entrypoint_outside_package');
+    try { entrypointPath = fs.realpathSync(lexicalEntry); }
+    catch { throw new PrimetechProcedureError('primetech_procedure_entrypoint_not_found'); }
+    if (!inside(realDir, entrypointPath) || !fs.statSync(entrypointPath).isFile()) {
+      throw new PrimetechProcedureError('primetech_procedure_entrypoint_outside_package');
+    }
   }
   return {
     manifest,
@@ -224,7 +261,7 @@ function loadProcedure(root, id, requestedVersion = undefined) {
     procedureDir: realDir,
     entrypointPath,
     manifestSha256: hash(raw),
-    entrypointSha256: hash(fs.readFileSync(entrypointPath)),
+    entrypointSha256: entrypointPath ? hash(fs.readFileSync(entrypointPath)) : null,
   };
 }
 
@@ -269,6 +306,12 @@ function buildPythonCommand(manifest, entrypointPath, input) {
   lines.push("printf '%s\\n' '{\"schema\":\"inneranimalmedia.primetech.asset-inventory.v1\",\"ok\":false,\"error\":\"python_interpreter_not_found\"}' >&2");
   lines.push('exit 127');
   return lines.join('\n');
+}
+
+function buildBashCommand(entrypointPath, input) {
+  // The command is composed solely from the manifest-pinned, catalog-validated
+  // entrypoint and a schema-validated JSON argument. No caller shell source.
+  return 'set -euo pipefail\nexec bash -- ' + shellQuote(entrypointPath) + ' ' + shellQuote(JSON.stringify(input));
 }
 
 function writeJsonAtomic(target, value) {
@@ -353,7 +396,10 @@ export function createPrimeTechProcedureHandler({
   projectRoot,
   receiptDir = null,
   invokeSamOperation,
+  invokeNativeTool = null,
   isCapabilityAvailable = () => false,
+  isNativeToolAvailable = () => false,
+  verifyProcedureOutput = null,
   authorizeProcedure = null,
   now = () => Date.now(),
 } = {}) {
@@ -362,6 +408,8 @@ export function createPrimeTechProcedureHandler({
     const runId = 'ptr_' + randomUUID().replaceAll('-', '');
     let procedure = null;
     let execution = null;
+    let executedOperation = null;
+    let sourceReceipt = null;
     let output = null;
     let outputSha256 = null;
     let artifactRef = null;
@@ -400,7 +448,10 @@ export function createPrimeTechProcedureHandler({
       record.output_sha256 = outputSha256;
       record.verification = verification;
       record.execution = execution ? {
+        operation: executedOperation,
+        runtime_kind: procedure?.manifest.runtime.kind || null,
         execution_id: execution.executionId || execution.execution_id || null,
+        source_receipt_id: sourceReceipt?.id || null,
         script_sha256: execution.scriptHash || execution.script_sha256 || null,
         status: execution.status || null,
         exit_code: execution.exitCode ?? execution.exit_code ?? null,
@@ -429,7 +480,7 @@ export function createPrimeTechProcedureHandler({
       if (!safeProcedureId(input.id) || typeof input.version !== 'string' || !VERSION_RE.test(input.version) || !isObject(input.input)) {
         throw new PrimetechProcedureError('primetech_procedure_input_invalid');
       }
-      if (!projectRoot || typeof invokeSamOperation !== 'function') throw new PrimetechProcedureError('primetech_procedure_host_binding_required');
+      if (!projectRoot) throw new PrimetechProcedureError('primetech_procedure_host_binding_required');
       const canonicalProjectRoot = fs.realpathSync(projectRoot);
       if (!fs.statSync(canonicalProjectRoot).isDirectory()) throw new PrimetechProcedureError('primetech_procedure_project_root_invalid');
       procedure = catalog.get(input.id, input.version);
@@ -438,9 +489,21 @@ export function createPrimeTechProcedureHandler({
       const inputErrors = validateValue(input.input, manifest.input_schema);
       if (inputErrors.length) throw new PrimetechProcedureError('primetech_procedure_input_schema_invalid', 'Procedure input did not match its schema.', inputErrors);
       if (manifest.flags.physical_hardware) throw new PrimetechProcedureError('primetech_physical_hardware_not_supported');
+      const runtime = manifest.runtime;
+      const toolId = runtime.kind === 'native_tool' ? runtime.tool_key : null;
+      const directOperation = runtime.kind === 'sam_operation' ? runtime.operation : null;
+      if (runtime.kind === 'native_tool' && typeof invokeNativeTool !== 'function') {
+        throw new PrimetechProcedureError('primetech_native_tool_host_not_bound');
+      }
+      if (runtime.kind !== 'native_tool' && typeof invokeSamOperation !== 'function') {
+        throw new PrimetechProcedureError('primetech_procedure_host_binding_required');
+      }
       for (const capability of manifest.capabilities) {
-        if (await isCapabilityAvailable(capability) !== true) {
-          throw new PrimetechProcedureError('primetech_required_capability_unavailable', 'A required SAM capability is not bound: ' + capability);
+        const available = toolId === capability
+          ? await isNativeToolAvailable(capability)
+          : await isCapabilityAvailable(capability);
+        if (available !== true) {
+          throw new PrimetechProcedureError('primetech_required_capability_unavailable', 'A required capability is not bound: ' + capability);
         }
       }
       if (manifest.effect !== 'read' || manifest.flags.network || manifest.flags.requires_operator_review) {
@@ -452,37 +515,71 @@ export function createPrimeTechProcedureHandler({
           throw new PrimetechProcedureError('primetech_procedure_operator_approval_required');
         }
       }
-      if (manifest.runtime.kind !== 'python') throw new PrimetechProcedureError('primetech_procedure_runtime_kind_not_supported');
-      if (manifest.verification.kind !== 'output_schema') throw new PrimetechProcedureError('primetech_verification_kind_not_supported');
-      const script = buildPythonCommand(manifest, procedure.entrypointPath, input.input);
+      const fileRunner = runtime.kind === 'python' || runtime.kind === 'bash';
+      const script = runtime.kind === 'python'
+        ? buildPythonCommand(manifest, procedure.entrypointPath, input.input)
+        : runtime.kind === 'bash' ? buildBashCommand(procedure.entrypointPath, input.input) : null;
+      executedOperation = fileRunner ? 'sam.superbash' : (directOperation || toolId);
       record.timings_ms.preflight = Math.max(0, now() - started);
       const executionStarted = now();
-      const samResult = await invokeSamOperation('sam.superbash', {
+      const invocation = fileRunner ? {
         script,
         relativeCwd: '.',
         idempotencyKey: 'primetech:' + manifest.id + ':' + manifest.version + ':' + record.input_sha256,
-      });
-      if (!samResult || samResult.ok !== true) {
-        const code = samResult?.error?.code || samResult?.error || 'primetech_procedure_execution_failed';
-        throw new PrimetechProcedureError(code, 'The existing SAM process operation did not complete successfully.');
+      } : input.input;
+      const invocationResult = toolId
+        ? await invokeNativeTool(toolId, invocation)
+        : await invokeSamOperation(executedOperation, invocation);
+      if (!isObject(invocationResult) || invocationResult.ok !== true) {
+        const code = invocationResult?.error?.code || invocationResult?.error || 'primetech_procedure_execution_failed';
+        throw new PrimetechProcedureError(String(code), 'The authorized host operation did not complete successfully.');
       }
-      execution = samResult.data || samResult;
+      sourceReceipt = isObject(invocationResult.receipt) ? invocationResult.receipt : null;
+      const resultData = invocationResult.data || invocationResult;
       record.timings_ms.execution = Math.max(0, now() - executionStarted);
-      if (execution.ok === false || execution.status !== 'completed' || (execution.exitCode ?? execution.exit_code) !== 0) {
-        const code = execution.error?.code || 'primetech_procedure_execution_failed';
-        throw new PrimetechProcedureError(code, 'The existing SAM process operation did not complete successfully.');
+      if (fileRunner) {
+        execution = resultData;
+        if (execution.ok === false || execution.status !== 'completed' || (execution.exitCode ?? execution.exit_code) !== 0) {
+          const code = execution.error?.code || 'primetech_procedure_execution_failed';
+          throw new PrimetechProcedureError(code, 'The existing SAM process operation did not complete successfully.');
+        }
+        try { output = JSON.parse(String(execution.stdout || '').trim()); }
+        catch { throw new PrimetechProcedureError('primetech_procedure_output_invalid', 'Procedure stdout was not one valid JSON document.'); }
+      } else {
+        // Direct operations return a structured result, never a shell stdout
+        // or an arbitrary unverified message. The host owns authorization.
+        output = resultData;
+        execution = {
+          status: sourceReceipt?.status || 'completed',
+          executionId: sourceReceipt?.id || null,
+          durationMs: sourceReceipt?.duration_ms ?? null,
+        };
+        if (execution.status !== 'completed') {
+          throw new PrimetechProcedureError('primetech_procedure_execution_failed');
+        }
       }
-      const stdout = String(execution.stdout || '').trim();
-      try { output = JSON.parse(stdout); }
-      catch { throw new PrimetechProcedureError('primetech_procedure_output_invalid', 'Procedure stdout was not one valid JSON document.'); }
-      if (!isObject(output) || output.ok !== true) throw new PrimetechProcedureError('primetech_procedure_output_failed');
+      if (!isObject(output) || output.ok === false) throw new PrimetechProcedureError('primetech_procedure_output_failed');
       const verificationStarted = now();
       const outputErrors = validateValue(output, manifest.output_schema);
       if (outputErrors.length) throw new PrimetechProcedureError('primetech_procedure_output_verification_failed', 'Procedure output failed schema verification.', outputErrors);
       if (manifest.verification.kind === 'output_schema' && manifest.verification.expected && output.schema !== manifest.verification.expected) {
         throw new PrimetechProcedureError('primetech_procedure_output_verification_failed');
       }
-      verification = { kind: manifest.verification.kind, ok: true };
+      if (manifest.verification.kind === 'output_schema') {
+        verification = { kind: 'output_schema', ok: true };
+      } else {
+        if (typeof verifyProcedureOutput !== 'function') {
+          throw new PrimetechProcedureError('primetech_procedure_verifier_not_bound');
+        }
+        const checked = await verifyProcedureOutput({
+          manifest, projectRoot: canonicalProjectRoot, input: input.input, output,
+          execution: { operation: executedOperation, source_receipt: sourceReceipt },
+        });
+        if (!isObject(checked) || checked.ok !== true || checked.kind !== manifest.verification.kind) {
+          throw new PrimetechProcedureError('primetech_procedure_verification_failed');
+        }
+        verification = { kind: checked.kind, ok: true, ...(checked.evidence ? { evidence: checked.evidence } : {}) };
+      }
       record.timings_ms.verification = Math.max(0, now() - verificationStarted);
       outputSha256 = jsonHash(output);
       const warnings = [];
@@ -517,8 +614,10 @@ export function createPrimeTechProcedureHandler({
         artifact: artifactRef ? { ref: artifactRef, sha256: artifactSha256, bytes: artifactBytes } : null,
         verification,
         execution: {
-          operation: 'sam.superbash',
+          operation: executedOperation,
+          runtime_kind: manifest.runtime.kind,
           execution_id: execution.executionId || execution.execution_id || null,
+          source_receipt_id: sourceReceipt?.id || null,
           script_sha256: execution.scriptHash || execution.script_sha256 || null,
           status: execution.status,
           exit_code: execution.exitCode ?? execution.exit_code ?? null,
