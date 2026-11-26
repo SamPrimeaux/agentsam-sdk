@@ -29,6 +29,8 @@ export interface NavValue {
   pathname?: string;
   /** Commerce or other non-conversation hosts may omit the history region. */
   showHistory?: boolean;
+  /** Host-selected mobile navigation treatment; defaults to the existing drawer. */
+  mobileNavigationPresentation?: 'drawer' | 'immersive';
   /** Insert the built-in New chat action after this destination id. */
   newConversationAfter?: string;
   historyStatus?: "loading" | "error" | "ready";
