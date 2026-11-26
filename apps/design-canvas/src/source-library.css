@@ -99,3 +99,30 @@
   .dca-pane-heading .dca-help-wrap:last-child .dca-help-tip{left:auto;right:0;transform:none}
   .dca-route .dca-help-wrap:first-child .dca-help-tip{left:0;right:auto;transform:none}
 }
+
+/* A reference viewer may be embedded in a narrow desktop Side Stage, not just a phone. */
+.dca-app { min-width:0; min-height:0; position:relative; }
+.dca-main { position:relative; min-width:0; overflow:hidden; }
+.dca-sheet-backdrop { position:absolute; inset:0; z-index:7; width:100%; height:100%; background:#0008!important; }
+.dca-app.is-compact .dca-topbar { min-height:48px; height:48px; padding:0 10px; gap:8px; }
+.dca-app.is-compact .dca-mark { width:30px; height:30px; flex:none; }
+.dca-app.is-compact .dca-heading { flex:1; min-width:0; }
+.dca-app.is-compact .dca-heading strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dca-app.is-compact .dca-heading span,.dca-app.is-compact .dca-top-actions .dca-secondary { display:none; }
+.dca-app.is-compact .dca-top-actions { flex:none; }
+.dca-app.is-compact .dca-top-actions .dca-primary { font-size:0; width:40px; height:40px; padding:0; gap:0; }
+.dca-app.is-compact .dca-toolbar { height:48px; min-height:48px; padding:0 6px; gap:4px; }
+.dca-app.is-compact .dca-route { flex:1; gap:4px; overflow:hidden; }
+.dca-app.is-compact .dca-route > span { display:none; }
+.dca-app.is-compact .dca-route b { min-width:0; max-width:100%; }
+.dca-app.is-compact .dca-tools { flex:none; gap:1px; }
+.dca-app.is-compact .dca-tools button { width:36px; min-height:40px; padding:0; gap:0; font-size:0; }
+.dca-app.is-compact .dca-tools button svg { flex:none; }
+.dca-app.is-compact .dca-tools .dca-zoom-label { width:31px; }
+.dca-app.is-compact .dca-toolbar-divider { margin:0 2px; }
+.dca-app.is-compact .dca-sidebar,.dca-app.is-compact .dca-inspector { position:absolute; top:auto; left:0; right:0; bottom:0; width:100%; min-width:0; max-width:none; height:min(72%,520px); max-height:100%; border:1px solid var(--dca-line); border-radius:16px 16px 0 0; z-index:9; box-shadow:0 -12px 36px #0006; }
+.dca-app.is-compact .dca-pane-heading { height:46px; min-height:46px; }
+.dca-app.is-compact .dca-pane-heading button { width:40px; height:40px; }
+.dca-app.is-compact .dca-inspector-tabs button { height:44px; }
+.dca-app.is-compact .dca-board-space { padding:22px 10px 70px; }
+.dca-app.is-compact .dca-board-space.dca-focus { min-width:max-content; }

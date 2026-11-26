@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
-export const MIN_ZOOM = 10;
+export const MIN_ZOOM = 4;
 export const MAX_ZOOM = 400;
 export const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(value)));
 export function fitZoom(viewWidth: number, viewHeight: number, width: number, height: number) {
