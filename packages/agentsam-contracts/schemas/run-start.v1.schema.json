@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/agentsam.run-start.v1.schema.json",
+  "title": "AgentRunStartV1",
+  "type": "object",
+  "required": [
+    "schema",
+    "run_id",
+    "status",
+    "queue",
+    "queue_job",
+    "published"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.run-start.v1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "const": "queued"
+    },
+    "queue": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "queue_job": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "published": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}
