@@ -2672,7 +2672,7 @@
       "use_when": [
         "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)"
       ],
-      "version": "2.6.20",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {
