@@ -195,7 +195,8 @@ export function absolutizeThemePreviewPaths(html, baseUrl) {
   if (!/^\/theme-packages\/[a-z0-9-]+\/\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\/preview\/$/.test(prefix)) return html;
   return html.replace(/(\b(?:href|src|poster)\s*=\s*)(["'])(\/theme-packages\/[^"'\s<>]*)\2/g, (match, start, quote, value) =>
     (value.startsWith(prefix) || value === prefix.slice(0, -1))
-      ? start + quote + origin + value + quote : match);
+      ? start + quote + origin + value + quote : match).replace(/(\b(?:src|poster)\s*=\s*)(["'])(\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.(?:svg|webp|png|jpe?g|gif|avif|ico|mp4|webm))\2/gi, (match, start, quote, value) =>
+    start + quote + origin + prefix + value.slice(1) + quote);
 }
 
 export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
