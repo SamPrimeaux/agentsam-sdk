@@ -551,6 +551,7 @@ function WorkflowInspector({
         <label className="as-wf-field"><span>Description</span><textarea rows={3} value={selectedNode.description ?? ""} disabled={!canEdit} onChange={(event) => patch({ description: event.target.value })} placeholder="What does this step do?" /></label>
 
         {selectedNode.kind === "action" ? (
+          <>
           <section className="as-wf-inspector-section">
             <h4>Action resolution</h4>
             <label className="as-wf-field"><span>Resolution</span><select value={selectedNode.resolutionMode ?? ""} disabled={!canEdit} onChange={(event) => patch({ resolutionMode: event.target.value as "routed" | "pinned", capabilityKey: null, pinnedToolId: null })}><option value="" disabled>Choose resolution</option><option value="routed">Routed capability</option><option value="pinned">Pinned tool</option></select></label>
@@ -573,6 +574,7 @@ function WorkflowInspector({
             <label className="as-wf-checkbox"><input type="checkbox" checked={selectedNode.config?.requires_approval === true} disabled={!canEdit} onChange={(event) => patchConfig("requires_approval", event.target.checked)} /><span>Require human approval before this action</span></label>
             <small>The approval gate binds to this operation, capability, resource ID and exact revision. The action handler must enforce the expected revision.</small>
           </section>
+          </>
         ) : null}
 
         {selectedNode.kind === "approval" ? (
