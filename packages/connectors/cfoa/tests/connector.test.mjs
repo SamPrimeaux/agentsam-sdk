@@ -184,6 +184,9 @@ describe('cloudflare connector', () => {
           packs: [],
         };
       },
+      async getActiveGrantedScopes() {
+        return [];
+      },
     };
     const response = await handleCloudflareConnectionRequest(
       new Request('https://agentsam.example/api/connections/cloudflare/start', {
