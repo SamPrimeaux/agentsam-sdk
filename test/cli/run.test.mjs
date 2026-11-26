@@ -269,6 +269,8 @@ test('run projection validates durable suspension detail', async (t) => {
     attempt:2, metadata:{provider:'example'},
   });
   assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
+  const receipt = await client.receipt('arun_child');
+  assert.equal(validateRunReceipt(receipt), true, schemaAjv.errorsText(validateRunReceipt.errors));
 });
 
 test('timeout event exposes timed_out lifecycle status while storage remains failed', async (t) => {
