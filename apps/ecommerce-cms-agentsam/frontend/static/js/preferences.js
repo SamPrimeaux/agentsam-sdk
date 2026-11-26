@@ -13,6 +13,9 @@
     passwordChangeOpen: false,
     dirty: false,
     saving: false,
+    loading: true,
+    loadedSiteId: null,
+    checking: false,
     availableAssets: [],
     pickerKind: "social",
   };
@@ -32,7 +35,25 @@
     }
   }
 
+  function syncInteractionState() {
+    const ready = Boolean(state.siteId && state.loadedSiteId === state.siteId);
+    const busy = state.loading || state.saving;
+    const controls = $("preferences-controls");
+    if (controls) controls.disabled = busy || !ready;
+    const select = $("site-select");
+    if (select) select.disabled = busy || state.checking || state.sites.length < 2;
+    const fallback = $("save-preferences-fallback");
+    if (fallback) {
+      fallback.hidden = typeof window.publishDockEdit === "function";
+      fallback.disabled = busy || !ready || !state.dirty;
+      fallback.textContent = state.saving ? "Saving…" : "Save changes";
+    }
+    const retry = $("retry-preferences");
+    if (retry) retry.hidden = busy || ready;
+  }
+
   function publishDockState() {
+    syncInteractionState();
     if (typeof window.publishDockEdit !== "function") return;
     if (!state.dirty) {
       window.publishDockEdit({ active: false });
@@ -42,7 +63,7 @@
       active: true,
       hint: `${state.site?.name || "Website"} preferences`,
       dirty: true,
-      canSave: !state.saving,
+      canSave: !state.saving && !state.loading && state.loadedSiteId === state.siteId,
       saveLabel: state.saving ? "Saving…" : "Save changes",
       onSave: savePreferences,
       discardHref: window.location.pathname + window.location.search,
@@ -50,8 +71,9 @@
   }
 
   function markDirty(message = "Unsaved changes") {
+    if (state.loading || state.saving || !state.siteId || state.loadedSiteId !== state.siteId) return;
     state.dirty = true;
-    notify(message, "pending");
+    notify(typeof message === "string" ? message : "Unsaved changes", "pending");
     publishDockState();
   }
 
@@ -225,6 +247,8 @@
     state.originalHasStorePassword = state.hasStorePassword;
     state.clearStorePassword = false;
     state.passwordChangeOpen = false;
+    $("store-password").value = "";
+    $("store-password-confirm").value = "";
 
     const s = state.settings;
     const seo = state.seo;
@@ -305,7 +329,7 @@
   }
 
   async function savePreferences() {
-    if (!state.dirty || state.saving) return;
+    if (!state.dirty || state.saving || state.loading || state.loadedSiteId !== state.siteId) return;
     let settings;
     try { settings = collectSettings(); }
     catch (error) { notify(error.message, "error"); throw error; }
@@ -328,8 +352,9 @@
       state.dirty = false;
       notify("Changes saved", "saved");
       renderPasswordState();
-      await loadOverview();
-      await refreshCrawlerDashboard();
+      // Persistence has succeeded. A status refresh failure is not a failed save.
+      try { await loadOverview(); await refreshCrawlerDashboard(); }
+      catch { notify("Changes saved. Publishing status could not refresh.", "saved"); }
       publishDockState();
     } catch (error) {
       notify(error.message || "Could not save website preferences.", "error");
@@ -351,6 +376,7 @@
       adminFetch(`/api/admin/store/preferences${siteQuery()}`),
       loadOverview(),
     ]);
+    state.loadedSiteId = state.siteId;
     applySettings(data);
     await refreshCrawlerDashboard();
   }
@@ -359,6 +385,7 @@
     const url = new URL(window.location.href);
     if (siteId) url.searchParams.set("site_id", siteId);
     else url.searchParams.delete("site_id");
+    url.searchParams.delete("site_slug");
     history.replaceState(null, "", url);
     try { sessionStorage.setItem(selectedSiteStorageKey, siteId); } catch {}
     state.siteId = siteId;
@@ -369,7 +396,11 @@
   async function loadSites() {
     const data = await adminFetch("/api/admin/cms/sites");
     state.sites = Array.isArray(data.sites) ? data.sites : [];
-    const requested = new URLSearchParams(window.location.search).get("site_id");
+    const params = new URLSearchParams(window.location.search);
+    const requestedId = params.get("site_id");
+    const requestedSlug = params.get("site_slug");
+    const requested = requestedId || (requestedSlug ? state.sites.find(site => site.slug === requestedSlug)?.id : null);
+    if (requestedSlug && !requested) throw new Error("The requested website is not available to this account.");
     let remembered = null;
     try { remembered = sessionStorage.getItem(selectedSiteStorageKey); } catch {}
     const eligible = (id) => Boolean(id && state.sites.some((site) => site.id === id));
@@ -386,12 +417,36 @@
       select.append(option);
     }
     select.value = state.siteId;
-    select.disabled = state.sites.length < 2;
+    syncInteractionState();
     updateSiteUrl(state.siteId);
   }
 
+  async function loadSelectedSite() {
+    state.loading = true;
+    state.loadedSiteId = null;
+    state.dirty = false;
+    $("store-password").value = "";
+    $("store-password-confirm").value = "";
+    $("prefs-assets-dialog")?.close();
+    notify("Loading website preferences…", "pending");
+    publishDockState();
+    try {
+      await loadPreferences();
+    } catch (error) {
+      state.loadedSiteId = null;
+      notify(error.message || "Could not load this website.", "error");
+    } finally {
+      state.loading = false;
+      publishDockState();
+    }
+  }
+
   async function switchSite(nextSiteId) {
-    if (!nextSiteId || nextSiteId === state.siteId) return;
+    if (state.loading || state.saving || state.checking || !state.sites.some(site => site.id === nextSiteId)) {
+      $("site-select").value = state.siteId || "";
+      return;
+    }
+    if (nextSiteId === state.siteId) return;
     if (state.dirty && !window.confirm("You have unsaved changes. Switch websites and discard them?")) {
       $("site-select").value = state.siteId;
       return;
@@ -401,11 +456,7 @@
     state.overview = null;
     state.settings = {};
     state.seo = {};
-    state.dirty = false;
-    publishDockState();
-    notify("Loading website preferences…", "pending");
-    try { await loadPreferences(); }
-    catch (error) { notify(error.message || "Could not load this website.", "error"); }
+    await loadSelectedSite();
   }
 
   function setDiscoveryCheck(key, ok, message) {
@@ -449,6 +500,9 @@
   }
 
   async function refreshCrawlerDashboard() {
+    if (state.checking) return;
+    state.checking = true;
+    syncInteractionState();
     const button = $("crawler-refresh-btn");
     if (button) { button.disabled = true; button.textContent = "Checking…"; }
     const pill = $("crawler-status-pill");
@@ -514,7 +568,9 @@
       setText("crawler-sitemap-count", "—");
       setText("crawler-notice", error.message || "Search discovery status could not be loaded.");
     } finally {
+      state.checking = false;
       if (button) { button.disabled = false; button.textContent = "Re-check files"; }
+      syncInteractionState();
     }
   }
 
@@ -587,6 +643,12 @@
 
   function bindEvents() {
     $("site-select")?.addEventListener("change", (event) => switchSite(event.target.value));
+    $("save-preferences-fallback")?.addEventListener("click", () => { void savePreferences().catch(() => {}); });
+    $("retry-preferences")?.addEventListener("click", () => {
+      if (state.loading || state.saving) return;
+      if (!state.siteId) { void init(); return; }
+      void loadSelectedSite();
+    });
     $("password-protection")?.addEventListener("change", () => {
       if ($("password-protection").checked && state.clearStorePassword) {
         state.clearStorePassword = false;
@@ -683,15 +745,22 @@
   }
 
   async function init() {
+    state.loading = true;
+    state.loadedSiteId = null;
+    publishDockState();
     try {
       await loadSites();
-      bindEvents();
-      await loadPreferences();
+      await loadSelectedSite();
     } catch (error) {
+      state.siteId = null;
+      state.loadedSiteId = null;
       notify(error.message || "Could not load website preferences.", "error");
-      $("site-select").disabled = true;
+    } finally {
+      state.loading = false;
+      publishDockState();
     }
   }
 
+  bindEvents();
   init();
 })();

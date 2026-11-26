@@ -59,6 +59,7 @@
           </nav>
 
           <main class="sp-content">
+            <fieldset id="preferences-controls" class="sp-controls" disabled>
             <section class="sp-section" id="section-access" data-section="access">
               <div class="sp-section-heading">
                 <div class="sp-section-kicker">01 / ACCESS</div>
@@ -297,7 +298,14 @@
               </article>
             </section>
 
-            <div class="sp-page-end" id="save-state" role="status">All changes saved</div>
+            </fieldset>
+            <div class="sp-page-end sp-save-footer">
+              <span id="save-state" role="status" aria-live="polite">Loading preferences…</span>
+              <div class="sp-inline-actions">
+                <button class="sp-small-button" type="button" id="retry-preferences" hidden>Retry</button>
+                <button class="sp-button" type="button" id="save-preferences-fallback" disabled hidden>Save changes</button>
+              </div>
+            </div>
           </main>
         </div>
 
