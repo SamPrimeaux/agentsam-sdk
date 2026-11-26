@@ -93,9 +93,12 @@ test('Settings subpages stay in one canonical shell and use router navigation',(
  assert.ok(keys.includes('agentsam:identity-open'));
 });
 
-test('CMS Structure uses a canonical pathname at runtime and explicit website scope during SSR',()=>{
- assert.ok(STUDIO_ADMIN_PRERENDERED_ROUTES.includes('/admin/structure'));
+test('retired CMS Structure is not staged and platform navigation stays in Settings',()=>{
+ assert.ok(!STUDIO_ADMIN_PRERENDERED_ROUTES.includes('/admin/structure'));
  assert.ok(STUDIO_ADMIN_PRERENDERED_ROUTES.every(route=>!route.includes('?')));
  const stage=readFileSync(path.join(root,'scripts/stage-settings-shell.mjs'),'utf8');
- assert.ok(stage.includes("requestUrl.searchParams.set('scope', 'website')"));
+ assert.ok(!stage.includes("requestUrl.searchParams.set('scope', 'website')"));
+ const settings=readFileSync(path.join(root,'frontend/src/components/settings/LocalStudioSettingsPage.tsx'),'utf8');
+ assert.ok(settings.includes('<PlatformNavigationSettings />'));
+ assert.ok(!settings.includes('to: "/admin/structure"'));
 });

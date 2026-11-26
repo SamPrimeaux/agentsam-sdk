@@ -61,8 +61,6 @@
       const link = $(id);
       if (link) link.href = `/admin/pages?${suffix}`;
     }
-    const structure = $("manage-structure-link");
-    if (structure) structure.href = `/admin/structure?${suffix}`;
   }
 
   function renderSiteContext() {

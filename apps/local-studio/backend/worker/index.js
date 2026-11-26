@@ -59,7 +59,7 @@ import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { handleSamSpeaksRequest } from "@inneranimalmedia/agentsam-communications/samspeaks";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
-import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES, resolveRetiredStructurePath } from "../../shared/studio-admin-routes.mjs";
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
@@ -1375,6 +1375,16 @@ export default {
       const cmsActorId = await resolveSessionUserId(request, env);
       if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
       return handleCmsWorkerRequest(request, env, cmsActorId);
+    }
+
+    // Retired Structure is not a renderable admin surface. Preserve old bookmarks.
+    if (request.method === "GET" || request.method === "HEAD") {
+      const retiredStructure = resolveRetiredStructurePath(url.pathname, url.searchParams);
+      if (retiredStructure) {
+        const denied = await guardStudioDocument(request, env);
+        if (denied) return denied;
+        return Response.redirect(new URL(retiredStructure, url.origin), 302);
+      }
     }
 
     // Canonical React app mounts are served as data-free, pre-rendered

@@ -12,6 +12,7 @@ import { AppsManagementPage } from "./AppsManagementPage";
 import { BrowserSettings } from "./BrowserSettings";
 import { McpManagementPage } from "./McpManagementPage";
 import { RuntimeManagerPage } from "@/components/runtime/RuntimeManagerPage";
+import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -28,12 +29,6 @@ export function LocalStudioSettingsPage({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const requestedView = unitId === "customize" && requestedViewProp === "panels" ? "apps" : requestedViewProp;
-
-  useEffect(() => {
-    if (unitId === "themes" && requestedView === "navigation" && !embedded) {
-      void navigate({ to: "/admin/structure", search: { scope: "platform" } as never, replace: true } as never);
-    }
-  }, [unitId, requestedView, embedded, navigate]);
 
   useEffect(() => {
     if (unitId !== "customize" || !connectedPluginKey) return;
@@ -78,7 +73,7 @@ export function LocalStudioSettingsPage({
       renderCustomView={(unit, view) => {
         if (unit === "keys") return <LiveKeysSettingsPage view={view} embedded />;
         if (unit === "runtime") return <RuntimeManagerPage embedded />;
-        if (unit === "themes" && view === "navigation") return <p className="p-4 text-sm text-muted-foreground">Navigation is managed in Online Store → Structure.</p>;
+        if (unit === "themes" && view === "navigation") return <PlatformNavigationSettings />;
         if (unit === "customize" && view === "apps") return <AppsManagementPage />;
         if (unit === "customize" && view === "mcps") return <McpManagementPage />;
         if (unit === "customize" && view === "companions") return <InnerAnimalCompanionsPage />;
