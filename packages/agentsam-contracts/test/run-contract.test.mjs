@@ -118,7 +118,7 @@ test('run and activity wire schemas validate actual projections and storage voca
   // use the canonical D1 storage vocabulary only.
   assert.deepEqual(persistedStatuses.filter(status => status !== 'paused'), [...AGENT_RUN_STORAGE_STATUSES]);
   const parityMigration = fs.readFileSync(new URL('../../../migrations/runtime/0012_agent_run_event_sequence.sql', import.meta.url), 'utf8');
-  assert.match(parityMigration, /SET status = 'running'[\\s\\S]*WHERE status = 'paused'/);
+  assert.match(parityMigration, /SET status = 'running'[\s\S]*WHERE status = 'paused'/);
   const validateActivity = ajv.compile(activity);
   assert.deepEqual(run.properties.status.enum, [...AGENT_RUN_STATUSES]);
   assert.deepEqual(run.properties.storageStatus.enum, [...AGENT_RUN_STORAGE_STATUSES]);
