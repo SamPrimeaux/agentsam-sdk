@@ -350,10 +350,13 @@ export async function runMcp(argv = [], options = {}) {
       url: bundle.url,
       feature_packs: bundle.feature_packs,
       capability_ids: bundle.capability_ids,
+      permission_packs: bundle.feature_packs || [],
+      permission_capabilities: bundle.capability_ids || [],
+      scope_expansion_requires_plugin_catalog: Boolean((bundle.feature_packs || []).length || (bundle.capability_ids || []).length),
       portal_manage_scopes: bundle.portal_manage_scopes,
       oauth_scopes: scopes,
-      authorize_hint: `agentsam cloudflare permissions authorize --packs ${(bundle.feature_packs || ['agentsam']).join(',')}`,
-      note: 'Never request CLOUDFLARE_ALL_SCOPES (~315) at once — upgrade by pack.',
+      authorize_hint: 'agentsam cloudflare login --pack ' + (bundle.feature_packs || []).join(',') + ' --capability ' + (bundle.capability_ids || []).join(','),
+      note: 'Provider scopes are resolved by the host from the registered Cloudflare plugin permission catalog.',
     };
     if (args.json) {
       write(JSON.stringify(payload, null, 2) + '\n');

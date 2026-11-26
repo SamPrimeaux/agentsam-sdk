@@ -33,21 +33,18 @@ export const CONNECTOR_PROVIDERS = Object.freeze({
     label: "Google Drive",
     kind: "google",
     statePrefix: "gdrive_",
-    scopes: ["openid", "email", "profile", "https://www.googleapis.com/auth/drive.file"],
   },
   google_calendar: {
     provider: "google_calendar",
     label: "Google Calendar",
     kind: "google",
     statePrefix: "gcal_",
-    scopes: ["openid", "email", "profile", "https://www.googleapis.com/auth/calendar.events"],
   },
   github: {
     provider: "github",
     label: "GitHub",
     kind: "github",
     statePrefix: "ghub_",
-    scopes: ["offline_access"], // GitHub App identity permissions come from app installation.
   },
 });
 
@@ -153,14 +150,56 @@ export function connectionIdParts(connectionId) {
   return { provider: raw.slice(0, index).toLowerCase(), accountIdentifier: raw.slice(index + 1) };
 }
 
+async function loadRegisteredOAuthPermissions(env, providerKey) {
+  if (!env?.DB?.prepare) throw new Error("oauth_permission_catalog_unavailable");
+  let rows;
+  try {
+    const result = await env.DB.prepare(
+      "SELECT id,plugin_key,config_json FROM agentsam_plugins " +
+      "WHERE provider_key=? AND plugin_kind='oauth'"
+    ).bind(providerKey).all();
+    rows = result?.results || [];
+  } catch {
+    throw new Error("oauth_permission_catalog_unavailable");
+  }
+  const authorities = rows.map((row) => {
+    try {
+      return { row, config: JSON.parse(row.config_json || "{}") };
+    } catch {
+      return { row, config: {} };
+    }
+  }).filter(({ config }) => config.oauth_permissions && typeof config.oauth_permissions === "object");
+  if (authorities.length !== 1) throw new Error("oauth_permission_catalog_unavailable");
+  const permissions = authorities[0].config.oauth_permissions;
+  const defaults = Array.isArray(permissions.default_scopes)
+    ? permissions.default_scopes.map(clean).filter(Boolean)
+    : [];
+  const available = Array.isArray(permissions.available_scopes)
+    ? permissions.available_scopes.map(clean).filter(Boolean)
+    : [];
+  const required = Array.isArray(permissions.required_scopes)
+    ? permissions.required_scopes.map(clean).filter(Boolean)
+    : defaults;
+  if (!defaults.length || !available.length) throw new Error("oauth_permission_catalog_unavailable");
+  return {
+    defaults: [...new Set(defaults)],
+    required: [...new Set(required)],
+    available: new Set([...defaults, ...available]),
+  };
+}
+
 async function scopesForSelectedConnector(env,userId,def,connectionId,requestedScopes=[]) {
   const selected=connectionIdParts(connectionId);
   if (selected.provider && (selected.provider !== def.provider || !selected.accountIdentifier))
     throw new Error('oauth_account_provider_mismatch');
-  // GitHub App permissions are installation-scoped, not Google OAuth scopes.
-  if (def.kind !== 'google') return def.scopes;
-
   const requested=[...new Set((Array.isArray(requestedScopes)?requestedScopes:[]).map(clean).filter(Boolean))];
+  const catalog=await loadRegisteredOAuthPermissions(env,def.provider);
+  // GitHub App installation permissions are configured by the plugin; this
+  // OAuth identity handshake does not accept user-selected OAuth scopes.
+  if (def.kind !== 'google') {
+    if (requested.length) throw new Error('oauth_scope_selection_not_supported');
+    return catalog.defaults;
+  }
   let prior=[];
   if (selected.provider) {
     // A reconnect must request the selected account's existing grants too,
@@ -171,25 +210,13 @@ async function scopesForSelectedConnector(env,userId,def,connectionId,requestedS
     ).bind(userId,def.provider,selected.accountIdentifier).first();
     if (row?.scopes) prior=clean(row.scopes).split(/[\s,]+/).filter(Boolean);
   }
-  if (!requested.length && !prior.length) return def.scopes;
+  if (!requested.length && !prior.length) return catalog.defaults;
 
-  let entries;
-  try {
-    const response=await env.DB.prepare(
-      "SELECT scope FROM agentsam_provider_scopes WHERE provider_key='google' AND is_active=1"
-    ).all();
-    entries=response.results||[];
-  } catch {
-    // Never silently discard an existing grant or requested capability when
-    // the permission catalog is unavailable.
-    throw new Error('oauth_permission_catalog_unavailable');
-  }
-  const known=new Set([...entries.map(entry=>String(entry.scope)), 'openid','email','profile']);
-  if (requested.some(scope=>!known.has(scope))) throw new Error('oauth_scope_not_registered');
-  const preserved=prior.filter(scope=>known.has(scope));
+  if (requested.some((scope) => !catalog.available.has(scope))) throw new Error('oauth_scope_not_registered');
+  const preserved=prior.filter((scope) => catalog.available.has(scope));
   // An explicit capability request for a new connection is the complete
   // least-privilege scope set. Reconnects add it without dropping prior grants.
-  const base=requested.length ? preserved : [...def.scopes,...preserved];
+  const base=requested.length ? preserved : [...catalog.defaults,...preserved];
   return [...new Set([...base,...requested])];
 }
 
@@ -274,7 +301,7 @@ async function fetchProfile(def, accessToken) {
   return { identifier: email, display: email, email };
 }
 
-async function persistConnectorGrant(env, userId, def, tokens, profile, requestedScopes = def.scopes) {
+async function persistConnectorGrant(env, userId, def, tokens, profile, requestedScopes = []) {
   const material = vaultMaterial(env);
   if (!material) throw new Error("vault_required");
   const account = profile.identifier;
@@ -288,7 +315,10 @@ async function persistConnectorGrant(env, userId, def, tokens, profile, requeste
   const accessEnc = await sealOauthToken(material, clean(tokens.access_token), aad);
   const refreshEnc = refreshToken ? await sealOauthToken(material, refreshToken, aad) : null;
   const tokenScopes=clean(tokens.scope).replace(/,/g, " ");
-  const scopes = def.kind === "github" ? "" : (tokenScopes || requestedScopes.join(" "));
+  const catalogDefaults = requestedScopes.length
+    ? requestedScopes
+    : (await loadRegisteredOAuthPermissions(env, def.provider)).defaults;
+  const scopes = def.kind === "github" ? "" : (tokenScopes || catalogDefaults.join(" "));
   const now = Math.floor(Date.now() / 1000);
   // GitHub App user tokens may expire; persist expiry/refresh token when GitHub returns them.
   const expiresAt = tokens.expires_in ? now + Math.max(60, Number(tokens.expires_in)) : null;
@@ -383,8 +413,10 @@ export async function completeConnectorOAuth(request, env) {
   const profile = await fetchProfile(def, tokens.access_token);
   if (!profile) return new Response(def.label + " account unavailable.", { status: 502 });
 
-  await persistConnectorGrant(env, clean(pending.user_id), def, tokens, profile,
-    Array.isArray(pending.metadata?.requested_scopes)?pending.metadata.requested_scopes:def.scopes);
+  const requestedScopes = Array.isArray(pending.metadata?.requested_scopes)
+    ? pending.metadata.requested_scopes
+    : (await loadRegisteredOAuthPermissions(env, def.provider)).defaults;
+  await persistConnectorGrant(env, clean(pending.user_id), def, tokens, profile, requestedScopes);
   const target = new URL(safeReturnTo(pending.return_to), url.origin);
   target.searchParams.set("provider", def.provider);
   target.searchParams.set("result", "connected");
@@ -434,7 +466,10 @@ export async function resolveConnectorAccess(env, userId, provider, accountIdent
   }
   if (!row) return { ok: false, code: "oauth_not_connected" };
   const granted = clean(row.scopes).split(/[,\s]+/).filter(Boolean);
-  const allowed = options.requiredScopes || def.scopes.slice(3);
+  const catalog = await loadRegisteredOAuthPermissions(env, def.provider);
+  const allowed = Array.isArray(options.requiredScopes) && options.requiredScopes.length
+    ? options.requiredScopes
+    : catalog.required;
   if (!allowed.some(scope => granted.includes(scope))) {
     return { ok: false, code: "oauth_insufficient_scope", grantedScopes: granted };
   }

@@ -6,10 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { collectModelsStatus } from '../commands/models.js';
 import { listProviderCredentialStatus } from './provider-credentials.js';
-import {
-  listCloudflareFeaturePacks,
-  scopesForFeaturePacks,
-} from '../../packages/connectors/cfoa/src/index.js';
 import { projectTerminalCapability } from './terminal-scopes.js';
 
 function clean(value) {
@@ -143,16 +139,14 @@ export async function projectWhoamiCapabilities(options = {}) {
 
   const cloudflare = {
     available: hasCfToken,
-    packs: listCloudflareFeaturePacks().map((pack) => ({
-      id: pack.id,
-      label: pack.label,
-      description: pack.description,
-      capability_count: pack.capabilities.length,
-    })),
-    agentsam_pack_scopes: scopesForFeaturePacks(['agentsam']).length,
+    permission_packs: {
+      source: 'Local Studio provider plugin',
+      list_command: 'agentsam cloudflare login --list-packs',
+      default_selection: 'configured by the provider plugin',
+    },
     next: hasCfToken
-      ? 'agentsam cloudflare permissions --json'
-      : 'agentsam cloudflare login --pack agentsam',
+      ? 'agentsam cloudflare login --list-packs'
+      : 'agentsam cloudflare login',
   };
 
   const tools = {
@@ -160,7 +154,7 @@ export async function projectWhoamiCapabilities(options = {}) {
       hyperdrive: hyperdrive.length > 0 || hasCfToken,
       supabase: hasSupabase,
       d1: d1Bindings.length > 0,
-      next: 'Enable via CF pack data + provider vault — then agentsam tools / MCP',
+      next: 'Connect the Store permission pack through the provider plugin — then agentsam tools / MCP',
     },
   };
 

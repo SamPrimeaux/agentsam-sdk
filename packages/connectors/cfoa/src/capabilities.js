@@ -1,29 +1,24 @@
 /**
- * Cloudflare capability manifests — permission-scoped, eligibility-aware.
+ * Cloudflare API capability metadata and operation-level authorization rules.
  *
- * Offerable surface = full Local Studio scope catalog (~315), organized into
- * permission products + feature packs (see permission-options.js).
- *
- * This is a permission CATALOG, not connection/session authority. Identity
- * authenticates the AgentSam actor; cfoa credential.js and oauth-persist.js
- * resolve this actor's Cloudflare grants. CMS hosts use their existing D1/R2
- * bindings unless a user explicitly connects their own Cloudflare account.
- * Default mint: baseline (+ host-selected packs). Explicit pack `all` or
- * `{ all: true }` requests the full catalog when the user chooses it.
+ * OAuth permission profiles are not defined here. A host injects its own
+ * permission catalog into connector routes; this file describes provider
+ * operations implemented by this package.
  */
 
-import { CLOUDFLARE_ALL_SCOPES } from './scope-catalog.js';
 import {
   CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
   CLOUDFLARE_PERMISSION_PRODUCTS,
   listCloudflarePermissionProducts,
   listCloudflarePermissionOptionsByCategory,
   permissionProductsAsCapabilities,
-  permissionCategoryFeaturePacks,
   assertPermissionCatalogCoversAllScopes,
 } from './permission-options.js';
 
-/** Minimum scopes for a useful connected Cloudflare account. */
+/**
+ * Legacy baseline used by operation-level capability helpers only.
+ * OAuth consent routes use baselineScopes from the injected host catalog.
+ */
 export const CLOUDFLARE_BASELINE_SCOPES = Object.freeze([
   'account-settings.read',
   'user-details.read',
@@ -347,138 +342,6 @@ export const CLOUDFLARE_CAPABILITIES = Object.freeze({
   ...CLOUDFLARE_CAPABILITIES_CURATED,
   ...permissionProductsAsCapabilities(),
 });
-
-/**
- * Feature packs — curated shortcuts + Studio category packs covering all ~315 scopes.
- * Pack `all` = explicit full-catalog opt-in.
- */
-const CLOUDFLARE_FEATURE_PACKS_CURATED = {
-  baseline: {
-    id: 'baseline',
-    label: 'Account baseline',
-    description: 'Who you are + memberships (always included)',
-    capabilities: [],
-  },
-  data: {
-    id: 'data',
-    label: 'Data plane',
-    description: 'D1, R2, KV, Hyperdrive, Vectorize, Pipelines',
-    capabilities: [
-      'cloudflare.d1',
-      'cloudflare.r2',
-      'cloudflare.kv',
-      'cloudflare.hyperdrive',
-      'cloudflare.vectorize',
-      'cloudflare.pipelines',
-    ],
-  },
-  media: {
-    id: 'media',
-    label: 'Media plane',
-    description: 'Cloudflare Images, Stream, and R2 object storage for galleries',
-    capabilities: [
-      'cloudflare.images',
-      'cloudflare.stream',
-      'cloudflare.r2',
-    ],
-  },
-  compute: {
-    id: 'compute',
-    label: 'Compute',
-    description: 'Workers, Containers, Queues, Workflows, Agents, MCP',
-    capabilities: [
-      'cloudflare.workers',
-      'cloudflare.containers',
-      'cloudflare.queues',
-      'cloudflare.workflows',
-      'cloudflare.agents',
-      'cloudflare.mcp_portals',
-      'cloudflare.browser_rendering',
-    ],
-  },
-  web: {
-    id: 'web',
-    label: 'Web / zones',
-    description: 'Pages, Tunnels, DNS-adjacent zone ops',
-    capabilities: ['cloudflare.pages', 'cloudflare.tunnels', 'cloudflare.tag_gateway'],
-  },
-  security: {
-    id: 'security',
-    label: 'Security (curated)',
-    description: 'Secrets Store, URL Scanner, Token Validation',
-    capabilities: [
-      'cloudflare.secrets_store',
-      'cloudflare.url_scanner',
-      'cloudflare.token_validation',
-    ],
-  },
-  agentsam: {
-    id: 'agentsam',
-    label: 'AgentSam Local Studio',
-    description: 'Data + compute + AI + MCP portals AgentSam needs day-to-day',
-    capabilities: [
-      'cloudflare.workers',
-      'cloudflare.d1',
-      'cloudflare.r2',
-      'cloudflare.kv',
-      'cloudflare.hyperdrive',
-      'cloudflare.vectorize',
-      'cloudflare.containers',
-      'cloudflare.workers_ai',
-      'cloudflare.ai_search',
-      'cloudflare.secrets_store',
-      'cloudflare.tunnels',
-      'cloudflare.browser_rendering',
-      'cloudflare.mcp_portals',
-      'cloudflare.agents',
-      'cloudflare.queues',
-    ],
-  },
-};
-
-export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
-  ...permissionCategoryFeaturePacks(),
-  ...CLOUDFLARE_FEATURE_PACKS_CURATED,
-  // Curated Media Library pack must win over the permission-category "media"
-  // pack (Images/Stream/Calls/MoQ only) so R2 gallery discovery is included.
-  media: CLOUDFLARE_FEATURE_PACKS_CURATED.media,
-});
-
-export {
-  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
-  CLOUDFLARE_PERMISSION_PRODUCTS,
-  listCloudflarePermissionProducts,
-  listCloudflarePermissionOptionsByCategory,
-  assertPermissionCatalogCoversAllScopes,
-};
-
-export function listCloudflareFeaturePacks() {
-  return Object.values(CLOUDFLARE_FEATURE_PACKS);
-}
-
-export function getCloudflareFeaturePack(id) {
-  const key = String(id || '').trim().toLowerCase();
-  if (key === 'dns') return CLOUDFLARE_FEATURE_PACKS.dns_zones || null;
-  return CLOUDFLARE_FEATURE_PACKS[key] || null;
-}
-
-/** Expand pack ids and/or capability ids into OAuth scopes (baseline included). */
-export function scopesForFeaturePacks(packIds = [], extraCapabilityIds = []) {
-  const keys = (packIds || []).map((p) => String(p || '').trim().toLowerCase()).filter(Boolean);
-  if (keys.includes('all')) {
-    return [...CLOUDFLARE_ALL_SCOPES];
-  }
-  const caps = new Set(extraCapabilityIds || []);
-  const directScopes = new Set();
-  for (const raw of keys) {
-    const pack = getCloudflareFeaturePack(raw);
-    if (!pack) continue;
-    for (const id of pack.capabilities || []) caps.add(id);
-    for (const s of pack.oauthScopes || []) directScopes.add(s);
-  }
-  const fromCaps = scopesForCapabilities({ capabilities: [...caps], includeBaseline: true });
-  return [...new Set([...fromCaps, ...directScopes])];
-}
 
 /** Legacy feature → scope map (kept for docs / workers_deploy callers). */
 export const CLOUDFLARE_CAPABILITY_SCOPES = Object.freeze({

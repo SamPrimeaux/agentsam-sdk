@@ -6,13 +6,7 @@ import { parseWhoami, renderCloudflareStatus } from './cloudflare-status.js';
 import {
   CloudflareApiClient,
   CloudflareApiError,
-  listCloudflareCapabilities,
-  listCloudflareFeaturePacks,
-  assessCapabilityAuthorization,
   capabilityAuthorizationMatrix,
-  scopesForCapabilities,
-  scopesForFeaturePacks,
-  requestedCloudflareScopes,
   workflows,
   scanner,
   tags,
@@ -158,7 +152,7 @@ Native (Wrangler reads)
 
 Auth lanes
   agentsam_api_key / agentsam_browser_oauth  → Inner Animal Media identity
-  agentsam_cf_browser_oauth                  → Cloudflare API scopes via feature packs
+  agentsam_cf_browser_oauth                  → Cloudflare OAuth scopes from plugin-owned permission packs
   CLOUDFLARE_API_TOKEN                       → optional direct token (still supported)
 
 Scope mitigation: never dump 300+ CF permissions — authorize by pack
@@ -260,47 +254,65 @@ async function dispatchFamily(args, options) {
   const id = args.id || args.rest[1] || args.rest[0] || '';
 
   if (family === 'permissions' || family === 'capabilities') {
+    const catalog = await runCloudflareBrowserOAuthLogin(['--list-packs', '--json'], options);
+    const packs = catalog.packs || [];
+    const capabilities = catalog.available_capabilities || [];
     if (family === 'capabilities' || action === 'list' || (!args.capability && !args.pack)) {
       return {
-        schema: 'agentsam.cloudflare.capabilities.v1',
-        baseline_scopes: requestedCloudflareScopes(),
-        feature_packs: listCloudflareFeaturePacks().map((pack) => ({
-          id: pack.id,
-          label: pack.label,
-          description: pack.description,
-          capabilities: pack.capabilities,
-          scope_count: scopesForFeaturePacks([pack.id]).length,
-          authorize: `agentsam cloudflare login --pack ${pack.id}`,
-        })),
-        mitigation: 'Use feature packs for consent UX — never present the full Cloudflare scope catalog.',
-        capabilities: listCloudflareCapabilities().map((c) => ({
-          id: c.id,
-          label: c.label,
-          domain: c.domain,
-          availability: c.availability,
-          permission: c.permissionLabel,
-          oauth_scopes: c.oauthScopes,
-          note: c.availabilityNote || null,
-        })),
+        schema: 'agentsam.cloudflare.plugin_permissions.v1',
+        provider: catalog.provider || 'cloudflare',
+        baseline_scopes: catalog.baseline_scopes || [],
+        default_packs: catalog.default_packs || [],
+        default_capabilities: catalog.default_capabilities || [],
+        full_catalog_opt_in: catalog.full_catalog_opt_in === true,
+        aliases: catalog.aliases || {},
+        feature_packs: packs,
+        capabilities,
         tag_vocabulary: TAG_VOCAB,
+        source: 'agentsam_plugins.config_json.oauth_permissions',
       };
     }
     if (args.pack) {
-      const scopes = scopesForFeaturePacks(args.pack.split(','));
+      const requested = args.pack.split(',').map((id) => id.trim().toLowerCase()).filter(Boolean);
+      if (requested.length === 1 && requested[0] === 'all' && catalog.full_catalog_opt_in === true) {
+        const scopes = (catalog.available_permissions || []).map((permission) => permission.scope);
+        return {
+          pack: 'all',
+          full_catalog_opt_in: true,
+          scopes_to_request: scopes,
+          scope_count: scopes.length,
+          authorize: 'agentsam cloudflare login --pack all',
+          authorize_url_hint: '/api/connections/cloudflare/start?packs=all',
+        };
+      }
+      const aliases = catalog.aliases || {};
+      const selectedIds = [];
+      const visit = (id) => {
+        if (Array.isArray(aliases[id])) {
+          for (const target of aliases[id]) visit(target);
+        } else if (!selectedIds.includes(id)) selectedIds.push(id);
+      };
+      requested.forEach(visit);
+      const selected = selectedIds.map((id) => packs.find((pack) => pack.pack_id === id)).filter(Boolean);
+      if (!selected.length) return { ok: false, error: 'cloudflare_permission_pack_unavailable', pack: args.pack };
+      const scopes = [...new Set(selected.flatMap((pack) => pack.requested_scopes || []))];
       return {
         pack: args.pack,
+        expanded_packs: selectedIds,
+        packs: selected,
         scopes_to_request: scopes,
         scope_count: scopes.length,
-        authorize: `agentsam cloudflare login --pack ${args.pack}`,
-        authorize_url_hint: `/api/connections/cloudflare/start?packs=${encodeURIComponent(args.pack)}`,
+        authorize: 'agentsam cloudflare login --pack ' + args.pack,
+        authorize_url_hint: '/api/connections/cloudflare/start?packs=' + encodeURIComponent(args.pack),
       };
     }
-    const assessment = assessCapabilityAuthorization(args.capability, []);
+    const capability = capabilities.find((item) => item.id === args.capability);
+    if (!capability) return { ok: false, error: 'cloudflare_capability_unavailable', capability: args.capability };
     return {
-      ...assessment,
-      scopes_to_request: scopesForCapabilities({ capabilities: [args.capability] }),
-      authorize: `agentsam cloudflare login --capability ${args.capability}`,
-      authorize_url_hint: `/api/connections/cloudflare/start?capabilities=${encodeURIComponent(args.capability)}`,
+      ...capability,
+      scopes_to_request: capability.scopes || [],
+      authorize: 'agentsam cloudflare login --capability ' + args.capability,
+      authorize_url_hint: '/api/connections/cloudflare/start?capabilities=' + encodeURIComponent(args.capability),
     };
   }
 
@@ -488,13 +500,8 @@ export async function runCloudflare(argv = [], options = {}) {
             account_id: client.accountId || null,
           },
           capabilities: matrix,
-          probes: core,
-          feature_packs: listCloudflareFeaturePacks().map((p) => ({
-            id: p.id,
-            label: p.label,
-            authorize: `agentsam cloudflare login --pack ${p.id}`,
-          })),
-          note: 'OAuth scope matrix unknown for raw API tokens — use family status probes for live authorization. Prefer agentsam_cf_browser_oauth packs for scoped consent.',
+          probes: core,          permission_catalog: 'agentsam cloudflare login --list-packs',
+          note: 'OAuth scopes are configured on the Local Studio provider plugin; this raw API-token probe does not infer OAuth grants.',
         };
         // Live probes for key families when account present
         if (client.accountId && args.probe) {

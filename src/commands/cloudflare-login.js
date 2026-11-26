@@ -11,13 +11,6 @@ import {
   resolveLocalStudioHostOrigin,
   resolvePlatformAccountIssuer,
 } from '../lib/app-authority.js';
-import {
-  listCloudflareFeaturePacks,
-  getCloudflareFeaturePack,
-  scopesForFeaturePacks,
-  scopesForCapabilities,
-} from '../../packages/connectors/cfoa/src/index.js';
-
 function clean(value) {
   return value == null ? '' : String(value).trim();
 }
@@ -51,7 +44,7 @@ function parseLoginArgs(argv = []) {
       out.capabilities.push(...raw.split(',').map((s) => s.trim()).filter(Boolean));
     } else if (arg.startsWith('--capability=')) {
       out.capabilities.push(...arg.slice('--capability='.length).split(',').map((s) => s.trim()).filter(Boolean));
-    } else if (!arg.startsWith('-') && getCloudflareFeaturePack(arg)) {
+    } else if (!arg.startsWith('-')) {
       out.packs.push(arg);
     } else {
       throw new Error(`unknown cloudflare login option: ${arg}`);
@@ -62,16 +55,19 @@ function parseLoginArgs(argv = []) {
 
 const LOGIN_HELP = `Agent Sam · Cloudflare browser OAuth (agentsam_cf_browser_oauth)
 
-Authorize Cloudflare API access without picking from 300+ scopes.
-Feature packs expand to OAuth scopes on the Local Studio APP host.
+Authorize Cloudflare features through permission packs registered on the Local Studio plugin.
+The host resolves scopes; the CLI does not contain a second permission catalog.
 
 Namespaces (do not collapse):
   APP.id              local-studio
   HOST.origin         from apps/local-studio/agentsam.app.json hosts[]
   PLATFORM issuer     IAM_OAUTH_ISSUER (account API — separate)
 
-  agentsam cloudflare login --pack agentsam
-  agentsam cloudflare login --pack data,ai
+  agentsam cloudflare login --pack watch
+  agentsam cloudflare login --pack store,build
+  agentsam cloudflare login --pack create
+  agentsam cloudflare login --pack publish
+  agentsam cloudflare login --pack all  # explicit full-catalog opt-in, when enabled by the host
   agentsam cloudflare login --capability cloudflare.d1,cloudflare.hyperdrive
   agentsam cloudflare login --list-packs
   agentsam cloudflare authorize --pack data   # alias
@@ -83,32 +79,46 @@ Flow
 `;
 
 /**
- * Build Cloudflare connection OAuth start URL from local-studio APP HOST.
- * Packs expand client-side; HOST serves /api/connections/cloudflare/start.
+ * Build the OAuth start URL. Permission expansion and validation stay on the
+ * Local Studio host; the CLI only forwards registered IDs.
  */
+function expandPackAliases(ids, aliases = {}) {
+  const out = new Set();
+  const visiting = new Set();
+  const visit = (raw) => {
+    const id = String(raw || '').trim().toLowerCase();
+    if (!id || visiting.has(id)) return;
+    const targets = aliases[id];
+    if (!Array.isArray(targets)) {
+      out.add(id);
+      return;
+    }
+    visiting.add(id);
+    for (const target of targets) visit(target);
+    visiting.delete(id);
+  };
+  for (const id of ids) visit(id);
+  return [...out];
+}
+
 export function buildCloudflareBrowserOAuthStartUrl(options = {}) {
   const packs = (options.packs || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean);
   const capabilities = (options.capabilities || []).map((c) => String(c).trim()).filter(Boolean);
-
-  for (const id of packs) {
-    if (id !== 'baseline' && !getCloudflareFeaturePack(id)) {
-      const err = new Error(`unknown Cloudflare feature pack: ${id}`);
-      err.code = 'unknown_feature_pack';
-      throw err;
-    }
-  }
-
-  const effectivePacks = packs.length ? packs : ['agentsam'];
-  const scopes = scopesForFeaturePacks(effectivePacks, capabilities);
-  const hostOrigin = resolveLocalStudioHostOrigin({
+  const defaultPacks = (options.defaultPacks || []).map((p) => String(p).trim().toLowerCase()).filter(Boolean);
+  const defaultCapabilities = (options.defaultCapabilities || []).map((c) => String(c).trim()).filter(Boolean);
+  const aliases = options.aliases || {};
+  const effectivePacks = packs.length ? expandPackAliases(packs, aliases) : defaultPacks;
+  const effectiveCapabilities = capabilities.length ? capabilities : (packs.length ? [] : defaultCapabilities);
+  const packCatalog = Array.isArray(options.packCatalog) ? options.packCatalog : [];
+  const byId = new Map(packCatalog.map((pack) => [pack.pack_id || pack.id, pack]));
+  const hostOrigin = options.hostOrigin || resolveLocalStudioHostOrigin({
     root: options.root,
     role: options.hostRole || 'production',
     hostId: options.hostId,
   });
-  const startPath = options.startPath
-    || '/api/connections/cloudflare/start';
-  const start = new URL(startPath, `${hostOrigin}/`);
-  start.searchParams.set('packs', effectivePacks.join(','));
+  const startPath = options.startPath || '/api/connections/cloudflare/start';
+  const start = new URL(startPath, hostOrigin + '/');
+  if (packs.length) start.searchParams.set('packs', packs.join(','));
   if (capabilities.length) start.searchParams.set('capabilities', capabilities.join(','));
   if (options.returnTo) start.searchParams.set('return_to', options.returnTo);
 
@@ -118,19 +128,38 @@ export function buildCloudflareBrowserOAuthStartUrl(options = {}) {
     host_origin: hostOrigin,
     platform_issuer: resolvePlatformAccountIssuer(options.env || process.env, options.issuer || ''),
     authorize_url: start.toString(),
+    permissions_url: new URL('/api/connections/cloudflare/permissions', hostOrigin + '/').toString(),
     path_kind: 'app_host_connections',
     packs: effectivePacks,
-    capabilities,
-    scope_count: scopes.length,
-    scopes,
+    requested_packs: packs,
+    capabilities: effectiveCapabilities,
+    scope_count: null,
+    scopes: [],
     packs_detail: effectivePacks.map((id) => {
-      const pack = getCloudflareFeaturePack(id);
+      const pack = byId.get(id);
       return pack
-        ? { id: pack.id, label: pack.label, description: pack.description, capabilities: pack.capabilities }
+        ? { id, label: pack.label, description: pack.description, capabilities: pack.capabilities || [] }
         : { id, label: id };
     }),
-    note: 'OAuth client + scopes authorize on local-studio HOST; account identity stays on PLATFORM IAM_OAUTH_ISSUER.',
+    note: 'OAuth permissions are resolved by the host from the registered provider plugin configuration.',
   };
+}
+
+async function fetchCloudflarePermissionCatalog(hostOrigin, accessToken, fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== 'function') throw new Error('cloudflare_permission_catalog_fetch_unavailable');
+  const response = await fetchImpl(new URL('/api/connections/cloudflare/permissions', hostOrigin + '/'), {
+    headers: {
+      authorization: 'Bearer ' + accessToken,
+      accept: 'application/json',
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload?.ok !== true) {
+    const error = new Error(payload?.error || ('cloudflare_permission_catalog_http_' + response.status));
+    error.code = payload?.error || 'cloudflare_permission_catalog_unavailable';
+    throw error;
+  }
+  return payload;
 }
 
 export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
@@ -143,24 +172,6 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     return { ok: true, help: true };
   }
 
-  if (args.listPacks) {
-    const packs = listCloudflareFeaturePacks().map((pack) => ({
-      id: pack.id,
-      label: pack.label,
-      description: pack.description,
-      capabilities: pack.capabilities,
-      scope_count: scopesForCapabilities({ capabilities: pack.capabilities, includeBaseline: true }).length,
-    }));
-    const payload = {
-      schema: 'agentsam.cloudflare.feature_packs.v1',
-      kind: 'agentsam_cf_browser_oauth',
-      mitigation: 'Authorize by pack (product need), not by scrolling 300+ Cloudflare scopes. Upgrade later with another --pack.',
-      packs,
-    };
-    write(args.json ? `${JSON.stringify(payload, null, 2)}\n` : LOGIN_HELP);
-    return payload;
-  }
-
   const authority = await (options.authorityLoader || resolveAccountAuthority)({
     env,
     home: options.home,
@@ -168,33 +179,85 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     refreshImpl: options.refreshImpl,
   });
   if (!authority.value) {
-    const err = new Error(
-      authority.error
-        || 'Sign in first: agentsam login  (or export AGENTSAM_API_KEY)',
-    );
+    const err = new Error(authority.error || 'Sign in first: agentsam login (or export AGENTSAM_API_KEY)');
     err.code = 'account_auth_required';
+    throw err;
+  }
+
+  const hostOrigin = options.hostOrigin || resolveLocalStudioHostOrigin({
+    root: options.root,
+    role: options.hostRole || 'production',
+    hostId: options.hostId,
+  });
+  const catalog = await fetchCloudflarePermissionCatalog(
+    hostOrigin,
+    authority.value,
+    options.fetchImpl || globalThis.fetch,
+  );
+
+  if (args.listPacks) {
+    const payload = {
+      schema: 'agentsam.cloudflare.permission_packs.v1',
+      kind: 'agentsam_cf_browser_oauth',
+      provider: catalog.provider,
+      default_packs: catalog.default_packs || [],
+      default_capabilities: catalog.default_capabilities || [],
+      full_catalog_opt_in: catalog.full_catalog_opt_in === true,
+      aliases: catalog.aliases || {},
+      packs: catalog.registered_packs || [],
+      available_capabilities: catalog.available_capabilities || [],
+      permissions_url: new URL('/api/connections/cloudflare/permissions', hostOrigin + '/').toString(),
+    };
+    write(args.json ? JSON.stringify(payload, null, 2) + '\n' : LOGIN_HELP + '\nRegistered packs are loaded from the Local Studio plugin catalog.\n');
+    return payload;
+  }
+
+  const knownPacks = new Set((catalog.registered_packs || []).map((pack) => String(pack.pack_id || '').toLowerCase()));
+  const aliases = catalog.aliases && typeof catalog.aliases === 'object' ? catalog.aliases : {};
+  const unknownPacks = args.packs.map((id) => id.toLowerCase()).filter((id) =>
+    id !== 'all' || catalog.full_catalog_opt_in !== true
+  ).filter((id) => !knownPacks.has(id) && !Array.isArray(aliases[id]));
+  if (unknownPacks.length) {
+    const err = new Error('Unknown Cloudflare permission pack: ' + unknownPacks.join(', '));
+    err.code = 'cloudflare_permission_pack_unavailable';
+    throw err;
+  }
+  const knownCapabilities = new Set((catalog.available_capabilities || []).map((capability) => capability.id));
+  const unknownCapabilities = args.capabilities.filter((id) => !knownCapabilities.has(id));
+  if (unknownCapabilities.length) {
+    const err = new Error('Unknown Cloudflare capability: ' + unknownCapabilities.join(', '));
+    err.code = 'cloudflare_capability_unavailable';
     throw err;
   }
 
   const plan = buildCloudflareBrowserOAuthStartUrl({
     env,
+    root: options.root,
+    hostRole: options.hostRole,
+    hostId: options.hostId,
+    hostOrigin,
     packs: args.packs,
     capabilities: args.capabilities,
+    defaultPacks: catalog.default_packs,
+    defaultCapabilities: catalog.default_capabilities,
+    aliases,
+    packCatalog: catalog.registered_packs,
     issuer: options.issuer,
+    returnTo: options.returnTo,
   });
 
   if (args.json && !args.open) {
-    write(`${JSON.stringify(plan, null, 2)}\n`);
+    write(JSON.stringify(plan, null, 2) + '\n');
     return plan;
   }
 
   writeLine(write, '');
   writeLine(write, '  Agent Sam · Cloudflare browser OAuth');
-  writeLine(write, `  kind           agentsam_cf_browser_oauth`);
-  writeLine(write, `  packs          ${plan.packs.join(', ')}`);
-  writeLine(write, `  scopes         ${plan.scope_count} (pack-expanded; not the full CF catalog)`);
+  writeLine(write, '  kind           agentsam_cf_browser_oauth');
+  writeLine(write, '  packs          ' + (plan.packs.join(', ') || '(host default)'));
+  writeLine(write, '  scopes         resolved by the Local Studio plugin registry');
   for (const pack of plan.packs_detail) {
-    writeLine(write, `  · ${pack.id.padEnd(12)} ${pack.description || pack.label || ''}`);
+    writeLine(write, '  · ' + String(pack.id).padEnd(12) + ' ' + (pack.description || pack.label || ''));
   }
   writeLine(write, '');
 
@@ -213,7 +276,7 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     writeLine(write, '');
   }
 
-  if (args.json) write(`${JSON.stringify(plan, null, 2)}\n`);
+  if (args.json) write(JSON.stringify(plan, null, 2) + '\n');
   return { ok: true, ...plan };
 }
 

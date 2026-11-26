@@ -7,6 +7,25 @@ import {
 } from '../src/index.js';
 import { handleCloudflareConnectionRequest } from '../src/routes.js';
 
+const permissionRegistry = {
+  async getOAuthPermissionCatalog(providerKey) {
+    assert.equal(providerKey, 'cloudflare');
+    return {
+      baselineScopes: ['offline_access', 'account-settings.read'],
+      defaultPacks: ['watch'],
+      allowFullCatalogOptIn: true,
+      availablePermissions: [{ scope: 'catalog.extra.read', label: 'Extra', category: 'extra' }],
+      aliases: { media: ['store', 'create'] },
+      packs: [
+        { id: 'watch', label: 'Watch', scopes: ['workers-observability.read'] },
+        { id: 'store', label: 'Store', scopes: ['d1.read', 'd1.write'] },
+        { id: 'create', label: 'Create', scopes: ['images.read', 'images.write'] },
+      ],
+      capabilities: [{ id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] }],
+    };
+  },
+};
+
 describe('cloudflare connector', () => {
   it('reports not_configured when credentials are absent', () => {
     const client = resolveCloudflareOAuthClient({});
@@ -65,6 +84,7 @@ describe('cloudflare connector', () => {
         fixtureSessions: new Map([['fixture', 'user_123']]),
         CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
       },
+      { permissionRegistry },
     );
     assert.equal(response.status, 200);
     const body = await response.json();
@@ -85,6 +105,7 @@ describe('cloudflare connector', () => {
         oauthState,
         CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
       },
+      { permissionRegistry },
     );
 
     assert.equal(response.status, 302);
@@ -94,6 +115,122 @@ describe('cloudflare connector', () => {
     assert.equal(location.searchParams.get('client_id'), 'real-client-id');
     assert.equal(location.searchParams.get('redirect_uri'), 'https://agentsam.example/api/connections/cloudflare/callback');
     assert.equal(oauthState.size, 1);
+  });
+
+
+  it('lists host-owned permission packs without treating offerable scopes as granted', async () => {
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/permissions', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+      },
+      { permissionRegistry },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.ok(body.available_permissions.some((permission) => permission.scope === 'd1.write'));
+    assert.ok(body.registered_packs.some((pack) => pack.pack_id === 'store'));
+    assert.deepEqual(body.granted_scopes, []);
+  });
+
+  it('uses host-provided default packs and rejects unregistered pack IDs', async () => {
+    const oauthState = new Map();
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState,
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+      { permissionRegistry },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.ok(body.scopes.includes('workers-observability.read'));
+    assert.ok(body.scopes.includes('account-settings.read'));
+
+    const rejected = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start?packs=not-registered', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+      { permissionRegistry },
+    );
+    assert.equal(rejected.status, 400);
+    assert.equal((await rejected.json()).error, 'cloudflare_permission_pack_unavailable');
+  });
+
+  it('uses host-declared default capabilities when no explicit pack or capability is selected', async () => {
+    const defaultCapabilityRegistry = {
+      async getOAuthPermissionCatalog() {
+        return {
+          baselineScopes: ['offline_access'],
+          defaultPacks: [],
+          defaultCapabilities: ['cloudflare.r2'],
+          capabilities: [{ id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] }],
+          packs: [],
+        };
+      },
+    };
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+      { permissionRegistry: defaultCapabilityRegistry },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.ok(body.scopes.includes('workers-r2.read'));
+    assert.ok(body.scopes.includes('workers-r2.write'));
+    assert.ok(!body.scopes.includes('workers-observability.read'));
+  });
+
+  it('supports an explicit full-catalog opt-in without making it a default', async () => {
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start?packs=all', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+      { permissionRegistry },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.ok(body.scopes.includes('catalog.extra.read'));
+    assert.ok(body.scopes.includes('d1.write'));
+  });
+
+  it('fails closed when no host permission registry is injected', async () => {
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start', {
+        headers: { authorization: 'Bearer fixture', accept: 'application/json' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState: new Map(),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+    );
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, 'cloudflare_permission_registry_unavailable');
   });
 
   it('consumes callback state and stores only encrypted OAuth tokens', async () => {

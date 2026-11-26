@@ -1,7 +1,7 @@
 /**
- * Offerable Cloudflare permission options — every Local Studio scope, grouped for UX/OAuth.
- * Users pick categories / products / packs. Default mint stays least-privilege;
- * pack `all` or `{ all: true }` explicitly requests the full catalog.
+ * Provider permission metadata used to describe API capabilities and
+ * remediation paths. This is not the OAuth consent-pack registry; consent
+ * packs are supplied by the host through the permissionRegistry adapter.
  */
 import { CLOUDFLARE_ALL_SCOPES } from './scope-catalog.js';
 
@@ -1022,31 +1022,6 @@ export function permissionProductsAsCapabilities() {
     };
   }
   return caps;
-}
-
-/** Feature packs = Studio categories + `all` opt-in. */
-export function permissionCategoryFeaturePacks() {
-  const byCat = listCloudflarePermissionOptionsByCategory();
-  /** @type {Record<string, object>} */
-  const packs = {
-    all: {
-      id: 'all',
-      label: 'All Cloudflare permissions',
-      description: 'Explicit opt-in to every offerable Local Studio scope (~315).',
-      capabilities: Object.keys(permissionProductsAsCapabilities()),
-      oauthScopes: [...CLOUDFLARE_ALL_SCOPES],
-    },
-  };
-  for (const [cat, products] of Object.entries(byCat)) {
-    packs[cat] = {
-      id: cat,
-      label: CLOUDFLARE_PERMISSION_CATEGORY_LABELS[cat] || cat,
-      description: `Offerable scopes in ${CLOUDFLARE_PERMISSION_CATEGORY_LABELS[cat] || cat}`,
-      capabilities: products.map((p) => p.id),
-      oauthScopes: products.flatMap((p) => p.oauthScopes),
-    };
-  }
-  return packs;
 }
 
 export function assertPermissionCatalogCoversAllScopes() {

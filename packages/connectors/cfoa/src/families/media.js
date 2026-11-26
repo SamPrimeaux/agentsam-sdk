@@ -69,9 +69,9 @@ export function normalizeCloudflareReturnTo(returnTo = '', fallback = '/settings
  * Build a Cloudflare OAuth start URL that returns to the originating product surface.
  * @param {{ packs?: string, returnTo?: string }} [opts]
  */
-export function cloudflareMediaConnectUrl({ packs = 'media,data', returnTo = '/settings/integrations' } = {}) {
+export function cloudflareMediaConnectUrl({ packs = 'store,create', returnTo = '/settings/integrations' } = {}) {
   const params = new URLSearchParams({
-    packs: String(packs || 'media,data'),
+    packs: String(packs || 'store,create'),
     return_to: normalizeCloudflareReturnTo(returnTo),
   });
   return `/api/connections/cloudflare/start?${params.toString()}`;

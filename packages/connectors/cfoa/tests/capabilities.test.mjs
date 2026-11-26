@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   requestedCloudflareScopes,
-  CLOUDFLARE_ALL_SCOPES,
   CLOUDFLARE_BASELINE_SCOPES,
   scopesForCapabilities,
   assessCapabilityAuthorization,
@@ -18,30 +17,37 @@ import {
 } from '../src/index.js';
 
 describe('cloudflare capability-scoped auth', () => {
-  it('does not request the full scope catalog by default', () => {
-    const scopes = requestedCloudflareScopes();
-    assert.ok(scopes.length < 20);
-    assert.ok(scopes.length >= CLOUDFLARE_BASELINE_SCOPES.length);
-    assert.deepEqual(scopes.sort(), [...CLOUDFLARE_BASELINE_SCOPES].sort());
-    assert.ok(!scopes.includes('url-scanner.write'));
-    assert.equal(CLOUDFLARE_ALL_SCOPES.length, 315);
+  it('requires a host-owned permission catalog and uses its default packs', () => {
+    assert.throws(
+      () => requestedCloudflareScopes(),
+      (error) => error.code === 'cloudflare_permission_registry_unavailable',
+    );
+    const scopes = requestedCloudflareScopes({
+      permissionCatalog: {
+        baselineScopes: ['offline_access'],
+        defaultPacks: ['watch'],
+        packs: [{ id: 'watch', scopes: ['workers-tail.read'] }],
+        capabilities: [],
+      },
+    });
+    assert.deepEqual(scopes, ['offline_access', 'workers-tail.read']);
   });
 
-  it('offers every Local Studio scope via permission products + pack all', async () => {
-    const {
-      assertPermissionCatalogCoversAllScopes,
-      listCloudflarePermissionProducts,
-      scopesForFeaturePacks,
-      requestedCloudflareScopes: req,
-    } = await import('../src/index.js');
+  it('keeps provider API metadata separate from host-owned OAuth pack configuration', async () => {
+    const { assertPermissionCatalogCoversAllScopes, listCloudflarePermissionProducts } = await import('../src/index.js');
     const cover = assertPermissionCatalogCoversAllScopes();
     assert.equal(cover.ok, true);
     assert.equal(cover.scopes, 315);
     assert.ok(listCloudflarePermissionProducts().length >= 150);
-    const allPack = scopesForFeaturePacks(['all']);
-    assert.equal(allPack.length, 315);
-    assert.equal(req({ packs: ['all'] }).length, 315);
-    assert.equal(req({ all: true }).length, 315);
+    const scopes = requestedCloudflareScopes({
+      permissionCatalog: {
+        baselineScopes: ['offline_access'],
+        packs: [{ id: 'store', scopes: ['d1.read', 'd1.write'] }],
+        capabilities: [],
+      },
+      packs: ['store'],
+    });
+    assert.deepEqual(scopes, ['offline_access', 'd1.read', 'd1.write']);
   });
 
   it('upgrades scopes only for requested capabilities', () => {
@@ -56,6 +62,14 @@ describe('cloudflare capability-scoped auth', () => {
 
   it('requests only read-only HTTP Analytics and Basin scopes for the Health dashboard', () => {
     const scopes = requestedCloudflareScopes({
+      permissionCatalog: {
+        baselineScopes: CLOUDFLARE_BASELINE_SCOPES,
+        packs: [],
+        capabilities: [
+          { id: 'cloudflare.perm.account-analytics', scopes: ['account-analytics.read'] },
+          { id: 'cloudflare.basin.read', scopes: ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'] },
+        ],
+      },
       capabilities: ['cloudflare.perm.account-analytics', 'cloudflare.basin.read'],
     });
     assert.deepEqual(

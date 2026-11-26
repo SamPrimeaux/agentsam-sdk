@@ -13,6 +13,7 @@ import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "@inneranimalmedia/agentsam-connector-cloudflare/routes";
 import { resolveCloudflareOAuthClient } from "@inneranimalmedia/agentsam-connector-cloudflare";
+import { createPluginOAuthPermissionRegistry } from "./cloudflare-plugin-permission-registry.js";
 import { handleIdentityWorkerRequest } from "@inneranimalmedia/agentsam-identity/server/worker-router";
 import {
   IDENTITY_ROUTE_IDS,
@@ -109,21 +110,6 @@ const APP = localStudioApp;
 const ROUTE_PROJECTION = projectionFromAppManifest(APP);
 const ROUTE_REGISTRY = createRouteRegistry([ROUTE_PROJECTION]);
 const PROVIDER_REGISTRY = createProviderRegistry();
-
-/** Host-owned CF connect defaults — not inside packages/connectors. */
-const LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES = Object.freeze([
-  "cloudflare.workers",
-  "cloudflare.d1",
-  "cloudflare.r2",
-  "cloudflare.pages",
-  "cloudflare.images",
-  "cloudflare.stream",
-  "cloudflare.vectorize",
-  "cloudflare.hyperdrive",
-  "cloudflare.mcp_portals",
-  "cloudflare.agents",
-  "cloudflare.workflows",
-]);
 
 const LOGIN_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.LOGIN);
 const SIGNUP_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.SIGNUP);
@@ -1366,7 +1352,7 @@ export default {
     // to the generated Nitro application handler.
     if (isCfConnection) {
       return handleCloudflareConnectionRequest(request, env, {
-        defaultCapabilities: LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES,
+        permissionRegistry: createPluginOAuthPermissionRegistry(env),
         app: APP,
         routeRegistry: ROUTE_REGISTRY,
         loginPath: LOGIN_PATH,

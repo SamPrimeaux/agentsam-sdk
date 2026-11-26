@@ -14,22 +14,21 @@ export {
   CLOUDFLARE_BASELINE_SCOPES,
   CLOUDFLARE_CAPABILITIES,
   CLOUDFLARE_CAPABILITY_SCOPES,
-  CLOUDFLARE_FEATURE_PACKS,
-  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
-  CLOUDFLARE_PERMISSION_PRODUCTS,
   listCloudflareCapabilities,
-  listCloudflareFeaturePacks,
-  listCloudflarePermissionProducts,
-  listCloudflarePermissionOptionsByCategory,
-  assertPermissionCatalogCoversAllScopes,
   getCloudflareCapability,
-  getCloudflareFeaturePack,
   scopesForCapabilities,
-  scopesForFeaturePacks,
   assessCapabilityAuthorization,
   capabilityAuthorizationMatrix,
   cloudflarePermissionRemediation,
 } from './capabilities.js';
+
+export {
+  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
+  CLOUDFLARE_PERMISSION_PRODUCTS,
+  listCloudflarePermissionProducts,
+  listCloudflarePermissionOptionsByCategory,
+  assertPermissionCatalogCoversAllScopes,
+} from './permission-options.js';
 
 export {
   upsertCloudflareUserOauthToken,
@@ -72,37 +71,31 @@ export * as snippets from './families/snippets.js';
 export * as vectorize from './families/vectorize.js';
 export { createCloudflareAnalyticsSqlClient, normalizeAnalyticsSqlCount } from './families/analytics-sql.js';
 
-import { scopesForCapabilities as _scopesForCapabilities, scopesForFeaturePacks as _scopesForFeaturePacks } from './capabilities.js';
-import { CLOUDFLARE_ALL_SCOPES as _CLOUDFLARE_ALL_SCOPES, isKnownCloudflareScope } from './scope-catalog.js';
-
-// Full Local Studio scope catalog — offerable via packs/products; pack `all` opts in wholesale.
-export const CLOUDFLARE_ALL_SCOPES = _CLOUDFLARE_ALL_SCOPES;
-export { isKnownCloudflareScope };
+export {
+  normalizeProviderPermissionCatalog,
+  loadProviderPermissionCatalog,
+  resolvePermissionScopes,
+  listProviderScopeOptions,
+} from './scope-registry.js';
 
 /**
- * Scopes requested at OAuth mint / re-authorize.
- * Default: baseline only. Pass `capabilities` and/or `packs` to upgrade deliberately.
- * Host apps supply their own default capability list — this package does not.
- * Pass `{ all: true }` or pack `all` when the user explicitly wants every offerable scope.
- * @param {{ capabilities?: string[], packs?: string[], all?: boolean }} [opts]
+ * Compatibility helper for consumers that already loaded a host permission
+ * catalog. No provider scopes or pack definitions are embedded in this package.
  */
-export function requestedCloudflareScopes(opts = {}) {
-  if (opts && opts.all === true) return [...CLOUDFLARE_ALL_SCOPES];
-  const capabilities = Array.isArray(opts?.capabilities) ? opts.capabilities.filter(Boolean) : [];
-  const packs = Array.isArray(opts?.packs) ? opts.packs.filter(Boolean) : [];
-  if (packs.map((p) => String(p).toLowerCase()).includes('all')) {
-    return [...CLOUDFLARE_ALL_SCOPES];
-  }
-  if (packs.length) {
-    return _scopesForFeaturePacks(packs, capabilities);
-  }
-  return _scopesForCapabilities({
-    capabilities,
-    includeBaseline: true,
-    generallyAvailableOnly: true,
+import { normalizeProviderPermissionCatalog, resolvePermissionScopes } from './scope-registry.js';
+export function requestedCloudflareScopes(options = {}) {
+  const catalog = normalizeProviderPermissionCatalog(options.permissionCatalog, 'cloudflare');
+  const selection = resolvePermissionScopes(catalog, {
+    packs: options.packs || [],
+    capabilities: options.capabilities || [],
   });
+  if (!selection.ok) {
+    const error = new Error(selection.error);
+    error.code = selection.error;
+    throw error;
+  }
+  return selection.scopes;
 }
-
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -251,6 +244,9 @@ export async function probeCloudflareConnection(env, ownerId, options = {}) {
 }
 
 export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge, scopes }) {
+  if (!Array.isArray(scopes) || scopes.length === 0) {
+    throw new TypeError('cloudflare_oauth_scopes_required');
+  }
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
@@ -258,7 +254,7 @@ export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge,
     state,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    scope: (scopes || requestedCloudflareScopes()).join(' '),
+    scope: scopes.join(' '),
   });
   return `${CLOUDFLARE_OAUTH_AUTHORIZE_URL}?${params}`;
 }
