@@ -21,7 +21,7 @@ const validateRun = schemaAjv.compile(readRunSchema('run.v1.schema.json'));
 const validateRunStart = schemaAjv.compile(readRunSchema('run-start.v1.schema.json'));
 const validateRunReceipt = schemaAjv.compile(readRunSchema('run-receipt.v1.schema.json'));
 
-async function fixture(t, { childStatus = 'running', timeoutChild = false, suspendChild = false } = {}) {
+async function fixture(t, { childStatus = 'running', suspendChild = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-run-'));
   fs.writeFileSync(path.join(root, 'package.json'), '{"name":"acp-test","private":true}\n');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
