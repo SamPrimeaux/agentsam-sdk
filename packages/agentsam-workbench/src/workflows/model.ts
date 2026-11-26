@@ -107,6 +107,9 @@ export function validateWorkflowGraph(
     }
 
     if (node.kind === "action") {
+      if (!node.capabilityKey?.trim()) {
+        issues.push({ severity: "error", code: "workflow_action_capability_required", nodeKey: key, message: "Every action must resolve to a registered capability." });
+      }
       if (node.resolutionMode === "routed" && !node.capabilityKey?.trim()) {
         issues.push({ severity: "error", code: "workflow_action_capability_required", nodeKey: key, message: "Choose a capability for this routed action." });
       } else if (node.resolutionMode === "pinned" && !node.pinnedToolId?.trim()) {
@@ -114,6 +117,8 @@ export function validateWorkflowGraph(
       } else if (!node.resolutionMode) {
         issues.push({ severity: "error", code: "workflow_action_resolution_required", nodeKey: key, message: "Choose routed capability or pinned tool resolution." });
       }
+    } else if (node.kind === "agent" && !node.agentProfileId?.trim()) {
+      issues.push({ severity: "error", code: "workflow_agent_profile_required", nodeKey: key, message: "Choose an active agent profile owned by this user or provided globally." });
     } else if (node.resolutionMode || node.capabilityKey || node.pinnedToolId) {
       issues.push({ severity: "error", code: "workflow_non_action_resolution_forbidden", nodeKey: key, message: "Only action nodes can declare capability or pinned-tool resolution." });
     }
@@ -148,6 +153,41 @@ export function validateWorkflowGraph(
     }
     edgeKeys.add(uniqueKey);
   });
+
+  for (const node of nodes.filter((candidate) => candidate.kind === "approval")) {
+    const config = node.config ?? {};
+    const outgoingActions = edges
+      .filter((edge) => edge.fromNodeKey === node.nodeKey)
+      .map((edge) => nodeByKey.get(edge.toNodeKey))
+      .filter((candidate): candidate is WorkflowGraphNode => candidate?.kind === "action");
+    const explicitTarget = String(config.target_node_key ?? config.targetNodeKey ?? "").trim();
+    const targetKey = explicitTarget || (outgoingActions.length === 1 ? outgoingActions[0].nodeKey : "");
+    const target = targetKey ? nodeByKey.get(targetKey) : undefined;
+    if (!target || target.kind !== "action") {
+      issues.push({ severity: "error", code: "workflow_approval_target_required", nodeKey: node.nodeKey, message: "Choose one connected action that this approval authorizes." });
+      continue;
+    }
+    if (!edges.some((edge) => edge.fromNodeKey === node.nodeKey && edge.toNodeKey === targetKey)) {
+      issues.push({ severity: "error", code: "workflow_approval_target_not_connected", nodeKey: node.nodeKey, message: "The approved action must be directly connected to this approval gate." });
+    }
+    const actionConfig = target.config ?? {};
+    const operation = actionConfig.authorized_operation ?? actionConfig.authorizedOperation ?? actionConfig.operation ?? actionConfig.operation_key;
+    const resourceType = actionConfig.resource_type ?? actionConfig.resourceType;
+    const resourceId = actionConfig.resource_id ?? actionConfig.resourceId ?? actionConfig.resource_id_path ?? actionConfig.resourceIdPath;
+    const resourceRevision = actionConfig.resource_revision ?? actionConfig.resourceRevision ?? actionConfig.resource_revision_path ?? actionConfig.resourceRevisionPath;
+    if (!String(operation ?? "").trim()) {
+      issues.push({ severity: "error", code: "workflow_approval_operation_required", nodeKey: target.nodeKey, message: "The target action needs an explicit authorized operation." });
+    }
+    if (!String(resourceType ?? "").trim()) {
+      issues.push({ severity: "error", code: "workflow_approval_resource_type_required", nodeKey: target.nodeKey, message: "The target action needs a resource type." });
+    }
+    if (!String(resourceId ?? "").trim()) {
+      issues.push({ severity: "error", code: "workflow_approval_resource_id_required", nodeKey: target.nodeKey, message: "Bind the target resource ID using a value or input path." });
+    }
+    if (!String(resourceRevision ?? "").trim()) {
+      issues.push({ severity: "error", code: "workflow_approval_resource_revision_required", nodeKey: target.nodeKey, message: "Bind the exact resource revision that the action will modify." });
+    }
+  }
 
   const errors = issues.some((issue) => issue.severity === "error");
   return { ok: !errors, issues };
