@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-design-canvas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
@@ -8,7 +8,7 @@
   },
   "private": false,
   "type": "module",
-  "description": "Installable, source-backed design canvas application for AgentSam and InnerAnimalMedia",
+  "description": "Installable AgentSam creative workspace for slides, visual design, design systems, and source-backed artboards",
   "bin": {
     "agentsam-design-canvas": "./bin/agentsam-design-canvas.mjs"
   },
