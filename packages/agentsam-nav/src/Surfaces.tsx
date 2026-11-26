@@ -509,7 +509,7 @@ function SidenavContents() {
   const unpinnedProjects = projects.filter((item) => !item.pinned);
   const recent = conversations.filter((item) => !item.pinned && (!item.projectId || !(data.projects ?? []).some(project => project.id === item.projectId))).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
   const projectThreads = (id: string) => conversations.filter(item => item.projectId === id && !item.pinned).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
-  const newConversation = data.showHistory !== false && data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
+  const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
   const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
     {(data.showSidebarHeader !== false || isMobile) ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /><span className="as-nav-current-app" title={data.brand?.name}>{data.brand?.name ?? "InnerAnimalMedia"}</span>
