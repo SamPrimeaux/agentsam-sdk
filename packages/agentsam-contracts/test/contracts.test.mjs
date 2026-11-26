@@ -5,7 +5,8 @@ import * as contracts from '../dist/index.js';
 
 test('contracts package stays framework neutral', async () => {
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  assert.equal(pkg.dependencies, undefined);
+  assert.deepEqual(Object.keys(pkg.dependencies ?? {}).sort(), ['ajv']);
+  assert.equal(pkg.dependencies.ajv, '^8.17.1');
   assert.equal(pkg.peerDependencies, undefined);
 });
 
@@ -21,6 +22,10 @@ test('operation and tool contracts are first-class package exports', async () =>
     './schemas/sam-operation.v1.schema.json',
     './schemas/agent-tool-definition.v1.schema.json',
     './schemas/sam-result.v1.schema.json',
+    './schemas/activity.v1.schema.json',
+    './schemas/run.v1.schema.json',
+    './schemas/run-start.v1.schema.json',
+    './schemas/run-receipt.v1.schema.json',
   ]) {
     assert.equal(typeof pkg.exports[key], 'string', `missing portable schema export: ${key}`);
     assert.ok(pkg.files.includes('schemas'), 'package must publish its source schemas');
@@ -32,6 +37,10 @@ test('protocol operation, tool and result schemas are exact package-owned mirror
     ['../schemas/sam-operation.v1.schema.json', '../../../protocol/sam/operation.schema.json'],
     ['../schemas/sam-result.v1.schema.json', '../../../protocol/sam/result.schema.json'],
     ['../schemas/agent-tool-definition.v1.schema.json', '../../../protocol/tools/agent-tool-definition.v1.schema.json'],
+    ['../schemas/activity.v1.schema.json', '../../../protocol/sam/activity.v1.schema.json'],
+    ['../schemas/run.v1.schema.json', '../../../protocol/sam/run.v1.schema.json'],
+    ['../schemas/run-start.v1.schema.json', '../../../protocol/sam/run-start.v1.schema.json'],
+    ['../schemas/run-receipt.v1.schema.json', '../../../protocol/sam/run-receipt.v1.schema.json'],
   ];
   for (const [source, mirror] of pairs) {
     const canonical = JSON.parse(await readFile(new URL(source, import.meta.url), 'utf8'));
@@ -69,6 +78,16 @@ test('JSON Schema enums and TypeScript/runtime vocabularies cannot drift', async
   assert.deepEqual(tool.properties.receiptMode.enum, contracts.AGENT_TOOL_RECEIPT_MODES);
   assert.deepEqual(tool.properties.handler.properties.type.enum, contracts.AGENT_TOOL_HANDLER_TYPES);
   assert.deepEqual(tool.properties.authority.items.properties.type.enum, contracts.AGENT_AUTHORITY_TYPES);
+});
+
+test('tool and operation guards reject malformed embedded JSON Schemas', () => {
+  const tool = { toolKey:'sample.read', displayName:'Sample read', capabilityKey:'sample.read', inputSchema:{type:'object'}, outputSchema:{type:'object'}, riskLevel:'low', sideEffectLevel:'none', idempotencyMode:'intrinsic' };
+  assert.doesNotThrow(() => contracts.assertAgentToolDefinition(tool));
+  assert.throws(() => contracts.assertAgentToolDefinition({...tool, inputSchema:{type:'not-a-json-schema-type'}}), /not valid JSON Schema/);
+  assert.throws(() => contracts.assertAgentToolDefinition({...tool, outputSchema:{$schema:'https://example.invalid/dialect',type:'object'}}), /unsupported JSON Schema dialect/);
+  const operation = { id:'fixture.read', version:1, module:'fixture', action:'read', summary:'Read fixture', execution:{lanes:['local'],model:'never',network:'none',sideEffects:'none'}, risk:'read_only', input_schema:{type:'object'}, output_schema:{type:'object'} };
+  assert.doesNotThrow(() => contracts.assertAgentOperationContract(operation));
+  assert.throws(() => contracts.assertAgentOperationContract({...operation, input_schema:{type:'unknown'}}), /not valid JSON Schema/);
 });
 
 test('packaged tool guard enforces the portable AgentToolDefinition shape', () => {

@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/agentsam.run.v1.schema.json",
+  "title": "AgentRunV1",
+  "description": "ACP lifecycle projection. status is the public lifecycle view; storageStatus is the narrower persisted runtime status.",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "status",
+    "storageStatus",
+    "cancelRequested",
+    "modelCallCount",
+    "toolCallCount",
+    "inputTokens",
+    "cachedInputTokens",
+    "outputTokens",
+    "reasoningTokens",
+    "costUsd",
+    "suspension"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.run.v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "accountId": {
+      "type": "string"
+    },
+    "conversationId": {
+      "type": "string"
+    },
+    "parentRunId": {
+      "type": "string"
+    },
+    "externalAgentId": {
+      "type": "string"
+    },
+    "externalRunId": {
+      "type": "string"
+    },
+    "sourceClient": {
+      "type": "string"
+    },
+    "surface": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "ask",
+        "plan",
+        "agent",
+        "debug",
+        "multitask"
+      ]
+    },
+    "modelKey": {
+      "type": "string"
+    },
+    "reasoningEffort": {
+      "type": "string"
+    },
+    "requestedServiceTier": {
+      "type": "string"
+    },
+    "actualServiceTier": {
+      "type": "string"
+    },
+    "selectedBy": {
+      "enum": [
+        "manual",
+        "automatic",
+        "fallback"
+      ]
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "paused",
+        "waiting_external",
+        "waiting_child",
+        "awaiting_input",
+        "awaiting_approval",
+        "sleeping",
+        "retry_scheduled",
+        "partial",
+        "completed",
+        "cancelled",
+        "failed",
+        "timed_out"
+      ]
+    },
+    "storageStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "paused",
+        "completed",
+        "failed",
+        "partial",
+        "cancelled"
+      ]
+    },
+    "cancelRequested": {
+      "type": "boolean"
+    },
+    "errorCode": {
+      "type": "string"
+    },
+    "errorMessage": {
+      "type": "string"
+    },
+    "modelCallCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "toolCallCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "inputTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cachedInputTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "outputTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reasoningTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "costUsd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "planId": {
+      "type": "string"
+    },
+    "todoId": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "number"
+    },
+    "startedAt": {
+      "type": "number"
+    },
+    "completedAt": {
+      "type": "number"
+    },
+    "updatedAt": {
+      "type": "number"
+    },
+    "latencyMs": {
+      "type": "number",
+      "minimum": 0
+    },
+    "suspension": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/suspension"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "suspension": {
+      "type": "object",
+      "required": [
+        "runId",
+        "state",
+        "reason"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "waiting_external",
+            "waiting_child",
+            "awaiting_input",
+            "awaiting_approval",
+            "sleeping",
+            "retry_scheduled"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "external",
+            "child_run",
+            "approval",
+            "input",
+            "retry",
+            "scheduled",
+            "rate_limit"
+          ]
+        },
+        "wakeAt": {
+          "type": "number"
+        },
+        "wakeEvent": {
+          "type": "string"
+        },
+        "dependencyRunIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resumeStepId": {
+          "type": "string"
+        },
+        "checkpointRef": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "number"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -15,7 +15,8 @@ The question "what is the schema for an app?" has more than one answer because a
 | Schema pack | App- or package-owned manifest (as applicable) | Versioned URLs, integrity of schema modules, compatibility |
 | 3D scene | `packages/iamscene/schema/iamscene.v1.schema.json` | Portable `.iamscene.json` content and runtime-facing scene graph |
 | Reusable scene geometry | `packages/iamscene/schema/iamgeometry.v1.schema.json` | Linked and versioned `.iamgeometry` asset manifest; not a new OCCT kernel |
-| File-format identity | `contracts/source-types.v2.json` | Universal source identification (`model.iamscene` / `model.iamgeometry`); format naming is not editability |
+| File-format identity | `contracts/source-types.v2.json` + `contracts/source-types.v2.schema.json` | Universal source identification; package copy is generated and protocol copy is a tested compatibility mirror; format naming is not editability |
+| ACP run and activity wire contracts | `packages/agentsam-contracts/src/run.ts` + `schemas/{run,run-start,run-receipt,activity}.v1.schema.json` | `src/acp/client.js` maps persisted runs/events into wire contracts; migrations own storage status and suspension/event persistence |
 | 3D format operations | `packages/iamscene/src/format-registry.ts` | Real import/export/reference/round-trip adapters; checked through portable `agentsam.scene-format.v1` contracts |
 | Scene capability vocabulary | `packages/agentsam-contracts/src/scene-format.ts` and `schemas/scene-format.v1.schema.json` | Portable operation statuses, source integrity and semantic-loss receipts; not an executable converter |
 | CAD project | Existing `cad.project.v2.schema.json` | Native project/revision, geometry and engineering authority |
@@ -24,6 +25,14 @@ The question "what is the schema for an app?" has more than one answer because a
 | Merch profiles | Existing `agentsam.manufacturing-profile.v1` contract | Verified process constraints, provider selection, preflight and derivatives |
 
 An APP may reference several independently versioned document schemas. A game such as Wizard Chess can therefore have one app manifest plus separately owned settings/save-state schemas without introducing a duplicate APP identity.
+
+## Cross-layer contract enforcement
+
+- **TypeScript:** `@inneranimalmedia/agentsam-contracts` owns portable wire/domain types; ACP runtime mappers reference them instead of inventing parallel interfaces.
+- **JSON Schema:** package-owned Draft 2020-12 schemas define serialized boundaries; `protocol/` contains exact compatibility mirrors.
+- **Runtime:** tool and operation registration validates embedded JSON Schema objects against Draft 2020-12 or Draft 7 meta-schemas through Ajv. This validates schema structure; external `$ref` resolution remains the owning schema-pack publisher's responsibility.
+- **Persistence:** `AgentRunStorageStatus` mirrors the constrained values in `migrations/runtime/0001_cli_runtime.sql`. The ACP `recordAgentRunTimeout()` helper writes storage status `failed`, clears any suspension and appends an idempotent `run.timed_out` event; the public mapper then exposes lifecycle status `timed_out`. No table rebuild is required.
+- **Regression tests:** package tests validate actual activity projections and schema mirrors; ACP tests validate run/start/receipt responses; CAD tests reject unknown catalog IDs.
 
 ## IAMScene — observed publication drift
 

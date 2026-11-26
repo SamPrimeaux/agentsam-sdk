@@ -8,6 +8,7 @@ export { createAgentControlHttpHandler } from './http.js';
 export { createRootRun } from './runs.js';
 export {
   appendAgentRunEvent,
+  recordAgentRunTimeout,
   createLocalQueueControl,
   spawnChildRun,
   reconcileParentAfterChildTerminal,

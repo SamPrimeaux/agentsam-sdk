@@ -15,6 +15,7 @@ function object(value) {
  * This is a control-plane operation only. It does not call a model. A runtime
  * consumer later claims the queued job and performs execution.
  */
+/** @returns {Promise<import('@inneranimalmedia/agentsam-contracts').AgentRunStartV1>} */
 export async function createRootRun(database, {
   runId = null,
   accountId = null,
