@@ -5,13 +5,14 @@ if (location.pathname.startsWith('/admin/')) {
   ['project','page','slug','section','block','previewMode','page_id'].forEach(key=>route.searchParams.delete(key));
   history.replaceState(history.state,'',route.pathname+route.search);
 }
+const themesView = new URLSearchParams(location.search).get("view") === "themes";
 renderShell("/admin/store", `
-  <div class="online-store">
+  <div class="online-store" data-store-view="${themesView?"themes":"overview"}">
     <h1 class="online-store-accessible-heading online-store-desktop-heading">Online Store</h1>
     <header class="online-store-mobile-head">
       <details class="online-store-destination">
-        <summary><h1>Online Store</h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></summary>
-        <nav aria-label="Online Store destinations"><a href="/admin/store" aria-current="page" data-store-route>Online Store</a><a href="#store-themes-heading">Themes</a><a href="/admin/pages" data-store-route data-requires-site hidden>Pages</a><a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a></nav>
+        <summary><h1>${themesView?"Themes":"Online Store"}</h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></summary>
+        <nav aria-label="Online Store destinations"><a href="/admin/store" ${themesView?"":'aria-current="page"'} data-store-route>Online Store</a><a href="/admin/store?view=themes" ${themesView?'aria-current="page"':""} data-store-route>Themes</a><a href="/admin/pages" data-store-route data-requires-site hidden>Pages</a><a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a></nav>
       </details>
       <div class="online-store-mobile-actions">
         <a id="store-open-live" aria-label="View storefront" title="View storefront" target="_blank" rel="noopener noreferrer" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></a>
@@ -20,7 +21,7 @@ renderShell("/admin/store", `
     </header>
     <dialog class="online-store-more-sheet" id="store-more-sheet" aria-labelledby="store-more-title">
       <header><h2 id="store-more-title">More options</h2><button type="button" id="store-more-close" aria-label="Close more options">×</button></header>
-      <a href="#store-themes-heading">Manage all themes</a>
+      <a href="/admin/store?view=themes" data-store-route>Manage all themes</a>
       <a href="#theme-product-marketplace">Discover themes</a>
       <a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a>
     </dialog>
@@ -49,7 +50,8 @@ renderShell("/admin/store", `
         </div>
         <div class="online-store-theme-actions">
           <a href="#theme-product-marketplace" class="btn primary" id="edit-theme-btn">Browse website themes</a>
-          <a href="#store-themes-heading" class="btn ghost online-store-manage">Manage all themes</a>
+          <a href="/admin/store?view=themes" data-store-route class="btn ghost online-store-manage">Manage all themes</a>
+          <details class="online-store-theme-menu" id="active-theme-menu" hidden><summary aria-label="Theme actions">···</summary><nav aria-label="Theme actions"><a id="theme-menu-preview" target="_blank" rel="noopener" hidden>Preview</a><a id="theme-menu-edit" hidden>Edit theme</a></nav></details>
         </div>
       </div>
     </section>
@@ -559,6 +561,12 @@ document.addEventListener('click',event=>{const menu=document.querySelector('.on
         versionLabel.textContent='v'+versionText;
         versionWrap.hidden=false;
       }else versionWrap.hidden=true;
+    }
+    const themeMenu=document.getElementById('active-theme-menu');
+    if(theme?.edit_href){
+      const edit=document.getElementById('theme-menu-edit');edit.href=scopedStoreEditorHref(theme.edit_href,d.selected_site_id);edit.hidden=false;
+      if(theme.preview_href){const preview=document.getElementById('theme-menu-preview');preview.href=scopedStoreEditorHref(theme.preview_href,d.selected_site_id);preview.hidden=false;}
+      themeMenu.hidden=false;
     }
     paintStoreDrafts((d.draft_themes||[]).filter(draft=>draft.id!==currentId));
     // Do not pretend that publishing the Shop CMS page publishes a theme.

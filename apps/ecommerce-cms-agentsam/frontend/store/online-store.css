@@ -680,3 +680,21 @@
 @media(min-width:901px){.online-store-mobile-head{display:none}}
 
 @media(max-width:900px){.online-store-desktop-heading{display:none!important}}
+
+/* Overview and library are distinct destinations, sharing the real store data. */
+.online-store-theme-menu{display:none}
+@media(max-width:900px){
+ .online-store[data-store-view="overview"] :is(.online-store-drafts-head,.online-store-drafts,.theme-marketplace,.online-store-version){display:none!important}
+ .online-store[data-store-view="overview"] .online-store-theme-actions>a:not(#edit-theme-btn):not(.online-store-manage){display:none}
+ .online-store[data-store-view="themes"] :is(.online-store-mobile-shortcuts,.online-store-manage,.online-store-mobile-actions){display:none!important}
+ .online-store[data-store-view="themes"] .online-store-theme-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:8px}
+ .online-store[data-store-view="themes"] .online-store-theme-actions>#edit-theme-btn{width:auto;min-width:120px;order:2}
+ .online-store[data-store-view="themes"] .online-store-theme-actions>a:not(#edit-theme-btn){display:none}
+ .online-store[data-store-view="themes"] .online-store-theme-menu:not([hidden]){display:block;position:relative;order:1}
+ .online-store-theme-menu summary{display:grid;place-items:center;list-style:none;width:46px;height:46px;border-radius:50%;background:var(--store-surface);border:1px solid var(--store-line);font-size:24px;cursor:pointer}
+ .online-store-theme-menu summary::-webkit-details-marker{display:none}
+ .online-store-theme-menu nav{position:absolute;bottom:calc(100% + 8px);left:0;z-index:8;width:220px;border:1px solid var(--store-line);border-radius:20px;background:var(--store-surface);box-shadow:0 10px 30px #0003;padding:6px}
+ .online-store-theme-menu nav a{display:flex;align-items:center;min-height:48px;padding:0 14px;color:var(--store-ink);text-decoration:none}
+ .online-store-mobile-head h1{font-size:30px}
+ .online-store[data-store-view="themes"] .online-store-version{margin-top:6px}
+}

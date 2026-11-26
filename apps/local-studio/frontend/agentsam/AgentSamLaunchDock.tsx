@@ -1,4 +1,4 @@
-import { Store, Settings, ShoppingBag, Package, BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
+import { BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useNavigate } from '@tanstack/react-router';
 import { useWorkStore } from '@/lib/work/store';
@@ -35,18 +35,7 @@ export function AgentSamLaunchDock() {
     data.onNavigate?.(path);
   };
 
-  if (storeRoute) {
-    if (!isMobile) return null;
-    const siteId = new URLSearchParams(routeSearch).get('site_id') || new URLSearchParams(location.search).get('site_id');
-    const scoped = (href:string) => siteId ? href+'?site_id='+encodeURIComponent(siteId) : href;
-    return <Nav.LaunchDock coverage="tablet" label="Store navigation" items={[
-      {id:'store',label:'Online Store',icon:<Store/>,active:storePath==='/admin/store',onSelect:()=>showPage(scoped('/admin/store'))},
-      {id:'pages',label:'Pages',icon:<Files/>,active:storePath==='/admin/pages',onSelect:()=>showPage(scoped('/admin/pages'))},
-      {id:'products',label:'Products',icon:<Package/>,active:storePath==='/admin/products',onSelect:()=>showPage(scoped('/admin/products'))},
-      {id:'orders',label:'Orders',icon:<ShoppingBag/>,active:storePath==='/admin/orders',onSelect:()=>showPage(scoped('/admin/orders'))},
-      {id:'preferences',label:'Preferences',icon:<Settings/>,active:storePath==='/admin/preferences',onSelect:()=>showPage(scoped('/admin/preferences'))},
-    ]}/>;
-  }
+  if (storeRoute && !isMobile) return null;
 
   if (libraryRoute) {
     const showArtifacts = (view: 'all' | 'yours' | 'shared' | 'recent') => {
