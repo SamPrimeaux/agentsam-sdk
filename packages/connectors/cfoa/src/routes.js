@@ -306,7 +306,10 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
  * @param {Request} request
  * @param {object} env
  * @param {{
- *   permissionRegistry?: {\n *     getOAuthPermissionCatalog(providerKey: string): Promise<object|null>,\n *     getActiveGrantedScopes(input: { ownerId: string, providerKey: string, accountIdentifier: string }): Promise<string[]|null>,\n *   },
+ *   permissionRegistry?: {
+ *     getOAuthPermissionCatalog(providerKey: string): Promise<object|null>,
+ *     getActiveGrantedScopes(input: { ownerId: string, providerKey: string, accountIdentifier: string }): Promise<string[]|null>,
+ *   },
  *   app?: { id: string },
  *   routeRegistry?: object,
  *   loginPath?: string,
