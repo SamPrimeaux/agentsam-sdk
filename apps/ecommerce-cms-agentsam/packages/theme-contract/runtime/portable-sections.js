@@ -974,7 +974,6 @@
     defaults, render, validate,
     schema(id) {
       if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.schema(id);
-      if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.schema(id);
       const definition = byId.get(id);
       if (!definition) return null;
       return {
