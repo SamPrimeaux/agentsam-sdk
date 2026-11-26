@@ -15,6 +15,8 @@ test('embed catalog matches manifests and declares installable templates',()=>{
   for(const k of ['form_inline','form_popup','store_chat','grow_capture'])assert.ok(catalog.apps.some(x=>x.key===k),k);
   assert.equal(catalog.preview_only,false);
   assert.equal(catalog.installable,true);
+  assert.ok(catalog.apps.every(x=>Array.isArray(x.surfaces)&&x.surfaces.includes('storefront_embed')),
+    'Apps catalog contains storefront_embeds only');
   assert.equal(catalog.apps.find(x=>x.key==='newsletter_subscribe').default_config.double_opt_in,true);
 });
 test('packaged editor lists embeds and installs through the CMS catalog-resources API',{skip:!JSDOM&&'jsdom is not installed on this machine'},async()=>{
@@ -32,7 +34,12 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     calls.push({url:String(url),method:(options.method||'GET').toUpperCase(),body:options.body||null});
     if(String(url).includes('/embed-catalog.json')) return {ok:true,json:async()=>catalog};
     if(String(url).includes('/catalog-resources') && (options.method||'GET').toUpperCase()==='GET')
-      return {ok:true,json:async()=>({ok:true,installed:[],catalog:catalog.apps})};
+      return {ok:true,json:async()=>({
+        ok:true,installed:[],
+        catalog:catalog.apps.map(app=>({key:app.key,installable:true})),
+        registered_embeds:catalog.apps.filter(app=>app.registry_required)
+          .map(app=>({...app,registration:{artifactReady:true,previewOnly:false}})),
+      })};
     if(String(url).includes('/catalog-resources') && (options.method||'').toUpperCase()==='POST')
       return {ok:true,status:201,json:async()=>({ok:true,section_key:'announcement-bar-test',catalog_key:'announcement_bar'})};
     return {ok:true,json:async()=>({})};
@@ -136,13 +143,25 @@ test('showcase mode leaves Resolve preview unmodified',{skip:!JSDOM&&'jsdom is n
   finally{dom.window.close();}
 });
 
+test('Sections picker merges verified CMS stock sections with theme-native sections in host mode',()=>{
+  const core=src('theme-editor.js');
+  assert.match(core,/window\.cmsRegistry\?\.catalog/);
+  assert.match(core,/row\.itemType==='section'/);
+  assert.match(core,/row\.catalogAvailable===true/);
+  assert.match(core,/row\.installable===true/);
+  assert.match(core,/return \[\.\.\.stock,\.\.\.native\.filter/);
+  assert.doesNotMatch(core,/if\(host\)return native/);
+});
+
 test('review UI is wired to catalog install APIs and keeps theme settings owners intact',()=>{
   const code=src('theme-embed-review.js');
-  const html=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
+  const mount=readFileSync(new URL('../frontend/theme-editor/mount.mjs',import.meta.url),'utf8');
   const settings=src('theme-settings-live.js');
   const core=src('theme-editor.js');
-  assert.match(html,/\/admin\/js\/theme-embed-review\.js/);
-  assert.match(html,/\/admin\/css\/theme-embed-review\.css/);
+  const adapter=readFileSync(new URL('../packages/theme-contract/editor/cms-page-adapter.mjs',import.meta.url),'utf8');
+  assert.match(adapter,/catalogResources:\s*true/);
+  assert.match(mount,/load\('\/admin\/js\/theme-embed-review\.js'\)/);
+  assert.match(mount,/theme-embed-review/);
   assert.match(code,/\/admin\/theme-editor\/embed-catalog\.json/);
   assert.match(code,/\/api\/admin\/cms\/pages\/.*catalog-resources/);
   assert.match(code,/data-embed-install/);
@@ -152,7 +171,7 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
   for(const key of ['brand.logoUrl','page.maxWidth','inputs.radius','overlays.placement','icons.style']){
     assert.ok(settings.includes(key),'missing CMS-connected theme draft control '+key);
   }
-  assert.match(core,/Matching CMS pages/);
-  assert.match(core,/ui_review/);
-  assert.match(core,/localShowcase/);
+  assert.match(core,/pagePickerCategory/);
+  assert.match(core,/AgentSamThemeEditorHost/);
+  assert.match(core,/activeSectionOwner/);
 });

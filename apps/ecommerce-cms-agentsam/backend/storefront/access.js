@@ -2,8 +2,8 @@ import { loadStorePreferences, verifyStorefrontPassword } from "../admin/store.j
 import {
   createPasswordGateToken,
   verifyPasswordGateToken,
-} from "@inneranimalmedia/agentsam-identity/core/password-gate";
-import { renderStorePasswordPortal } from "@inneranimalmedia/agentsam-identity/frontend/auth-portal/store-access";
+} from "@inneranimalmedia/agentsam-sdk/identity/core/password-gate";
+import { renderStorePasswordPortal } from "@inneranimalmedia/agentsam-sdk/identity/frontend/auth-portal/store-access";
 
 const ACCESS_COOKIE = "__Host-iam-store-access";
 const ACCESS_SECONDS = 7 * 24 * 60 * 60;

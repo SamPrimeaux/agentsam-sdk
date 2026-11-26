@@ -2,11 +2,17 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const loginSource = fileURLToPath(import.meta.resolve('@inneranimalmedia/agentsam-identity/frontend/auth-portal/pages/login.html'));
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const loginSource = (() => {
+  try {
+    return fileURLToPath(import.meta.resolve('@inneranimalmedia/agentsam-sdk/identity/frontend/auth-portal/pages/login.html'));
+  } catch {
+    return path.resolve(appRoot, '../../packages/identity/src/frontend/auth-portal/pages/login.html');
+  }
+})();
 const sourceRoot = path.resolve(path.dirname(loginSource), '..');
 const pagesSource = path.join(sourceRoot, 'pages');
 const sharedSource = path.join(sourceRoot, 'shared');
-const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(appRoot, 'frontend/static/identity-portal');
 
 await rm(outputRoot, { recursive: true, force: true });

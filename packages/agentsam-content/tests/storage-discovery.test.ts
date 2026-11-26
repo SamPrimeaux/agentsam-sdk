@@ -2,18 +2,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { requireStorageRole, scoreStorageCandidate } from "../src/storage/roles.js";
+import { scoreStorageCandidate } from "../src/storage/candidates.js";
 import { discoverStorageCandidates } from "../src/server/discover-storage.js";
 
-describe("storage roles", () => {
-  it("requires a mapping with an actionable error", () => {
-    expect(() => requireStorageRole({}, "website_assets")).toThrow(/agentsam doctor/);
-    expect(requireStorageRole({ website_assets: { provider: "r2", binding: "MEDIA" } }, "website_assets").binding).toBe("MEDIA");
-  });
-
-  it("scores the convention above arbitrary buckets", () => {
-    const a = scoreStorageCandidate({ provider: "r2", binding: "WEBSITE_ASSETS", capabilities: [] });
-    const b = scoreStorageCandidate({ provider: "r2", binding: "X", bucket: "random", capabilities: [] });
+describe("local storage discovery", () => {
+  it("ranks only explicitly declared local bindings", () => {
+    const a = scoreStorageCandidate({ provider: "r2", binding: "MEDIA", capabilities: [] }, { knownBindings: ["MEDIA"] });
+    const b = scoreStorageCandidate({ provider: "r2", binding: "WEBSITE_ASSETS", capabilities: [] });
     expect(a).toBeGreaterThan(b);
   });
 

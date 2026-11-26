@@ -37,6 +37,12 @@ jobs:
         with:
           studio: 'true'
 
+      - name: Link canonical SDK source for integration tests
+        if: matrix.shard == 'integration'
+        run: |
+          mkdir -p node_modules/@inneranimalmedia
+          ln -sfn "$GITHUB_WORKSPACE" node_modules/@inneranimalmedia/agentsam-sdk
+
       - name: Verify SDK shard
         run: node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:shard:${{ matrix.shard }}
 
@@ -413,10 +419,29 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build packaged portable contracts
         run: npm run build:contracts
+      - name: Check Ecommerce standalone npm prerequisites
+        id: ecommerce-registry
+        run: node apps/local-studio/scripts/check-first-party-registry.mjs --app-root apps/ecommerce-cms-agentsam --lock-file npm-shrinkwrap.json --standalone --github-output
       - name: Verify Ecommerce nested npm 11 clean install
+        if: steps.ecommerce-registry.outputs.ready == 'true'
         run: npm run install:studio --prefix apps/ecommerce-cms-agentsam
+      - name: Defer Ecommerce nested npm 11 clean install until packages are published
+        if: steps.ecommerce-registry.outputs.ready != 'true'
+        run: echo "::notice::Ecommerce standalone install deferred until its exact first-party packages are published and npm-shrinkwrap.json is regenerated."
       - name: Verify Ecommerce installer tests
         run: node --test apps/ecommerce-cms-agentsam/tests/install-studio-deps.test.mjs
+      - name: Install Ecommerce image-processing test dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/ecommerce-image-deps"
+          cd "$RUNNER_TEMP/ecommerce-image-deps"
+          npm init -y
+          npm install --no-save --ignore-scripts --no-audit --no-fund @jsquash/jpeg@1.6.0 @jsquash/png@3.1.1 @jsquash/resize@2.1.1 @jsquash/webp@1.5.0
+          rm -rf "$GITHUB_WORKSPACE/node_modules/@jsquash"
+          ln -s "$RUNNER_TEMP/ecommerce-image-deps/node_modules/@jsquash" "$GITHUB_WORKSPACE/node_modules/@jsquash"
+      - name: Link canonical SDK source for workspace-level Ecommerce tests
+        run: |
+          mkdir -p node_modules/@inneranimalmedia
+          ln -sfn "$GITHUB_WORKSPACE" node_modules/@inneranimalmedia/agentsam-sdk
       - name: Verify hosted CMS account isolation and degraded status
         run: |
           node --test \
@@ -428,6 +453,18 @@ jobs:
             packages/connectors/cfoa/tests/capabilities.test.mjs
       - name: Install Local Studio build dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+      - name: Reuse root and Local Studio dependencies for Ecommerce monorepo build
+        run: |
+          rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
+          mkdir -p node_modules/@types
+          for package in node react react-dom; do
+            if [ -d "apps/local-studio/node_modules/@types/$package" ]; then
+              rm -rf "node_modules/@types/$package"
+              ln -s "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/$package" "node_modules/@types/$package"
+            fi
+          done
       - name: Assemble hosted Local Studio Worker and assets
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output

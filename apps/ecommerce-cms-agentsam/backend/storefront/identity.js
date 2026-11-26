@@ -1,6 +1,6 @@
-import { createPortableD1IdentityAdapter } from '@inneranimalmedia/agentsam-identity/adapters/portable-d1';
-import { createRouteRegistry, defineRouteProjection } from '@inneranimalmedia/agentsam-identity/contracts/routes';
-import { createIdentityService, handleIdentityWorkerRequest } from '@inneranimalmedia/agentsam-identity/server/worker-router';
+import { createPortableD1IdentityAdapter } from '@inneranimalmedia/agentsam-sdk/identity/adapters/portable-d1';
+import { createRouteRegistry, defineRouteProjection } from '@inneranimalmedia/agentsam-sdk/identity/contracts/routes';
+import { createIdentityService, handleIdentityWorkerRequest } from '@inneranimalmedia/agentsam-sdk/identity/server/worker-router';
 import { createCredentialResolver } from '@inneranimalmedia/agentsam-vault/resolver';
 import { openVaultRow } from '@inneranimalmedia/agentsam-vault/crypto';
 import { getCompany } from '../lib/company.js';

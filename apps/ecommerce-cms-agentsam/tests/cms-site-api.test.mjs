@@ -181,7 +181,7 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
 
     const addSectionUrl = `/api/admin/cms/pages/our-story/sections?site_id=site-a&page_id=${created.page.id}`;
     const sectionResponse = await handleAdminCmsApi(
-      request(addSectionUrl, "POST", { templateKey: "portable", themePreset: "revise/editorial-statement" }),
+      request(addSectionUrl, "POST", { templateKey: "portable", themePreset: "cad-beyond/aspiration" }),
       env, new URL("https://cms.test" + addSectionUrl), { accountId: "acct-a" },
     );
     assert.equal(sectionResponse.status, 201);
@@ -189,8 +189,8 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
     assert.ok(section.section_key);
 
     const sectionContent = section.section.content;
-    sectionContent.title = "A real editable page";
-    sectionContent.body = "Saved through the site-scoped CMS API.";
+    sectionContent.headline = "A real editable page";
+    sectionContent.lede = "Saved through the site-scoped CMS API.";
     const saveSectionUrl = `/api/admin/cms/pages/our-story/sections/${section.section_key}?site_id=site-a&page_id=${created.page.id}`;
     const saved = await handleAdminCmsApi(
       request(saveSectionUrl, "PUT", { content: sectionContent, expected_version: 1 }),
@@ -204,7 +204,7 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
       env, new URL("https://cms.test/api/admin/cms/pages/our-story"), { accountId: "acct-a" },
     );
     const refreshedPage = (await refreshed.json()).page;
-    assert.equal(refreshedPage.sections[0].content.title, "A real editable page");
+    assert.equal(refreshedPage.sections[0].content.headline, "A real editable page");
     assert.equal(refreshedPage.sections[0].version, 2);
 
     const duplicate = await handleAdminCmsApi(
@@ -319,7 +319,7 @@ test("Theme Editor global settings resolve to a distinct page identity per site"
 
     const addGlobalSection = "/api/admin/cms/pages/site/sections?site_id=site-a2";
     const created = await handleAdminCmsApi(
-      request(addGlobalSection, "POST", { templateKey: "portable", themePreset: "revise/editorial-statement" }),
+      request(addGlobalSection, "POST", { templateKey: "portable", themePreset: "cad-beyond/aspiration" }),
       env, new URL("https://cms.test" + addGlobalSection), { accountId: "acct-a" },
     );
     assert.equal(created.status, 201);

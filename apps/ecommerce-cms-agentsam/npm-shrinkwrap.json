@@ -12,8 +12,6 @@
         "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
         "@inneranimalmedia/agentsam-cms": "2.6.18",
         "@inneranimalmedia/agentsam-merch": "2.6.18",
-        "@inneranimalmedia/revise-theme": "0.2.0",
-        "@inneranimalmedia/section-library": "0.1.0",
         "@jsquash/jpeg": "1.6.0",
         "@jsquash/png": "3.1.1",
         "@jsquash/resize": "2.1.1",
@@ -1450,30 +1448,6 @@
     "node_modules/@inneranimalmedia/agentsam-merch": {
       "resolved": "../../packages/agentsam-merch",
       "link": true
-    },
-    "node_modules/@inneranimalmedia/revise-theme": {
-      "version": "0.2.0",
-      "resolved": "https://registry.npmjs.org/@inneranimalmedia/revise-theme/-/revise-theme-0.2.0.tgz",
-      "integrity": "sha512-hSIampCFzOKuzsaR6lVRYVBxfrzBp4JF3w+LFdk5Oio0AN6p3jf9AcepoJUeGqWnVxiwq2XyQYbncakmR19Nxw==",
-      "license": "UNLICENSED",
-      "dependencies": {
-        "@inneranimalmedia/site-contracts": "^0.1.0"
-      }
-    },
-    "node_modules/@inneranimalmedia/section-library": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@inneranimalmedia/section-library/-/section-library-0.1.0.tgz",
-      "integrity": "sha512-2Cjpf+x2sRzmgqHZvxgORcoeIcqq4PT2AmiHLczuFfIpZ5IcuZgRD/BjMTYvan0roAWk59iWTZxYhuEAJcv7Aw==",
-      "license": "UNLICENSED",
-      "dependencies": {
-        "@inneranimalmedia/site-contracts": "^0.1.0"
-      }
-    },
-    "node_modules/@inneranimalmedia/site-contracts": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@inneranimalmedia/site-contracts/-/site-contracts-0.1.0.tgz",
-      "integrity": "sha512-hFQVVyvak7Ge3V258Rf+eOzjNvc2YRrhxYozEXw6zO4Eo9dZFslmS5d7ys6YGTKtE8kMOUn/+OtkDmoi/HV+zg==",
-      "license": "UNLICENSED"
     },
     "node_modules/@jridgewell/resolve-uri": {
       "version": "3.1.3",

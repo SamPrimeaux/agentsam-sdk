@@ -195,6 +195,12 @@
     const payload = await api('/api/admin/cms/pages/' + encodeURIComponent(pageSlug()) + '/catalog-resources');
     installed = Array.isArray(payload.installed) ? payload.installed : [];
     const registered = new Map((payload.registered_embeds || []).map(entry=>[entry.key,entry]));
+    const availability = new Map((payload.catalog || []).map(entry=>[entry.key,entry]));
+    if (availability.size) {
+      catalog = catalog.filter(app=>availability.get(app.key)?.installable===true);
+    } else {
+      catalog = catalog.filter(app=>!app.registry_required);
+    }
     catalog = catalog.map(app=>registered.has(app.key)?{...app,...registered.get(app.key)}:app);
     return payload;
   }
@@ -614,8 +620,8 @@
       '<div class="ter-picker-launch"><button type="button" data-open-embed-picker>+ Add apps</button>'+
       '<a href="'+appStoreUrl+'" target="_blank" rel="noopener noreferrer">Browse App Store ↗</a></div>'+
       '<div class="ter-catalog-label">Installed on this page</div><div data-embed-installed role="group" aria-label="Installed storefront embeds"></div>'+
-      '<div class="ter-catalog-label">Available storefront components <span>Catalog</span></div>'+
-      '<div data-embed-list role="group" aria-label="Available storefront embed types"></div>'+
+      '<div class="ter-catalog-label">Available storefront embeds <span>Catalog</span></div>'+
+      '<div data-embed-list role="group" aria-label="Available storefront embeds"></div>'+
       '<p class="ter-catalog-foot">Templates become installed CMS instances with their own section and block identities.</p>');
     drawer.querySelector('[data-open-embed-picker]').addEventListener('click',openPicker);
     if(searchInput)searchInput.placeholder='Search storefront components';
@@ -628,7 +634,9 @@
       if(!response.ok)throw Error('Catalog unavailable');
       const data=await response.json();
       if(data.schema!=='agentsam.theme-embed-ui-catalog.v1' || !Array.isArray(data.apps))throw Error('Invalid catalog');
-      catalog=data.apps.filter(app=>app.key && app.name && app.default_config);
+      catalog=data.apps.filter(app=>app.key && app.name && app.default_config &&
+        Array.isArray(app.surfaces) && app.surfaces.includes('storefront_embed') &&
+        (!app.registry_required || canInstall));
       try { await refreshInstalled(); } catch { installed = []; }
       renderList();
     }catch{

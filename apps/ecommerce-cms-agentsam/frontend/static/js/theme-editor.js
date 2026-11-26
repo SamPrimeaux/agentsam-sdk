@@ -535,9 +535,10 @@
   }
 
   function themeCatalog() {
-    // The installed Theme Store project supplies actual insertable section
-    // definitions and faithful source previews. CMS pages additionally have
-    // tenant-authorized STOCK templates selected by their canonical SKU.
+    // Theme Store owns theme-native section definitions and source previews.
+    // Site-owned CMS hosts also provide tenant-authorized stock section
+    // templates through the canonical CMS registry; keep that catalog visible
+    // in host mode instead of silently replacing it with theme-local schemas.
     const schemas = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(schemas)
       .filter(([,definition]) => definition?.capabilities?.insert === true)
@@ -549,7 +550,6 @@
         category:definition.category || 'Theme sections',
         previewHtml:definition.previewHtml || '',
       }));
-    if(host)return native;
     const stock=(window.cmsRegistry?.catalog||[])
       .filter(row=>row.itemType==='section' && row.catalogAvailable===true &&
         row.installable===true && !!row.sku)
@@ -559,7 +559,8 @@
         source:'CMS stock',preset:row.sku,rendererPreset:row.rendererKey,
         category:row.category||'Sections',catalog:row,
       }));
-    return [...stock,...native];
+    const stockIds=new Set(stock.map(item=>item.id));
+    return [...stock,...native.filter(item=>!stockIds.has(item.id))];
   }
 
   async function setTheme(nextTheme) {

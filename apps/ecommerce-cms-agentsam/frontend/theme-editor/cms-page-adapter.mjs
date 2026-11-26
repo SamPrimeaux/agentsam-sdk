@@ -211,7 +211,7 @@ export function createCmsPageThemeEditorAdapter({
     resolvePreview,
     listMedia,
     uploadMedia,
-    capabilities: { publish: true },
+    capabilities: { publish: true, catalogResources: true },
     get site() { return site; },
     get pages() { return pages; },
     get siteId() { return siteId; },

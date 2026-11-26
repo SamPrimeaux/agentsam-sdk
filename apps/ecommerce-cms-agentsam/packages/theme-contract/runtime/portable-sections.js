@@ -10,46 +10,6 @@
  */
 (function (scope) {
   const f = (key, label, type = "text") => ({ key, label, type });
-  const heroFields = [
-    f("eyebrow", "Eyebrow"), f("headline", "Headline"),
-    f("subheadline", "Description", "textarea"),
-    f("imageUrl", "Background / side image", "media"),
-    f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
-    f("ctaPrimary.openInNewTab", "Open in new tab", "boolean"),
-  ];
-  const cards = [
-    f("title", "Heading"),
-    f("text", "Description", "textarea"),
-  ];
-  const imageCard = {
-    key: "collection-card", label: "Collection", repeatable: true, min: 0, max: 12,
-    fields: [f("name", "Name"), f("imageUrl", "Image", "media"), f("href", "Link", "link")],
-    defaultContent: { name: "New collection", imageUrl: "", href: "/shop" },
-  };
-  const detailCard = {
-    key: "detail-card", label: "Item", repeatable: true, min: 0, max: 12,
-    fields: [f("name", "Heading"), f("description", "Description", "textarea")],
-    defaultContent: { name: "New item", description: "Edit this description." },
-  };
-  const faqCard = {
-    key: "faq-item", label: "Question", repeatable: true, min: 0, max: 16,
-    fields: [f("question", "Question"), f("answer", "Answer", "textarea")],
-    defaultContent: { question: "Your question", answer: "Your answer." },
-  };
-  const buttonBlock = {
-    key: "button", label: "Button", category: "Basic", definitionKey: "button",
-    repeatable: true, min: 0, max: 4,
-    fields: [
-      f("label", "Label"),
-      f("href", "Link", "link"),
-      { key: "variant", label: "Style", type: "select", options: [
-        { label: "Solid", value: "solid" },
-        { label: "Outline", value: "outline" },
-        { label: "Text", value: "text" },
-      ] },
-    ],
-    defaultContent: { label: "Explore", href: "/shop", variant: "solid" },
-  };
   const spec = (id, label, family, fields, block = null, options = {}) => Object.freeze({
     id, label, type: family, family, source: id.split("/")[0],
     templateKey: "portable", preset: id,
@@ -134,14 +94,6 @@
   // ONLY register implementations with actual markup + scoped styles below.
   // Other donor concepts remain candidates and MUST NOT appear in Add Section.
   const definitions = Object.freeze([
-    spec("revise/sticky-curtain", "Sticky curtain hero", "hero", heroFields, buttonBlock),
-    spec("revise/wardrobe-rail", "Wardrobe rail", "collections", [f("title", "Heading")], imageCard),
-    spec("revise/editorial-statement", "Editorial statement", "story", [f("title", "Heading"), f("body", "Body", "textarea")]),
-    spec("revise/faq", "FAQ accordion", "faq", [f("title", "Heading")], faqCard),
-    spec("revise/testimonials", "Testimonial cards", "testimonials", [f("title", "Heading")], detailCard),
-    spec("revise/trust-row", "Trust row", "trust", [f("title", "Heading")], detailCard),
-    spec("revise/newsletter", "Newsletter", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
-
     spec("cad-beyond/aspiration", "Aspiration", "cad-beyond-chapter", beyondChapterFields),
     spec("cad-beyond/complexity", "Complexity", "cad-beyond-chapter", beyondChapterFields),
     spec("cad-beyond/uncertainty", "Uncertainty", "cad-beyond-chapter", beyondChapterFields),
@@ -866,7 +818,6 @@
 
   function defaults(id) {
     if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.defaults(id);
-    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.defaults(id);
     const definition = byId.get(id);
     if (!definition) return null;
     const content = JSON.parse(JSON.stringify(cadBeyondDefaults[id]?.content || primetechDefaults[id] || genericDefaults[definition.family] || {}));
@@ -902,10 +853,6 @@
   function render(entry) {
     const id = preset(entry);
     if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.render(entry);
-    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) {
-      if (entry.content?.__editor?.visibility?.enabled === false) return "";
-      return scope.ThemeReviseAtlas.render(entry);
-    }
     const definition = byId.get(id);
     if (!definition) return null;
     const content = entry.content || {};
@@ -923,7 +870,6 @@
   }
   function validate(id, content) {
     if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.validate(id, content);
-    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.validate(id, content);
     const definition = byId.get(id);
     if (!definition) return { ok: false, error: "Unsupported section preset" };
     if (!content || Array.isArray(content) || typeof content !== "object")
@@ -979,17 +925,15 @@
 
   scope.ThemePortableSections = Object.freeze({
     definitions,
-    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
+    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || null,
     catalog: () => [
       ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
         ({ id, label, type: family, source, templateKey, preset })),
       ...(scope.ThemePlatformStock?.catalog() || []),
-      ...(scope.ThemeReviseAtlas?.catalog() || []),
     ],
     defaults, render, validate,
     schema(id) {
       if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.schema(id);
-      if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.schema(id);
       const definition = byId.get(id);
       if (!definition) return null;
       return {

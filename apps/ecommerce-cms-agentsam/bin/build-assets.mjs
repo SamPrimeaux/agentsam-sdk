@@ -11,13 +11,13 @@ import { STARTER_PRODUCT_ILLUSTRATIONS } from '../frontend/theme-editor/starter-
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dest = path.join(app, "dist/assets");
 const source = (name) => path.join(app, name);
-const installed = (name) => path.join(app, "node_modules", name);
 const copy = async (from, to) => {
   if (!fs.existsSync(from)) throw new Error("Required installed asset missing: " + from);
   await mkdir(path.dirname(to), { recursive: true });
   await cp(from, to, { recursive: true });
 };
 execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")], { stdio: "inherit" });
+execFileSync(process.execPath, [source("scripts/compile-portable-styles.mjs")], { stdio: "inherit" });
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 // theme-scenes is the canonical cross-product scene package. Generate the
@@ -174,41 +174,12 @@ for (const [entry, asset] of [
   }
 }
 await copy(source("packages/theme-contract/runtime/primetech/assets"), path.join(dest, "primetech"));
-const atlas = await bundle({
-  entryPoints: [source("packages/theme-contract/runtime/revise-atlas-browser.js")],
-  bundle: true, platform: "browser", format: "iife", target: "es2022",
-  write: false, minify: false,
-});
-for (const name of ["js/revise-atlas.js", "admin/js/revise-atlas.js"]) {
-  const out = path.join(dest, name);
-  await mkdir(path.dirname(out), { recursive: true });
-  await writeFile(out, atlas.outputFiles[0].contents);
-}
-const revise = installed("@inneranimalmedia/revise-theme/dist");
-const layout = installed("@inneranimalmedia/section-library/dist/layout.css");
-await copy(revise, path.join(dest, "admin/theme-previews/revise"));
-await copy(revise, path.join(dest, "theme-assets/revise"));
-await copy(layout, path.join(dest, "admin/theme-previews/revise/layout.css"));
-await copy(layout, path.join(dest, "theme-assets/revise/layout.css"));
-const scoped = [
-  "/* Reusable section layout remains scoped to its own host. */",
-  ".ps-revise-atlas { min-width:0; isolation:isolate; }",
-  "@scope (.ps-revise-atlas) {",
-  await readFile(layout, "utf8"),
-  await readFile(path.join(revise, "theme.css"), "utf8"),
-  "}",
-].join("\n");
-for (const name of ["css/revise-atlas.css", "admin/css/revise-atlas.css"]) {
-  const out = path.join(dest, name);
-  await mkdir(path.dirname(out), { recursive: true });
-  await writeFile(out, scoped);
-}
 for (const critical of [
   "admin/js/media-library.js", "admin/media-kit/index.js",
   "admin/workbench/media-asset-workbench.js",
   "admin/_spa/index.html", "admin/theme-editor.html",
   "admin/js/shell.js", "admin/js/inspector.js",
-  "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
+  "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
   "admin/js/primetech-scene.js", "admin/js/primetech-circuit.js", "js/primetech-scene.js", "js/primetech-circuit.js",
   "admin/js/theme-scenes-sections.js", "js/theme-scenes-sections.js",
   "admin/js/iamscene-runtime.js", "js/iamscene-runtime.js",

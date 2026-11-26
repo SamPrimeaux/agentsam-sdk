@@ -14,6 +14,27 @@ const source = path.join(app, 'dist/assets');
 const productStage = path.join(localStudio, 'frontend/public/ecommerce-cms-agentsam');
 const hostAdmin = path.join(localStudio, 'frontend/public/admin');
 const hostConfig = path.join(hostAdmin, 'host-config.js');
+function removeLegacyReviseAssets(root, adminRoot = false) {
+  const paths = adminRoot ? [
+    'theme-previews/revise',
+    'js/revise-atlas.js',
+    'css/revise-atlas.css',
+    'revise-atlas.html',
+    'js/revise-atlas-view.js',
+  ] : [
+    'admin/theme-previews/revise',
+    'theme-assets/revise',
+    'admin/js/revise-atlas.js',
+    'admin/css/revise-atlas.css',
+    'admin/revise-atlas.html',
+    'admin/js/revise-atlas-view.js',
+    'js/revise-atlas.js',
+    'css/revise-atlas.css',
+  ];
+  for (const relative of paths) rmSync(path.join(root, relative), { recursive: true, force: true });
+}
+removeLegacyReviseAssets(productStage);
+removeLegacyReviseAssets(hostAdmin, true);
 const themePreviewMirror = path.join(localStudio, 'frontend/public/themes');
 const legacySiteThemeGallery = path.join(localStudio, 'frontend/public/site/themes');
 // Remove only former website preview subdirectories. The /themes root also
@@ -45,6 +66,9 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   }
   mkdirSync(destination, { recursive: true });
   cpSync(hostAdmin, destination, { recursive: true, force: true });
+  removeLegacyReviseAssets(destination, true);
+  const compiledProduct = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist/ecommerce-cms-agentsam' : '.output/public/ecommerce-cms-agentsam');
+  removeLegacyReviseAssets(compiledProduct);
   // Website theme previews are served by their owning Theme Store origin.
   // Keep stale SDK mirrors out of hosted and desktop release assets.
   const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
@@ -67,20 +91,12 @@ if (!existsSync(path.join(frontendModules, 'react-router-dom/package.json')) ||
     cwd: app, stdio: 'inherit',
   });
 }
+
+// The checked-in browser editor modules are generated from the app's
+// canonical theme-contract/editor sources; staging must sync them before Vite.
+execFileSync('npm', ['run', 'sync:theme-contract'], { cwd: app, stdio: 'inherit' });
+execFileSync('npm', ['run', 'sync:identity-portals'], { cwd: app, stdio: 'inherit' });
 execFileSync('npm', ['run', 'build:frontend'], { cwd: app, stdio: 'inherit' });
-// The installable Ecommerce application also has its own lockfile. Its CMS
-// theme/section packages are not root-SDK dependencies and must be installed
-// for an isolated Studio build before assembling the original product assets.
-const appModules = path.join(app, 'node_modules');
-if (!existsSync(path.join(appModules, '@inneranimalmedia/section-library/package.json')) ||
-    !existsSync(path.join(appModules, '@inneranimalmedia/revise-theme/package.json'))) {
-  if (!existsSync(path.join(app, 'package-lock.json'))) {
-    throw new Error('Ecommerce application package-lock.json is required for portable asset staging');
-  }
-  execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], {
-    cwd: app, stdio: 'inherit',
-  });
-}
 execFileSync(process.execPath, [path.join(app, 'bin/build-assets.mjs')], { cwd: app, stdio: 'inherit' });
 for (const name of ['admin/home.html', 'admin/store.html', 'admin/js/shell.js', 'admin/css/console.css', 'admin/theme-editor.html']) {
   if (!existsSync(path.join(source, name))) throw new Error('Missing packaged console asset: ' + name);
@@ -89,6 +105,8 @@ if (!existsSync(hostConfig)) throw new Error('Missing Local Studio host-only con
 mkdirSync(productStage, { recursive: true });
 mkdirSync(hostAdmin, { recursive: true });
 cpSync(source, productStage, { recursive: true, force: true });
+removeLegacyReviseAssets(productStage);
+removeLegacyReviseAssets(hostAdmin, true);
 // Retire the former split-editor entry scripts from persistent staging roots.
 for (const name of ['theme-editor-entry.js', 'theme-project-editor-bootstrap.mjs']) {
   rmSync(path.join(productStage, 'admin/js', name), { force: true });

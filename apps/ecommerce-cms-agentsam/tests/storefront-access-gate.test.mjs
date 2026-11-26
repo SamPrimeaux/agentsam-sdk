@@ -5,7 +5,7 @@ import { createCmsTestDb } from "./cms-test-db.mjs";
 import { createCmsSite, ensureDefaultCmsSite } from "../backend/cms/site-context.mjs";
 import { postStorePreferences } from "../backend/admin/store.js";
 import { hashPassword as legacyAdminHashPassword } from "../backend/lib/auth.js";
-import { verifyPassword as verifyIdentityPassword } from "@inneranimalmedia/agentsam-identity/core/password-crypto";
+import { verifyPassword as verifyIdentityPassword } from "@inneranimalmedia/agentsam-sdk/identity/core/password-crypto";
 import {
   createStorefrontAccessToken,
   handleStorefrontAccessApi,

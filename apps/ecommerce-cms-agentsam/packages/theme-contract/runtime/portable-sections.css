@@ -53,32 +53,11 @@
 .ps-section .ps-form-row input { flex: 1; width: 0; min-width: 0; border: 1px solid currentColor; border-right: 0; padding: 14px; font: 400 1rem/1.4 Inter,system-ui,sans-serif; background: transparent; color: inherit; }
 .ps-section .ps-form-row button { min-height: 48px; border: 0; padding: 12px 24px; font: 700 .9rem/1.3 Inter,system-ui,sans-serif; background: var(--ps-accent); color: #fff; cursor: pointer; }
 
-.ps-section[data-portable-preset^="revise/"] { --ps-paper: #edeae5; --ps-ink: #151515; --ps-accent: #343434; }
-.ps-section[data-portable-preset="revise/sticky-curtain"] { min-height: min(90svh, 900px); overflow: clip; }
 .ps-section.ps-hero { display: flex; align-items: center; }
 .ps-section.ps-hero .ps-inner { position: relative; z-index: 1; }
 .ps-section.ps-hero .ps-hero-copy { display: grid; align-content: center; justify-items: start; gap: 22px; }
 .ps-section.ps-hero .ps-hero-media { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #292421; }
 .ps-section.ps-hero .ps-hero-media img { width: 100%; height: 100%; object-fit: cover; }
-.ps-section[data-portable-preset="revise/sticky-curtain"] { --ps-ink: #fff; background: #141311; }
-.ps-section[data-portable-preset="revise/sticky-curtain"] .ps-hero-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.82),rgba(0,0,0,.16)),linear-gradient(0deg,rgba(0,0,0,.36),transparent 50%); }
-.ps-section[data-portable-preset="revise/sticky-curtain"] .ps-display { max-width: 12ch; }
-.ps-section[data-portable-preset="revise/wardrobe-rail"] .ps-cards { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:14px; }
-.ps-section[data-portable-preset="revise/wardrobe-rail"] .ps-card { flex: 0 0 clamp(200px,27vw,400px); scroll-snap-align:start; }
-.ps-section[data-portable-preset="revise/wardrobe-rail"] .ps-card img { aspect-ratio: 3/4; }
-.ps-section[data-portable-preset="revise/editorial-statement"] { --ps-paper: #0e0d0c; --ps-ink: #f5f1e9; }
-.ps-section[data-portable-preset="revise/editorial-statement"] .ps-story-layout { grid-template-columns:1fr; text-align:center; max-width: 900px; }
-.ps-section[data-portable-preset="revise/editorial-statement"] .ps-story-copy { gap: 38px; }
-.ps-section[data-portable-preset="revise/editorial-statement"] .ps-story-image { display:none; }
-.ps-section[data-portable-preset="revise/editorial-statement"] h2 { font-size: clamp(3rem,7vw,8rem); }
-.ps-section[data-portable-preset="revise/faq"] { --ps-paper: #f9f7f3; }
-.ps-section[data-portable-preset="revise/testimonials"] { --ps-paper: #e0d8ca; }
-.ps-section[data-portable-preset="revise/testimonials"] .ps-detail-grid article { border: none; border-left: 2px solid #79736e; }
-.ps-section[data-portable-preset="revise/testimonials"] .ps-detail-grid h3 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em; }
-.ps-section[data-portable-preset="revise/testimonials"] .ps-detail-grid p { font-size: 1.3rem; font-style: italic; }
-.ps-section[data-portable-preset="revise/trust-row"] .ps-detail-grid article { padding: 8px 20px 8px 0; border: 0; border-right: 1px solid #bdbab5; }
-.ps-section[data-portable-preset="revise/trust-row"] h2 { font-size: clamp(2rem,3vw,3.8rem); }
-.ps-section[data-portable-preset="revise/newsletter"] { --ps-paper: #cfc7b8; }
 @media(max-width:760px) {
   .ps-section .ps-inner { padding-block: 60px; }
   .ps-section .ps-cards { grid-template-columns: repeat(2,minmax(0,1fr)); }

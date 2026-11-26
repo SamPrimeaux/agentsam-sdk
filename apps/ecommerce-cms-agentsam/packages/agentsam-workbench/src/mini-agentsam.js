@@ -4,8 +4,8 @@ import { attachCapabilityMenu } from './composer.js';
 // This app-local vanilla JS module SHIPS via bin/build-assets.mjs → /admin/workbench.
 // Canonical React/TS workbench lives at packages/agentsam-workbench (MiniAgentSam.tsx +
 // ResourceCard). Do NOT invent a third copy. Convergence path: publish
-// @inneranimalmedia/agentsam-workbench with a browser build (or installed() package like
-// revise-theme), then point build-assets at node_modules and retire this file.
+// @inneranimalmedia/agentsam-workbench with a browser build, then route this
+// existing consumer through that build and retire this ship copy.
 // Until that consumer swap lands, keep this ship copy; never delete it first.
 // Status: Decide=packages React SSOT for Studio; this file remains Ecommerce release SSOT.
 export const miniAgentSamTokens = {

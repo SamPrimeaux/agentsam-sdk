@@ -1,10 +1,35 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), 'utf8'));
+
+function exportTargetExists(target) {
+  const relativeTarget = target.replace(/^\.\//, '');
+  if (!relativeTarget.includes('*')) return existsSync(join(root, relativeTarget));
+
+  const wildcardIndex = relativeTarget.indexOf('*');
+  const basePrefix = relativeTarget.slice(0, wildcardIndex);
+  const baseDirectory = basePrefix.endsWith('/')
+    ? basePrefix.slice(0, -1)
+    : basePrefix.slice(0, basePrefix.lastIndexOf('/'));
+  const pattern = new RegExp(`^${relativeTarget.split('*').map((part) => part.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')).join('.*')}$`);
+
+  function containsMatch(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolute = join(directory, entry.name);
+      const relative = absolute.slice(root.length + 1).replaceAll('\\\\', '/');
+      if (entry.isFile() && pattern.test(relative)) return true;
+      if (entry.isDirectory() && containsMatch(absolute)) return true;
+    }
+    return false;
+  }
+
+  const directory = join(root, baseDirectory);
+  return existsSync(directory) && containsMatch(directory);
+}
 
 const pkg = readJson('package.json');
 const lock = readJson('package-lock.json');
@@ -29,7 +54,7 @@ assert.equal(pkg.scripts?.postinstall, undefined, 'root SDK install must be side
 
 for (const [exportKey, target] of Object.entries(pkg.exports || {})) {
   assert.ok(target, `missing public export ${exportKey}`);
-  assert.ok(existsSync(join(root, target)), `public export target missing: ${target}`);
+  assert.ok(exportTargetExists(target), `public export target missing: ${target}`);
 }
 
 assert.equal(pkg.bin?.agentsam, 'bin/agentsam');
@@ -82,8 +107,9 @@ assert.ok(
   'published files must include the Cloudflare connector imported by the CLI',
 );
 assert.ok(pkg.files?.includes('AGENTSAM.md') && existsSync(join(root, 'AGENTSAM.md')), 'published files must include the stable AgentSam runtime contract');
-assert.notEqual(identity.private, true, 'identity is a publishable workspace package and is also distributed through the root SDK');
-assert.equal(identity.publishConfig?.access, 'public', 'identity workspace must remain publicly publishable');
+assert.equal(identity.private, true, 'identity is an SDK-internal workspace module, not a separately published npm product');
+assert.equal(identity.publishConfig, undefined, 'identity must not declare a separate npm publication target');
+assert.ok(pkg.files?.includes('packages/identity'), 'the root SDK distribution must include the Identity module');
 for (const file of ['services/knowledge/package.json', 'services/knowledge/package-lock.json']) {
   assert.ok(pkg.files.includes(file) && existsSync(join(root, file)), `missing knowledge service runtime asset: ${file}`);
 }

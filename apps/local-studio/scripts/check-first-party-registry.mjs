@@ -9,9 +9,11 @@ import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => JSON.parse(readFileSync(resolve(appRoot, p), 'utf8'));
 
-export function requiredPublishedPackages(manifests, lock = null) {
+export function requiredPublishedPackages(manifests, lock = null, {
+  appRoot: root = appRoot,
+  allowWorkspaceLinks = true,
+} = {}) {
   const local = new Set(manifests.filter(({ path }) => path !== 'package.json')
     .map(({ manifest }) => manifest.name).filter(Boolean));
   const required = new Map();
@@ -20,20 +22,20 @@ export function requiredPublishedPackages(manifests, lock = null) {
       for (const [name, version] of Object.entries(manifest[section] || {})) {
         if (!name.startsWith('@inneranimalmedia/') || local.has(name)) continue;
         if (version.startsWith('file:')) {
-          const packageDir = resolve(appRoot, dirname(path), version.slice(5));
-          const packagesRoot = resolve(appRoot, '../../packages');
+          const packageDir = resolve(root, dirname(path), version.slice(5));
+          const packagesRoot = resolve(root, '../../packages');
           const within = relative(packagesRoot, packageDir);
           if (!within || within === '..' || within.startsWith('..' + sep) || within.startsWith(sep)) {
             throw Error('untrusted_first_party_source_pin:' + name);
           }
           const source = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
-          if (source.name !== name || source.version !== manifest.version) {
+          if (source.name !== name || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(source.version || '')) {
             throw Error('mismatched_first_party_source_pin:' + name);
           }
           continue;
         }
         const sourceLink = lock?.packages?.['node_modules/' + name];
-        if (sourceLink?.link) {
+        if (sourceLink?.link && allowWorkspaceLinks) {
           const packageName = name.slice('@inneranimalmedia/'.length);
           const expected = '../../packages/' + packageName;
           if (sourceLink.resolved !== expected) throw Error('untrusted_first_party_lock_link:' + name);
@@ -63,13 +65,14 @@ export async function registryStatus(requirements, get = fetch) {
   return { ready: results.every((r) => r.published), results };
 }
 
-export function appManifestSources() {
-  const root = read('package.json');
+export function appManifestSources(root = appRoot) {
+  const read = (p) => JSON.parse(readFileSync(resolve(root, p), 'utf8'));
+  const manifest = read('package.json');
   const paths = ['package.json'];
-  for (const workspace of root.workspaces || []) {
+  for (const workspace of manifest.workspaces || []) {
     if (workspace.endsWith('/*')) {
       const directory = workspace.slice(0, -2);
-      for (const item of readdirSync(resolve(appRoot, directory), { withFileTypes: true })) {
+      for (const item of readdirSync(resolve(root, directory), { withFileTypes: true })) {
         if (item.isDirectory()) paths.push(directory + '/' + item.name + '/package.json');
       }
     } else {
@@ -79,7 +82,7 @@ export function appManifestSources() {
   return paths.map((path) => ({ path, manifest: read(path) }));
 }
 
-export function staleLockTarballs(lock, requirements) {
+export function staleLockTarballs(lock, requirements, { allowWorkspaceLinks = true } = {}) {
   const expected = new Map(requirements.map(({ name, version }) => [name, version]));
   const seen = new Set();
   const stale = [];
@@ -90,7 +93,10 @@ export function staleLockTarballs(lock, requirements) {
     const version = expected.get(name);
     if (!version) continue;
     seen.add(name);
-    if (pkg.link) continue;
+    if (pkg.link) {
+      if (!allowWorkspaceLinks) stale.push('workspace link cannot ship in standalone install ' + key);
+      continue;
+    }
     if (typeof pkg.version === 'string' && pkg.version !== version) {
       stale.push(key + '@' + pkg.version + ' (expected ' + version + ')');
     }
@@ -101,30 +107,46 @@ export function staleLockTarballs(lock, requirements) {
   return stale;
 }
 
-async function main() {
-  const manifests = appManifestSources();
+function argumentValue(args, name, fallback) {
+  const index = args.indexOf(name);
+  return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
+}
+
+async function main(args = process.argv.slice(2)) {
+  const selectedAppRoot = resolve(process.cwd(), argumentValue(args, '--app-root', appRoot));
+  const lockFile = argumentValue(args, '--lock-file', 'package-lock.json');
+  const standalone = args.includes('--standalone');
+  const manifests = appManifestSources(selectedAppRoot);
   const version = manifests[0].manifest.version;
-  const lock = read('package-lock.json');
-  const requirements = requiredPublishedPackages(manifests, lock);
+  const name = manifests[0].manifest.name || 'Application';
+  const lock = JSON.parse(readFileSync(resolve(selectedAppRoot, lockFile), 'utf8'));
+  const options = { appRoot: selectedAppRoot, allowWorkspaceLinks: !standalone };
+  const requirements = requiredPublishedPackages(manifests, lock, options);
   const registry = await registryStatus(requirements);
-  const stale = staleLockTarballs(lock, requirements);
+  const stale = staleLockTarballs(lock, requirements, options);
   const missing = registry.results.filter((r) => !r.published);
   const ready = registry.ready && stale.length === 0;
-  console.log('Local Studio first-party registry: ' +
+  console.log(name + ' first-party registry: ' +
     (registry.results.length - missing.length) + '/' + registry.results.length +
     ' exact dependencies published (app ' + version + ')');
   if (missing.length) console.log('Unpublished: ' + missing.map((r) => r.name + '@' + r.version).join(', '));
   if (stale.length) console.log('Stale app lock entries: ' + stale.join(', '));
-  if (process.argv.includes('--github-output') && process.env.GITHUB_OUTPUT) {
+  if (args.includes('--github-output') && process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, 'ready=' + ready + '\n');
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, ready
-      ? 'Local Studio exact first-party dependencies are published and lock-aligned.\n'
-      : 'DEFERRED: standalone Local Studio install needs all exact first-party packages published AND a refreshed committed lockfile.\n');
+    const summary = ready
+      ? name + ' exact first-party dependencies are published and lock-aligned.\n'
+      : [
+          'DEFERRED: ' + name + ' standalone install requires every exact first-party dependency published and a refreshed committed lockfile.',
+          missing.length ? 'Unpublished: ' + missing.map((r) => r.name + '@' + r.version).join(', ') : '',
+          stale.length ? 'Lock issues: ' + stale.join(', ') : '',
+          '',
+        ].filter(Boolean).join('\n') + '\n';
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   }
-  if (!ready) console.log('DEFERRED: use the approved publish-stable release workflow, then regenerate and commit the product lock.');
-  if (!ready && process.argv.includes('--require')) process.exitCode = 1;
+  if (!ready) console.log('DEFERRED: publish the already-staged first-party packages through the approved release workflow, then regenerate and commit the product lock.');
+  if (!ready && args.includes('--require')) process.exitCode = 1;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

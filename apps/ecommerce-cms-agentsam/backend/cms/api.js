@@ -43,9 +43,7 @@ import {
 // The same concrete section definitions are loaded by the browser and Worker.
 import "../../packages/theme-contract/runtime/platform-stock-sections.js";
 import "../../packages/theme-contract/runtime/portable-sections.js";
-import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
 // The Worker validates the exact same Revise section contract the browser renders.
-globalThis.ThemeReviseAtlas = reviseAtlas;
 const PORTABLE = globalThis.ThemePortableSections;
 import {
   draftKey,
@@ -2006,22 +2004,26 @@ function catalogResourceDetails(section, settings) {
 
 export async function listInstalledCatalogResources(env, slug, accountId, siteId = null, pageId = null) {
   if (!accountId) return { error: "Account required", status: 403 };
-  const catalog = loadEmbedCatalog().apps.map((app) => ({
-    key: app.key,
-    name: app.name,
-    category: app.category,
-    installable: Array.isArray(app.surfaces) &&
-      (app.surfaces.includes("cms_block") || app.surfaces.includes("storefront_embed")),
-  }));
+  const embedEntries = loadEmbedCatalog().apps;
+  const registered = (await Promise.all(embedEntries.filter(app=>app.registry_required)
+    .map(app=>registeredEmbed(env,accountId,app.key)))).filter(Boolean);
+  const registeredByKey = new Map(registered.map(entry=>[entry.key,entry]));
+  const catalog = embedEntries.map((app) => {
+    const entry=registeredByKey.get(app.key);
+    const storefrontEmbed=Array.isArray(app.surfaces)&&app.surfaces.includes("storefront_embed");
+    const registeredReady=!app.registry_required ||
+      (entry?.registration?.artifactReady===true && entry.registration.previewOnly===false);
+    return {
+      key:app.key,
+      name:app.name,
+      category:app.category,
+      installable:storefrontEmbed && registeredReady,
+    };
+  });
   const storageMode = await cmsPageStorageMode(env.DB);
   if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
     const stock = await listSiteOwnedStockCatalog(env,accountId).catch(()=>[]);
-    const registered = (await Promise.all(loadEmbedCatalog().apps.filter(app=>app.registry_required)
-      .map(app=>registeredEmbed(env,accountId,app.key)))).filter(Boolean);
-    const allCatalog = [...catalog.map(app=>{
-      const entry=registered.find(item=>item.key===app.key);
-      return entry?{...app,installable:entry.registration.artifactReady}:app;
-    }),...stock];
+    const allCatalog = [...catalog,...stock];
     const result = await getSiteOwnedPage(env, accountId, slug, siteId, pageId);
     if (!result) return { error: "cms_page_not_found", status: 404 };
     const installed = result.page.sections

@@ -28,6 +28,18 @@ test('checks pinned public dependencies without treating app-private workspaces 
   ]);
 });
 
+test('local file source pin validates the source package version, not the consuming app version', () => {
+  const manifests = [
+    { path: 'package.json', manifest: { name: '@inneranimalmedia/agentsam-local-studio', version: '2.6.18' } },
+    { path: 'backend/package.json', manifest: {
+      name: '@inneranimalmedia/agentsam-local-studio-backend',
+      version: '2.6.18',
+      dependencies: { '@inneranimalmedia/agentsam-identity': 'file:../../../packages/identity' },
+    } },
+  ];
+  assert.deepEqual(requiredPublishedPackages(manifests), []);
+});
+
 test('reports all absent published dependencies, not only the first ETARGET', async () => {
   const requirements = requiredPublishedPackages(input);
   const queries = [];
@@ -65,11 +77,30 @@ test('checks lock tarballs against their exact manifest pins, not the Local Stud
   assert.deepEqual(staleLockTarballs(candidateLock, requirements), []);
 });
 
+test('standalone package gates require registry tarballs instead of workspace symlinks', () => {
+  const manifests = [{ path: 'package.json', manifest: {
+    name: '@inneranimalmedia/ecommerce-cms-agentsam',
+    version: '2.6.18',
+    dependencies: { '@inneranimalmedia/agentsam-cms': '2.6.18' },
+  } }];
+  const lock = { packages: {
+    'node_modules/@inneranimalmedia/agentsam-cms': {
+      link: true,
+      resolved: '../../packages/agentsam-cms',
+    },
+  } };
+  const requirements = requiredPublishedPackages(manifests, lock, { allowWorkspaceLinks: false });
+  assert.deepEqual(requirements, [{ name: '@inneranimalmedia/agentsam-cms', version: '2.6.18' }]);
+  assert.deepEqual(staleLockTarballs(lock, requirements, { allowWorkspaceLinks: false }), [
+    'workspace link cannot ship in standalone install node_modules/@inneranimalmedia/agentsam-cms',
+  ]);
+});
+
 test('candidate Studio uses verified source links and checks only real npm tarballs', () => {
   const manifests = appManifestSources();
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
   assert.deepEqual(requiredPublishedPackages(manifests, lock), [
-    { name: '@inneranimalmedia/agentsam-sdk', version: '2.6.13' },
+    { name: '@inneranimalmedia/agentsam-sdk', version: '2.6.17' },
   ]);
   const tampered = structuredClone(lock);
   tampered.packages['node_modules/@inneranimalmedia/agentsam-nav'].resolved = '../../packages/agentsam-brand';

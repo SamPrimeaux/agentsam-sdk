@@ -9,7 +9,7 @@ import { resolveNavConfig } from "../lib/site-nav.js";
 import { resolveCmsSite } from "../cms/site-context.mjs";
 import { loadPrimaryCmsNavigation, upsertPrimaryCmsNavigation } from "../cms/navigation-menus.mjs";
 import { DEFAULT_SITE_STORE_SETTINGS as PACKAGE_STORE_DEFAULTS } from "../cms/site-settings-contract.mjs";
-import { hashPassword, verifyPassword } from "@inneranimalmedia/agentsam-identity/core/password-crypto";
+import { hashPassword, verifyPassword } from "@inneranimalmedia/agentsam-sdk/identity/core/password-crypto";
 import { listStoreThemes } from "./themes.js";
 import { normalizeSiteSeo } from "../cms/seo.mjs";
 // Theme appearance comes from the installed theme/tenant contract, never

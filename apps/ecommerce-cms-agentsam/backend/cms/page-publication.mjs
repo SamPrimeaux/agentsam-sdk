@@ -95,28 +95,44 @@ async function selectPageAndDraft(env,accountId,siteId,slug,pageId) {
   const site=await selectOwnedPageSite(env,accountId,siteId);
   const page=await findSiteOwnedPage(env,site,slug,pageId);
   if (!page || page.slug !== slug || page.status === 'archived') return {error:'cms_page_not_found',status:404};
-  const row=await env.DB.prepare('SELECT draft_data FROM cms_page_drafts WHERE page_id=? AND user_id=? LIMIT 1').bind(page.id,accountId).first();
-  if (!row) return {error:'cms_page_draft_not_saved',status:409};
-  const draft=readObject(row.draft_data);
-  if (!draft.title || !safeSlug(draft.url_handle) || draft.url_handle === 'site' ||
-      !['visible','hidden'].includes(draft.visibility)) return {error:'cms_page_draft_invalid',status:409};
   if (page.requires_auth) return {error:'cms_page_auth_renderer_required',status:409};
+
+  // cms_pages + cms_page_sections are the canonical site-owned page model.
+  // cms_page_drafts is read only as an optional compatibility source for older
+  // body/SEO fields; newer rows may contain only {page_id, sections, updated_at}.
+  // Such rows are valid and must never block preview or publication.
+  const row=await env.DB.prepare('SELECT draft_data FROM cms_page_drafts WHERE page_id=? AND user_id=? LIMIT 1').bind(page.id,accountId).first();
+  const persisted=readObject(row?.draft_data);
+  const seo=readObject(page.seo_json);
+  const title=typeof persisted.title==='string'&&persisted.title.trim()
+    ? persisted.title : String(page.title||'').trim();
+  const draft={
+    title,
+    body_html:typeof persisted.body_html==='string'?persisted.body_html:'',
+    visibility:['visible','hidden'].includes(persisted.visibility)
+      ? persisted.visibility
+      : (page.status==='published'&&page.nav_visible!==0?'visible':'hidden'),
+    ...(typeof persisted.url_handle==='string'&&persisted.url_handle.trim()
+      ? {url_handle:persisted.url_handle.trim()} : {}),
+    seo_title:typeof persisted.seo_title==='string'&&persisted.seo_title.trim()
+      ? persisted.seo_title : (typeof seo.title==='string'&&seo.title.trim()?seo.title:title),
+    seo_description:typeof persisted.seo_description==='string'
+      ? persisted.seo_description : (typeof seo.description==='string'?seo.description:''),
+    template_sku:typeof persisted.template_sku==='string'&&persisted.template_sku.trim()
+      ? persisted.template_sku : (page.template_sku||''),
+  };
   const nav=await env.DB.prepare("SELECT title,slug,route_path,nav_visible FROM cms_pages WHERE site_id=? AND status='published' AND nav_visible=1 AND requires_auth=0 ORDER BY sort_order ASC LIMIT 10").bind(site.id).all();
-  return {page,site,draft,rawDraft:row.draft_data,navigation:nav.results||[]};
+  return {page,site,draft,rawDraft:row?.draft_data??null,navigation:nav.results||[]};
 }
 export async function previewMerchantPage(env,accountId,siteId,slug,pageId,override=null) {
   try {
-    let data=await selectPageAndDraft(env,accountId,siteId,slug,pageId);
-    if (data.error && data.error !== 'cms_page_draft_not_saved') return data;
-    if (data.error) {
-      const site=await selectOwnedPageSite(env,accountId,siteId);
-      const page=await findSiteOwnedPage(env,site,slug,pageId);
-      if (!page || page.slug !== slug) return error('cms_page_not_found',404);
-      data={site,page,draft:{},navigation:[]};
-    }
+    const data=await selectPageAndDraft(env,accountId,siteId,slug,pageId);
+    if (data.error) return data;
     const sections=await renderSiteOwnedPageSections(env,accountId,data.site,data.page);
-    return {ok:true,html:renderMerchantPage({...data,
-      draft:override ? {...data.draft,...override} : data.draft,sections})};
+    const draft=override ? {...data.draft,...override} : data.draft;
+    if (!['visible','hidden'].includes(draft.visibility)) draft.visibility=data.draft.visibility;
+    if (typeof draft.title!=='string'||!draft.title.trim()) draft.title=data.draft.title;
+    return {ok:true,html:renderMerchantPage({...data,draft,sections})};
   } catch(e) {return error(String(e.message||e),/too_large|invalid|title_required/.test(String(e.message))?422:500);}
 }
 const hashHtml=async html=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(html))),b=>b.toString(16).padStart(2,'0')).join('');
@@ -130,13 +146,22 @@ export async function publishMerchantPage(env,accountId,siteId,slug,pageId) {
   if (page.page_type === 'global' || page.route_path.startsWith('/__cms/')) return error('cms_system_page_cannot_publish',409);
   if (site.status !== 'active') return error('cms_site_not_active',409);
 
-  // URL handles are draft data. A published route changes only in the same
-  // transaction that advances the verified HTML and manifest pointers.
-  const nextSlug=page.route_path==='/'?page.slug:String(draft.url_handle||page.slug).trim().toLowerCase();
+  // cms_pages owns the canonical route. Only a valid legacy URL-handle
+  // draft may request a route change; absent legacy fields preserve nested
+  // site-owned slugs such as work/fuelnfreetime exactly as stored.
+  const requestedHandle=typeof draft.url_handle==='string'&&draft.url_handle.trim()
+    ? draft.url_handle.trim().toLowerCase() : null;
+  if(requestedHandle&&(!safeSlug(requestedHandle)||requestedHandle==='site'))
+    return error('cms_page_route_invalid',409);
+  const currentSlug=String(page.slug||'');
   const routePrefix=page.route_path==='/'?'/':page.route_path.slice(0,page.route_path.lastIndexOf('/')+1);
-  const nextRoute=page.route_path==='/'?'/':routePrefix+nextSlug;
-  if(!safeSlug(nextSlug)||nextSlug==='site'||!isValidPath(nextRoute)||
-    (routePrefix==='/'&&/^(admin|api|auth|checkout|media|settings)$/i.test(nextSlug)))
+  const slugPrefix=currentSlug.includes('/')?currentSlug.slice(0,currentSlug.lastIndexOf('/')+1):'';
+  const nextSlug=page.route_path==='/'||!requestedHandle
+    ? currentSlug : slugPrefix+requestedHandle;
+  const nextRoute=page.route_path==='/'||!requestedHandle
+    ? page.route_path : routePrefix+requestedHandle;
+  if(!isValidPath(nextRoute)||
+    (requestedHandle&&routePrefix==='/'&&/^(admin|api|auth|checkout|media|settings)$/i.test(requestedHandle)))
     return error('cms_page_route_invalid',409);
   if(nextSlug!==page.slug||nextRoute!==page.route_path){
     const collision=await env.DB.prepare(`
@@ -220,19 +245,24 @@ export async function publishMerchantPage(env,accountId,siteId,slug,pageId) {
     const guard=sections.sources.map(()=>
       'AND EXISTS(SELECT 1 FROM cms_page_sections s WHERE s.id=? AND s.page_id=? '+
       'AND s.is_visible=1 AND s.draft_r2_key IS ? AND s.content_hash IS ?)').join('\n');
+    const draftGuard=rawDraft==null
+      ? 'AND NOT EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=?)'
+      : 'AND EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=? AND draft_data=?)';
+    const draftGuardBindings=rawDraft==null
+      ? [page.id,accountId] : [page.id,accountId,rawDraft];
     const sql=`UPDATE cms_pages SET slug=?,route_path=?,title=?,seo_json=?,metadata_json=?,template_sku=?,
       nav_visible=?,status='published',content_object_key=?,published_manifest_object_key=?,
       published_at=unixepoch(),updated_at=unixepoch()
       WHERE id=? AND site_id=? AND slug=? AND route_path=? AND status=? AND content_object_key IS ?
         AND metadata_json=?
-        AND EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=? AND draft_data=?)
+        ${draftGuard}
         AND (SELECT COUNT(*) FROM cms_page_sections WHERE page_id=? AND is_visible=1)=?
         ${guard}`;
     const pageUpdate=env.DB.prepare(sql).bind(
-      nextSlug,nextRoute,nextTitle,JSON.stringify(seo),JSON.stringify(nextMeta),draft.template_sku||null,
+      nextSlug,nextRoute,nextTitle,JSON.stringify(seo),JSON.stringify(nextMeta),draft.template_sku||page.template_sku||null,
       draft.visibility==='visible'?1:0,key,manifestKey,
       page.id,site.id,page.slug,page.route_path,page.status,page.content_object_key,page.metadata_json,
-      page.id,accountId,rawDraft,page.id,sections.sources.length,
+      ...draftGuardBindings,page.id,sections.sources.length,
       ...sections.sources.flatMap(source=>[
         source.section_id,page.id,source.draft_key,source.draft_hash,
       ]),

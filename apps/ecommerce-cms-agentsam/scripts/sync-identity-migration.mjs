@@ -4,7 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(appRoot, '../..');
-const sourceRoot = path.join(repositoryRoot, 'packages/identity/migrations/sqlite');
+const sourceRoot = (() => {
+  try {
+    return path.dirname(fileURLToPath(import.meta.resolve('@inneranimalmedia/agentsam-sdk/identity/migrations/sqlite/001_identity_core.sql')));
+  } catch {
+    return path.join(repositoryRoot, 'packages/identity/migrations/sqlite');
+  }
+})();
 const outputPath = path.join(appRoot, 'db/migrations/011_storefront_identity.sql');
 const sourceFiles = [
   '001_identity_core.sql',
@@ -22,7 +28,7 @@ for (const file of sourceFiles) {
 }
 
 const output = [
-  '-- GENERATED FILE. Source of truth: @inneranimalmedia/agentsam-identity portable D1 migrations.',
+  '-- GENERATED FILE. Source of truth: @inneranimalmedia/agentsam-sdk/identity portable D1 migrations.',
   '-- The host Ecommerce accounts table is merchant-owned; migration 008_identity_accounts.sql is intentionally excluded.',
   '-- Customer identities are isolated by cms_sites.id through identity scope_id.',
   ...sections,

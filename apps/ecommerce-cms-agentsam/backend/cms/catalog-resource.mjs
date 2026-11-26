@@ -30,9 +30,9 @@ export function resolveCatalogTemplate(catalogKey) {
   const entry = loadEmbedCatalog().apps.find((app) => app.key === key);
   if (!entry?.default_config || typeof entry.default_config !== "object") return null;
   const surfaces = Array.isArray(entry.surfaces) ? entry.surfaces : [];
-  // Packaged embeds declare storefront_embed and/or cms_block. Either surface
-  // is enough to install a page-owned CMS instance from the catalog.
-  if (!surfaces.includes("cms_block") && !surfaces.includes("storefront_embed")) return null;
+  // The Apps picker and this install path are specifically storefront embeds.
+  // A cms_block-only template belongs to the Sections/component catalog instead.
+  if (!surfaces.includes("storefront_embed")) return null;
   return entry;
 }
 
