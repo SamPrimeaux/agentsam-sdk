@@ -32,9 +32,9 @@ test('Ecommerce consumes Identity and Vault through the canonical SDK package', 
   for (const key of requiredExports) {
     const target = sdkManifest.exports[key];
     assert.equal(typeof target, 'string', 'SDK export missing: ' + key);
-    const relativeTarget = target.replace(/^\.\//, '');
-    assert.ok(
-      readFileSync(path.join(repositoryRoot, relativeTarget)) || relativeTarget,
+    const relativeTarget = target.replace(/^\.\//, '').replace('*', key.includes('migrations') ? '001_identity_core.sql' : 'pages/login.html');
+    assert.doesNotThrow(
+      () => readFileSync(path.join(repositoryRoot, relativeTarget)),
       'SDK export target missing: ' + key,
     );
   }
