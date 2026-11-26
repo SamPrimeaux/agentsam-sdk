@@ -5,9 +5,9 @@ import {
   Square, Type, Underline
 } from 'lucide-react';
 import type { CreativeObject } from '../creative-model';
-import { MenuAction, MenuDivider, MenuPopover } from './EditorMenus';
+import { MenuAction, MenuAvoidanceContext, MenuDivider, MenuPopover, type MenuAvoidRect } from './EditorMenus';
 
-type Anchor = { left: number; top: number; side: 'top' | 'bottom' };
+type Anchor = { left: number; top: number; side: 'top' | 'bottom'; avoidRect: MenuAvoidRect };
 type Props = {
   object: CreativeObject;
   anchor: Anchor;
@@ -62,7 +62,7 @@ export function SelectionFormattingToolbar({ object, anchor, colors, onChange, o
   const isImage = object.type === 'image';
   const isShape = object.type === 'shape';
   const activeColor = object.color || '#17191d';
-  return <div className="dcx-selection-formatting-toolbar" role="toolbar" aria-label={'Format selected ' + object.type} style={{ left: anchor.left, top: anchor.top }} onPointerDown={(event) => event.stopPropagation()}>
+  return <MenuAvoidanceContext.Provider value={anchor.avoidRect}><div className="dcx-selection-formatting-toolbar" role="toolbar" aria-label={'Format selected ' + object.type} style={{ left: anchor.left, top: anchor.top }} onPointerDown={(event) => event.stopPropagation()}>
     {isText ? <>
       <MenuPopover label="Font family" side={anchor.side} trigger={<><Type size={14}/><span className="dcx-context-font-name">{object.fontFamily || 'Inter'}</span><ChevronDown size={11}/></>} triggerClassName="dcx-context-font-trigger">
         {(close) => <>
@@ -140,5 +140,5 @@ export function SelectionFormattingToolbar({ object, anchor, colors, onChange, o
     <button type="button" className="dcx-context-icon-trigger" title="More formatting options" aria-label="More formatting options" onClick={onMore}><SlidersHorizontal size={15}/></button>
     <button type="button" className="dcx-context-icon-trigger" title="Comment" aria-label="Comment" onClick={onComment}><MessageCircle size={15}/></button>
     {onAsk ? <button type="button" className="dcx-context-ask" onClick={onAsk}><Sparkles size={14}/> Ask AgentSam</button> : null}
-  </div>;
+  </div></MenuAvoidanceContext.Provider>;
 }

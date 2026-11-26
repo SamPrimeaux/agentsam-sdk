@@ -14,10 +14,10 @@ import { SourceLibraryApp } from './SourceLibraryApp';
 import {
   Artboard, AssetToken, CodeDocument, ColorToken, CreativeArtifact, CreativeObject, CreativeType, CreativeComment, ChartType,
   DesignDocument, DesignSystemDocument, ScaleToken, ShadowToken, Slide, SlidesDocument,
-  TypeToken, artifactHasImages, brandGuidelinesSlides, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset,
+  TypeToken, artifactHasImages, brandGuidelinesSlides, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
   normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY
 } from './creative-model';
-import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
+import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, SlideInsertToolbar, SlideLayoutMenu, ViewMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
 import { SelectionFormattingToolbar } from './components/SelectionFormattingToolbar';
 import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
@@ -263,7 +263,7 @@ function AlignmentControls({ onAlign }: { onAlign: (alignment: AlignCommand) => 
 function EmptyState({ title, description, action, icon }: { title: string; description?: string; action?: ReactNode; icon?: ReactNode }) {
   return <div className="dcx-empty-state">{icon ? <div className="dcx-empty-icon">{icon}</div> : null}<strong>{title}</strong>{description ? <p>{description}</p> : null}{action ? <div className="dcx-empty-actions">{action}</div> : null}</div>;
 }
-type SelectionToolbarAnchor = { left: number; top: number; side: 'top' | 'bottom' } | null;
+type SelectionToolbarAnchor = { left: number; top: number; side: 'top' | 'bottom'; avoidRect: { left: number; top: number; right: number; bottom: number } } | null;
 function useSelectionToolbarAnchor(areaRef: { current: HTMLDivElement | null }, selectedId: string, revision: string): SelectionToolbarAnchor {
   const [anchor, setAnchor] = useState<SelectionToolbarAnchor>(null);
   useEffect(() => {
@@ -283,7 +283,7 @@ function useSelectionToolbarAnchor(areaRef: { current: HTMLDivElement | null }, 
       const center = area.scrollLeft + rect.left - areaRect.left + rect.width / 2;
       const left = maxLeft < minLeft ? area.scrollLeft + area.clientWidth / 2 : Math.max(minLeft, Math.min(maxLeft, center));
       const top = area.scrollTop + (placeAbove ? Math.max(8, visibleTop - 48) : visibleBottom + 8);
-      setAnchor({ left, top, side: placeAbove ? 'top' : 'bottom' });
+      setAnchor({ left, top, side: placeAbove ? 'top' : 'bottom', avoidRect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } });
     };
     update();
     area.addEventListener('scroll', update, { passive: true });
@@ -374,11 +374,11 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   const [tool, setTool] = useState<Tool>('select');
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [addSlideOpen, setAddSlideOpen] = useState(false);
   const [present, setPresent] = useState(false);
   const [presentIndex, setPresentIndex] = useState(0);
   const [presentNotes, setPresentNotes] = useState(false);
   const [explorerTab, setExplorerTab] = useState<'slides' | 'layers'>('slides');
+  const [draggedSlideId, setDraggedSlideId] = useState('');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(false);
@@ -486,7 +486,7 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   const addSlide = (kind: string) => {
     const next = makeSlidePreset(kind);
     next.name = kind === 'Blank' ? 'Slide ' + (doc.slides.length + 1) : kind;
-    updateDoc({ slides: [...doc.slides, next] }); setSlideId(next.id); setSelectedId(''); setAddSlideOpen(false); setExplorerTab('slides');
+    updateDoc({ slides: [...doc.slides, next] }); setSlideId(next.id); setSelectedId(''); setExplorerTab('slides');
   };
   const addComment = (value: string) => updateSlide({ comments: [...slide.comments, { id: makeId('comment'), text: value, targetId: selectedId || undefined, createdAt: new Date().toISOString() }] });
   const alignSelected = (alignment: AlignCommand) => {
@@ -517,9 +517,18 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
     <div className="dcx-panel-title"><strong>Structure</strong><span>{explorerTab === 'slides' ? doc.slides.length + ' slides' : slide.objects.length + ' layers'}</span></div>
     <div className="dcx-explorer-tabs" role="tablist" aria-label="Document structure"><button role="tab" aria-selected={explorerTab === 'slides'} className={explorerTab === 'slides' ? 'active' : ''} onClick={() => setExplorerTab('slides')}>Slides</button><button role="tab" aria-selected={explorerTab === 'layers'} className={explorerTab === 'layers' ? 'active' : ''} onClick={() => setExplorerTab('layers')}>Layers</button></div>
     {explorerTab === 'slides' ? <>
-      <div className="dcx-slide-list">{doc.slides.map((item, index) => <button key={item.id} className={'dcx-slide-thumb' + (item.id === slide.id ? ' active' : '')} onClick={() => { setSlideId(item.id); setSelectedId(''); setCommentsOpen(false); }}><span className="dcx-thumb-number">{index + 1}</span><span className="dcx-thumb-preview" style={{ background: item.backgroundImage ? 'linear-gradient(135deg,#2b3038,#14161a)' : item.background }}><span>{item.objects.find((o) => o.type === 'text')?.text?.slice(0, 36) || item.name}</span></span><span className="dcx-thumb-label">{item.name}</span></button>)}</div>
-      <button className="dcx-add-slide" onClick={() => setAddSlideOpen(!addSlideOpen)}><Plus size={15}/> Add slide</button>
-      {addSlideOpen ? <div className="dcx-preset-menu">{['Blank','Brand Cover','Brand Foundations','Logo System','Color Palette','Typography','Imagery & Art Direction','Voice & Messaging','Applications & Governance'].map((kind) => <button key={kind} className="dcx-preset-option" onClick={() => addSlide(kind)}><span className={'dcx-preset-thumb ' + kind.toLowerCase().replaceAll(' ', '-')}>{kind === 'Blank' ? <span/> : kind.split(' ').map((word) => word[0]).join('')}</span><strong>{kind}</strong></button>)}</div> : null}
+      <div className="dcx-slide-list" aria-label="Slides">{doc.slides.map((item, index) => <button
+        key={item.id}
+        draggable
+        className={'dcx-slide-thumb' + (item.id === slide.id ? ' active' : '') + (draggedSlideId === item.id ? ' is-dragging' : '')}
+        aria-label={'Slide ' + (index + 1) + ': ' + item.name + '. Drag to reorder'}
+        onClick={() => { setSlideId(item.id); setSelectedId(''); setCommentsOpen(false); }}
+        onDragStart={(event) => { setDraggedSlideId(item.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', item.id); }}
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+        onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = draggedSlideId || event.dataTransfer.getData('text/plain'); const slides = reorderSlides(doc.slides, sourceId, item.id); if (slides !== doc.slides) updateDoc({ ...doc, slides }); setDraggedSlideId(''); }}
+        onDragEnd={() => setDraggedSlideId('')}
+      ><span className="dcx-thumb-number">{index + 1}</span><span className="dcx-thumb-preview" style={{ background: item.backgroundImage ? 'linear-gradient(135deg,#2b3038,#14161a)' : item.background }}><span>{item.objects.find((o) => o.type === 'text')?.text?.slice(0, 36) || item.name}</span></span><span className="dcx-thumb-label">{item.name}</span></button>)}</div>
+      <SlideLayoutMenu onAdd={addSlide} label="Add slide"/>
     </> : <>
       {slide.objects.length ? <div className="dcx-layer-list">{[...slide.objects].reverse().map((object) => <div className={'dcx-layer-row' + (object.id === selectedId ? ' active' : '')} key={object.id}><button className="dcx-layer-select" onClick={() => setSelectedId(object.id)}><span className="dcx-layer-kind">{object.type === 'text' ? <Type size={13}/> : object.type === 'image' ? <Image size={13}/> : object.type === 'chart' ? <BarChart3 size={13}/> : object.type === 'table' ? <Table2 size={13}/> : <Square size={13}/>}</span><span>{object.name}</span></button><div className="dcx-layer-actions"><button title="Move up" aria-label={'Move ' + object.name + ' up'} onClick={() => moveLayer(object.id, 1)}>↑</button><button title="Move down" aria-label={'Move ' + object.name + ' down'} onClick={() => moveLayer(object.id, -1)}>↓</button><button title="Duplicate" aria-label={'Duplicate ' + object.name} onClick={() => duplicateLayer(object.id)}><Copy size={11}/></button><button title="Delete" aria-label={'Delete ' + object.name} onClick={() => updateObject(object.id, { name: '__delete__' })}><Trash2 size={11}/></button></div></div>)}</div> : <EmptyState title="No layers yet" description="Insert text, shapes, images, charts, or tables to build this slide."/>}
       <button className="dcx-add-slide" onClick={() => addObject('text')}><Plus size={15}/> Add text layer</button>
@@ -530,17 +539,15 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   </div> : undefined;
   const commands = <>
     <div className="dcx-command-group">
-      <button className="dcx-command-button" onClick={() => setAddSlideOpen(!addSlideOpen)}><Plus size={15}/> New slide <ChevronDown size={13}/></button>
-      <InsertMenu onText={() => addObject('text')} onImage={uploadImage} onMedia={uploadVideo} onShape={addShape} onChart={addChart} onTable={() => addObject('table')}/>
+      <SlideLayoutMenu onAdd={addSlide} label="New slide"/>
+      <ViewMenu grid={showGrid} snap={snapToGrid} guides={showGuides} bounds={showBounds} onToggleGrid={() => setShowGrid((value) => !value)} onToggleSnap={() => setSnapToGrid((value) => !value)} onToggleGuides={() => setShowGuides((value) => !value)} onToggleBounds={() => setShowBounds((value) => !value)}/>
       <button className={'dcx-command-button' + (notesOpen ? ' active' : '')} onClick={() => setNotesOpen(!notesOpen)}>Speaker notes</button>
-      <button className={'dcx-command-button' + (commentsOpen ? ' active' : '')} onClick={() => { setCommentsOpen(!commentsOpen); setInspectorOpen(true); }}><MessageSquare size={14}/> Comments</button>
       <button className={'dcx-command-icon' + (inspectorOpen ? ' active' : '')} title={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-label={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-pressed={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)}><Settings2 size={15}/></button>
       <button className="dcx-command-icon" title="Undo" aria-label="Undo" disabled={historyIndex === 0} onClick={undo}><Undo2 size={15}/></button>
       <button className="dcx-command-icon" title="Redo" aria-label="Redo" disabled={historyIndex >= history.length - 1} onClick={redo}><Redo2 size={15}/></button>
     </div>
     <div className="dcx-command-group">
-      {onAsk ? <button className="dcx-command-button" onClick={() => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name } : undefined })}>Ask AgentSam</button> : null}
-      <ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}/>
+      <ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)} showGridToggle={false}/>
       <PresentMenu onPresent={() => startPresent(false)} onPresentWithNotes={() => startPresent(true)}/>
       <button className="dcx-command-icon" title="Export presentation JSON" aria-label="Export presentation JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', artifact)}><Download size={15}/></button>
     </div>
@@ -554,7 +561,18 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
           </div></div>
           {selected && selectionAnchor ? <SelectionFormattingToolbar object={selected} anchor={selectionAnchor} colors={documentColors} onChange={(patch) => updateObject(selected.id, patch)} onMore={() => setInspectorOpen(true)} onComment={() => { setCommentsOpen(true); setInspectorOpen(true); }} onAlign={alignSelected} onAsk={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: selected.id, kind: selected.type, label: selected.name } }) : undefined}/> : null}
         </div>
-        <ToolBar active={tool} onChange={setTool} includeChart includeTable includeMedia/>
+        <SlideInsertToolbar
+          activeTool={tool === 'hand' ? 'hand' : 'select'}
+          onToolChange={(value) => setTool(value)}
+          onText={() => addObject('text')}
+          onImage={uploadImage}
+          onMedia={uploadVideo}
+          onTable={() => addObject('table')}
+          onShape={addShape}
+          onChart={addChart}
+          onComment={() => { setCommentsOpen(true); setInspectorOpen(true); }}
+          onAsk={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name } : undefined }) : undefined}
+        />
         {notesOpen ? <div className="dcx-speaker-notes"><textarea aria-label="Speaker notes" value={slide.notes} onChange={(event) => updateSlide({ notes: event.target.value })} placeholder="Add speaker notes for this slide"/></div> : null}
         <div className="dcx-stage-footer"><span>Slide {doc.slides.findIndex((item) => item.id === slide.id) + 1} of {doc.slides.length}</span><button onClick={() => setNotesOpen(!notesOpen)}>{notesOpen ? 'Hide speaker notes' : 'Speaker notes'}</button><span>16:9 · {zoom}%</span></div>
       </div> : <EmptyState title="No slides yet" action={<button className="dcx-primary-button" onClick={() => addSlide('Blank')}><Plus size={15}/> Add a slide</button>}/>}
@@ -922,7 +940,7 @@ function AgentSamBuildEditor({ artifact, leading, documentActions, assistant, as
         <div className="dcx-build-capabilities">
           <span>Project files</span><span>IDE and terminal</span><span>Shared conversation</span>
         </div>
-        <button type="button" className="dcx-primary-button" onClick={onOpenCode}>Open Code in Work <Code2 size={14}/></button>
+        <button type="button" className="dcx-primary-button" onClick={() => onOpenCode?.()}>Open Code in Work <Code2 size={14}/></button>
       </div>
     </div>
   </DesignWorkspaceFrame>;
@@ -1122,9 +1140,9 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       <button className="dcx-topbar-icon" type="button" title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} onClick={() => void toggleFullscreen()}>
         {fullscreen ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}
       </button>
-      <button className="dcx-topbar-icon" type="button" title={onShareArtifact ? 'Share document' : 'Document sharing is not connected yet'} aria-label="Share document" disabled={!onShareArtifact} onClick={() => onShareArtifact?.(active)}>
+      {onShareArtifact ? <button className="dcx-topbar-icon" type="button" title="Share document" aria-label="Share document" onClick={() => onShareArtifact(active)}>
         <Share2 size={16}/>
-      </button>
+      </button> : null}
       <CreationMenu onCreate={selectCreation} onCreateBrandGuidelines={createBrandGuidelines}/>
       {onToggleOutputs ? <button className="dcx-topbar-icon" type="button" title={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-label={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-pressed={outputsOpen} onClick={onToggleOutputs}>
         {outputsOpen ? <PanelRightClose size={16}/> : <PanelRight size={16}/>}

@@ -187,3 +187,41 @@ test('app manifest declares Slides, Design, and Design System capabilities', asy
     assert.ok(manifest.capabilities.includes(capability), capability);
   }
 });
+
+test('Slides provides native editable layout starters instead of reusing Brand Guidelines sections', async () => {
+  const model = await loadModel();
+  const expected = new Map([
+    ['Blank', 0], ['Title', 2], ['Section', 3], ['Title + body', 3],
+    ['Bullets', 5], ['Two columns', 6], ['Summary', 10],
+  ]);
+  for (const [name, minimumObjects] of expected) {
+    const value = model.makeSlidePreset(name);
+    assert.equal(value.name, name === 'Blank' ? 'Blank slide' : name);
+    assert.ok(value.objects.length >= minimumObjects, name + ' should contain editable layout objects');
+    assert.equal(new Set(value.objects.map((item) => item.id)).size, value.objects.length, name + ' object IDs should be unique');
+  }
+});
+
+test('slide reordering moves a slide without dropping or re-keying document content', async () => {
+  const model = await loadModel();
+  const document = model.brandGuidelinesSlides();
+  const originalIds = document.slides.map((item) => item.id);
+  const reordered = model.reorderSlides(document.slides, originalIds[0], originalIds[3]);
+  assert.deepEqual(reordered.map((item) => item.id), [originalIds[1], originalIds[2], originalIds[3], originalIds[0], ...originalIds.slice(4)]);
+  assert.equal(reordered[3].objects[0].id, document.slides[0].objects[0].id);
+  assert.equal(model.reorderSlides(document.slides, 'missing', originalIds[0]), document.slides);
+});
+
+test('Slides editor exposes reference-led layout, view, and bottom insert controls', async () => {
+  const source = await readFile(appPath, 'utf8');
+  const menus = await readFile(new URL('../src/components/EditorMenus.tsx', import.meta.url), 'utf8');
+  for (const layout of ['Blank', 'Title', 'Section', 'Title + body', 'Bullets', 'Two columns', 'Summary']) {
+    assert.ok(menus.includes("['" + layout + "'") || menus.includes("'" + layout + "'"), layout + ' layout should be selectable');
+  }
+  for (const control of ['SlideLayoutMenu', 'ViewMenu', 'SlideInsertToolbar', 'onDragStart', 'onDrop']) {
+    assert.ok(source.includes(control), control + ' should be wired into Slides');
+  }
+  for (const control of ['Select', 'Hand', 'Text', 'Image', 'Media', 'Table', 'Shape', 'Chart', 'Comment', 'Ask AgentSam']) {
+    assert.ok(menus.includes("'" + control + "'") || menus.includes('>' + control + '<') || menus.includes('>' + control), control + ' should be available in the slide insert toolbar');
+  }
+});

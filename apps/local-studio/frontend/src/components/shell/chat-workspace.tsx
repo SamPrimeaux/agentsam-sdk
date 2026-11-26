@@ -1,6 +1,6 @@
-import { useEffect, useState, type PointerEvent, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type PointerEvent, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Columns2, Maximize2, Settings, Share, SquareTerminal, Users } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Columns2, Maximize2, Settings, Share, SquareTerminal, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,10 +8,17 @@ import { ChatThread } from "@/components/workbench/thread";
 import { SideStage } from "@/components/workbench/side-stage";
 import { ChatsPanel } from "@/components/shell/studio-panels";
 import { SplitHandle } from "@/components/shell/split-handle";
+import { calculateChatDockResize } from "@/components/shell/chat-dock";
 import { ComputerFullscreen } from "@/components/workbench/computer-stage";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
 import type { Chat } from "@inneranimalmedia/agentsam-local-shared";
+
+function restorePaneDock(key: string): "left" | "right" {
+  if (typeof window === "undefined") return "left";
+  try { return window.localStorage.getItem(key) === "right" ? "right" : "left"; }
+  catch { return "left"; }
+}
 
 function restorePaneWidth(key: string, fallback: number, min: number, max: number) {
   if (typeof window === "undefined") return fallback;
@@ -33,6 +40,9 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
   const setSettingsOpen = useWorkStore((s) => s.setSettingsOpen);
   const [railW, setRailW] = useState(() => restorePaneWidth("agentsam.studio.railWidth", 288, 200, 420));
   const [sideW, setSideW] = useState(() => restorePaneWidth("agentsam.studio.sideWidth", 420, 280, 1100));
+  const sideWRef = useRef(sideW);
+  const dockChangedDuringDrag = useRef(false);
+  const [chatDock, setChatDock] = useState<"left" | "right">(() => restorePaneDock("agentsam.studio.chatDock"));
   const [stageFull, setStageFull] = useState(false);
 
   useEffect(() => {
@@ -42,8 +52,11 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
     try {
       window.localStorage.setItem("agentsam.studio.railWidth", String(railW));
       window.localStorage.setItem("agentsam.studio.sideWidth", String(sideW));
+      window.localStorage.setItem("agentsam.studio.chatDock", chatDock);
     } catch { /* Preference persistence is optional; resizing must still work. */ }
-  }, [railW, sideW]);
+  }, [railW, sideW, chatDock]);
+
+  useEffect(() => { sideWRef.current = sideW; }, [sideW]);
 
   function lightPane(event: PointerEvent<HTMLElement>, on: boolean) {
     event.currentTarget.setAttribute("data-pane", on ? "hover" : "idle");
@@ -72,6 +85,54 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
       toast("Could not copy the chat");
     }
   }
+
+  const chatPane = (
+    <div key="agent-chat-pane" className="studio-pane flex min-h-0 min-w-0 flex-1 flex-col" onPointerEnter={(e) => lightPane(e, true)} onPointerLeave={(e) => lightPane(e, false)}>
+      <ChatThread />
+    </div>
+  );
+  const sidePane = sideOpen ? (
+    <Fragment key="side-stage-pane">
+      <button type="button" aria-label="Close side stage overlay" className="fixed inset-0 z-40 bg-ink/60 md:hidden" onClick={() => setSideOpen(false)}/>
+      <aside
+        className={cn("studio-pane min-h-0 min-w-0 bg-background", "max-md:fixed max-md:inset-0 max-md:z-50", "md:relative md:shrink-0 md:max-w-[calc(100%_-_clamp(360px,_36vw,_560px))] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]")}
+        style={{ "--agentsam-side-stage-width": sideW + "px" } as CSSProperties}
+        onPointerEnter={(e) => lightPane(e, true)}
+        onPointerLeave={(e) => lightPane(e, false)}
+      >
+        <SideStage onSplitChange={(enabled) => {
+          if (enabled) {
+            const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
+            const next = Math.min(640, Math.max(280, window.innerWidth - railW - minPrimaryWidth));
+            sideWRef.current = next;
+            setSideW(next);
+          }
+        }}/>
+      </aside>
+    </Fragment>
+  ) : null;
+  const splitHandle = sideOpen ? (
+    <SplitHandle
+      key="chat-stage-split"
+      axis="x"
+      label="Resize side stage. Drag past the limit to move AgentSam chat to the other side"
+      className="hidden md:flex"
+      onDrag={(delta) => {
+        const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
+        const maxSideWidth = Math.max(280, Math.min(1100, window.innerWidth - railW - minPrimaryWidth));
+        const next = calculateChatDockResize(chatDock, sideWRef.current, delta, maxSideWidth, dockChangedDuringDrag.current);
+        if (next.docked) {
+          dockChangedDuringDrag.current = true;
+          setChatDock(next.dock);
+        }
+        sideWRef.current = next.width;
+        setSideW(next.width);
+      }}
+      onDragEnd={() => { dockChangedDuringDrag.current = false; }}
+      onDoubleClick={() => { sideWRef.current = 420; setSideW(420); }}
+    />
+  ) : null;
+  const workspacePanes = !sideOpen ? [chatPane] : chatDock === "left" ? [chatPane, splitHandle, sidePane] : [sidePane, splitHandle, chatPane];
 
   return (
     <div className="studio-workspace flex h-full min-h-0">
@@ -194,54 +255,17 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
             </TooltipTrigger>
             <TooltipContent>Side stage</TooltipContent>
           </Tooltip>
+          {sideOpen ? <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" size="icon" variant="ghost" className="hidden size-8 md:inline-flex" aria-label={chatDock === "left" ? "Move AgentSam chat to the right" : "Move AgentSam chat to the left"} onClick={() => setChatDock((dock) => dock === "left" ? "right" : "left")}>
+                <ArrowLeftRight className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Swap chat and stage</TooltipContent>
+          </Tooltip> : null}
         </header>
 
-        <div className="studio-workspace flex min-h-0 min-w-0 flex-1">
-          <div
-            className="studio-pane flex min-h-0 min-w-0 flex-1 flex-col"
-            onPointerEnter={(e) => lightPane(e, true)}
-            onPointerLeave={(e) => lightPane(e, false)}
-          >
-            <ChatThread />
-          </div>
-          {sideOpen ? (
-            <>
-              <button
-                type="button"
-                aria-label="Close side stage overlay"
-                className="fixed inset-0 z-40 bg-ink/60 md:hidden"
-                onClick={() => setSideOpen(false)}
-              />
-              <SplitHandle
-                axis="x"
-                label="Resize side stage"
-                className="hidden md:flex"
-                onDrag={(d) => setSideW((w) => {
-                  const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
-                  return Math.max(280, Math.min(1100, w - d, window.innerWidth - railW - minPrimaryWidth));
-                })}
-                onDoubleClick={() => setSideW(420)}
-              />
-              <aside
-                className={cn(
-                  "studio-pane min-h-0 min-w-0 bg-background",
-                  "max-md:fixed max-md:inset-0 max-md:z-50",
-                  "md:relative md:shrink-0 md:max-w-[calc(100%_-_clamp(360px,_36vw,_560px))] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]",
-                )}
-                style={{ "--agentsam-side-stage-width": sideW + "px" } as CSSProperties}
-                onPointerEnter={(e) => lightPane(e, true)}
-                onPointerLeave={(e) => lightPane(e, false)}
-              >
-                <SideStage onSplitChange={enabled=>{
-                  if(enabled) {
-                    const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
-                    setSideW(Math.min(640, Math.max(280, window.innerWidth - railW - minPrimaryWidth)));
-                  }
-                }}/>
-              </aside>
-            </>
-          ) : null}
-        </div>
+        <div className="studio-workspace flex min-h-0 min-w-0 flex-1">{workspacePanes}</div>
       </div>
       <ComputerFullscreen open={stageFull} onClose={() => setStageFull(false)} />
     </div>
