@@ -970,7 +970,6 @@
       ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
         ({ id, label, type: family, source, templateKey, preset })),
       ...(scope.ThemePlatformStock?.catalog() || []),
-      ...(scope.ThemeReviseAtlas?.catalog() || []),
     ],
     defaults, render, validate,
     schema(id) {
