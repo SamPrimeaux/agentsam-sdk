@@ -24,8 +24,10 @@
   },
   "configuration": {
     "plugin_key": "completeful",
-    "credential_secret": "CAPP_KEY",
-    "live_writes_gate": "COMPLETEFUL_ALLOW_LIVE_WRITES"
+    "credential_provider": "agentsam-vault",
+    "credential_service": "completeful",
+    "credential_scope": "authenticated_account",
+    "write_authority": "provider_key_mode_and_explicit_action_or_tool_approval"
   },
   "extensions": [
     "product-studio"

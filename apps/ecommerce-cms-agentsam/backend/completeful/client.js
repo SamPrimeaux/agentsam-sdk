@@ -1,9 +1,14 @@
-import { requireApplicationAccountId } from "../lib/account-context.js";
+import { getApplicationAccountContext, requireApplicationAccountId } from "../lib/account-context.js";
+import {
+  resolveAccountCredential,
+  last4 as vaultLast4,
+} from "@inneranimalmedia/agentsam-vault";
 // Completeful Partner API client (host shim).
 // Portable provider package: @inneranimalmedia/agentsam-provider-completeful
 //   → agentsam-sdk/packages/providers/completeful
-// This host file keeps FNF env names (CAPP_KEY) and remains the Worker import
-// surface until the app depends on the published package. No requireApplicationAccountId().
+// This host adapter resolves the signed-in account's Completeful key through
+// @inneranimalmedia/agentsam-vault. Environment keys remain a standalone-install
+// compatibility lane only; hosted Local Studio requests never fall back across accounts.
 //
 // Source contract: docs/providers/completeful/openapi.json
 // The browser never receives CAPP_KEY. All provider traffic goes through the
@@ -32,17 +37,69 @@ export async function completefulApiBase(env) {
   }
 }
 
-export function completefulKeyMode(env) {
-  const key = String(env.CAPP_KEY || "");
+export function completefulKeyMode(value) {
+  const key = typeof value === "string" ? value : String(value?.CAPP_KEY || "");
   if (key.startsWith("capp_test_")) return "test";
   if (key.startsWith("capp_live_")) return "live";
   return key ? "unknown" : "missing";
 }
 
-export function completefulLiveWritesAllowed(env) {
-  const value = env.COMPLETEFUL_ALLOW_LIVE_WRITES;
-  if (typeof value === "boolean") return value;
-  return String(value || "").toLowerCase() === "true";
+export function completefulWritesEnabled(value) {
+  return ["test", "live"].includes(completefulKeyMode(value));
+}
+
+async function resolveCompletefulVaultCredential(env, accountId) {
+  return resolveAccountCredential({
+    env,
+    db: env.DB,
+    accountId,
+    provider: "completeful",
+    kind: "provider_key",
+    actor: "ecommerce:completeful",
+  });
+}
+
+/** Resolve the active Completeful key for the authenticated account. */
+export async function resolveCompletefulCredential(env) {
+  const context = getApplicationAccountContext();
+  const hosted = context?.authority === "local-studio";
+  const vaultMaterial = String(env?.VAULT_MASTER_KEY || env?.VAULT_KEY || "").trim();
+  const vaultAvailable = Boolean(env?.DB?.prepare && vaultMaterial);
+
+  if (hosted || vaultAvailable) {
+    if (!env?.DB?.prepare || !vaultMaterial) {
+      throw new CompletefulApiError("AgentSam Account Vault is unavailable for Completeful", {
+        status: 503,
+        code: "completeful_vault_unavailable",
+        remediation: "Restore the packaged AgentSam Vault connection. Do not install this account's provider key as a Worker secret.",
+      });
+    }
+    let accountId;
+    try { accountId = requireApplicationAccountId(); }
+    catch {
+      throw new CompletefulApiError("An authenticated account is required to resolve Completeful credentials", {
+        status: 403,
+        code: "completeful_account_context_required",
+      });
+    }
+    try {
+      return await resolveCompletefulVaultCredential(env, accountId);
+    } catch (error) {
+      // Never fall back to a platform/global key when an account-owned vault row
+      // exists but cannot be opened. This is a tenant-isolation boundary.
+      console.error("completeful_vault_resolution_failed", error?.code || error?.name || "unknown");
+      throw new CompletefulApiError("Completeful credentials could not be opened from this account's vault", {
+        status: 503,
+        code: error?.code || "completeful_vault_unavailable",
+        remediation: "Check the Completeful credential in Account Vault and verify the vault's encryption status.",
+      });
+    }
+  }
+
+  // Compatibility for separately deployed single-account ecommerce installs.
+  // Hosted Local Studio always takes the account-vault branch above.
+  const key = String(env?.CAPP_KEY || "").trim();
+  return key ? { source: "environment", value: key, last4: vaultLast4(key) } : null;
 }
 
 export class CompletefulApiError extends Error {
@@ -101,19 +158,30 @@ export async function completefulRequest(
   path,
   { query = null, body = undefined, idempotencyKey = null, headers = null } = {},
 ) {
-  if (!env.CAPP_KEY) {
-    throw new CompletefulApiError("Completeful is not configured: CAPP_KEY is missing", {
+  const credential = await resolveCompletefulCredential(env);
+  const apiKey = credential?.value || "";
+  const mode = completefulKeyMode(apiKey);
+  if (mode === "missing") {
+    throw new CompletefulApiError("Completeful is not connected for this account", {
       status: 503,
       code: "completeful_not_configured",
       path,
-      remediation: "Install a Completeful capp_test_ API key as the Worker secret CAPP_KEY.",
+      remediation: "Connect a Completeful credential in AgentSam Account Vault. The Worker resolves it automatically for this account.",
+    });
+  }
+  if (mode === "unknown") {
+    throw new CompletefulApiError("The saved Completeful credential has an unrecognized key format", {
+      status: 400,
+      code: "completeful_credential_format_invalid",
+      path,
+      remediation: "Check the Completeful credential saved in AgentSam Account Vault.",
     });
   }
 
   const url = await buildUrl(env, path, query);
   const requestHeaders = new Headers(headers || {});
   requestHeaders.set("Accept", "application/json");
-  requestHeaders.set("Authorization", `Bearer ${env.CAPP_KEY}`);
+  requestHeaders.set("Authorization", `Bearer ${apiKey}`);
 
   let requestBody = body;
   if (body !== undefined && body !== null && !(body instanceof FormData)) {
@@ -164,15 +232,20 @@ export async function completefulRequest(
   return { data, meta };
 }
 
-export function assertCompletefulMutationAllowed(env) {
-  const mode = completefulKeyMode(env);
-  if (mode === "test") return;
-  if (mode === "live" && completefulLiveWritesAllowed(env)) return;
-
-  throw new CompletefulApiError("Completeful live writes are disabled", {
-    status: 409,
-    code: "completeful_live_writes_disabled",
-    remediation:
-      "Use a capp_test_ key for dry-run mutations or explicitly enable COMPLETEFUL_ALLOW_LIVE_WRITES after the production cutover checklist passes.",
+export async function assertCompletefulMutationAllowed(env) {
+  const credential = await resolveCompletefulCredential(env);
+  const mode = completefulKeyMode(credential?.value);
+  if (mode === "test" || mode === "live") return { mode, source: credential.source };
+  if (mode === "missing") {
+    throw new CompletefulApiError("Completeful is not connected for this account", {
+      status: 503,
+      code: "completeful_not_configured",
+      remediation: "Connect Completeful in AgentSam Account Vault before creating supplier products.",
+    });
+  }
+  throw new CompletefulApiError("The saved Completeful credential has an unrecognized key format", {
+    status: 400,
+    code: "completeful_credential_format_invalid",
+    remediation: "Check the Completeful credential saved in AgentSam Account Vault.",
   });
 }

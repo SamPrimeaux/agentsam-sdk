@@ -4,8 +4,8 @@
  * Callable only after a scoped, enabled agentsam_tools row and write gate.
  */
 import { editImageWithPrompt, resampleImage, loadSourceImage, generateMediaArtwork } from "../media/image-operations.js";
-import { evaluateManufacturingCompatibility } from "../../packages/agentsam-merch/src/index.js";
-import { completefulTarget } from "../../packages/agentsam-merch/src/adapters-completeful.js";
+import { evaluateManufacturingCompatibility } from "@inneranimalmedia/agentsam-merch";
+import { completefulTarget } from "@inneranimalmedia/agentsam-merch/adapters/completeful";
 import decodePng from "@jsquash/png/decode.js";
 import decodeWebp from "@jsquash/webp/decode.js";
 import decodeJpeg from "@jsquash/jpeg/decode.js";
