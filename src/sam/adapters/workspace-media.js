@@ -7,10 +7,13 @@ import { realpath, readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { defineSamOperation } from '../define.js';
 import { inspectGlb } from '../operation-packs/generated-v2/glb.js';
+import { createFfprobeMedia } from '../packs/evidence/media.js';
 
 const formats = new Map([
   ['.png','image/png'], ['.jpg','image/jpeg'], ['.jpeg','image/jpeg'],
   ['.webp','image/webp'], ['.glb','model/gltf-binary'],
+  ['.mp4','video/mp4'], ['.mov','video/quicktime'],
+  ['.webm','video/webm'], ['.mkv','video/x-matroska'], ['.avi','video/x-msvideo'],
 ]);
 
 export function createWorkspaceMediaImportOperation({ root, assetStore, resolveTrustedContext, authorize } = {}) {
@@ -20,7 +23,7 @@ export function createWorkspaceMediaImportOperation({ root, assetStore, resolveT
   }
   return defineSamOperation({
     id:'media.local.import', version:1, module:'media', action:'local.import',
-    summary:'Import an image or GLB from an authorized project workspace into the installed Media Library before inspecting, editing, or removing a background.',
+    summary:'Import a validated image, video or GLB from an authorized project workspace into the existing installation-owned Media Library.',
     risk:'write', capabilities:['media.asset.write'],
     execution:{lanes:['local'],model:'never',network:'none',sideEffects:'local_write'},
     input_schema:{
@@ -57,7 +60,17 @@ export function createWorkspaceMediaImportOperation({ root, assetStore, resolveT
       if (!fileStat.isFile() || fileStat.size < 1 || fileStat.size > 50*1024*1024) throw new Error('media_file_invalid_or_oversized');
       const bytes = await readFile(candidate);
       if (extension === '.glb') inspectGlb(bytes); // fail closed on malformed 3D
-      else {
+      else if (contentType.startsWith('video/')) {
+        // Reuse SAM's existing FFprobe adapter to validate the video container.
+        // Extension/MIME alone must not authorize arbitrary bytes as video.
+        let info;
+        try { info = await createFfprobeMedia({ decode: false, probeTimeoutMs: 15000 }).probe({ path: candidate }); }
+        catch { throw new Error('media_video_probe_failed'); }
+        if (!info.video?.width || !info.video?.height ||
+            info.video.width * info.video.height > 40_000_000) {
+          throw new Error('media_video_invalid_dimensions');
+        }
+      } else {
         const image = (await import('sharp')).default;
         const info = await image(bytes).metadata();
         if (!info.width || !info.height || info.width*info.height > 40_000_000) throw new Error('media_image_invalid_dimensions');

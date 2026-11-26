@@ -14,6 +14,7 @@ import { createObjectMediaStore } from './adapters/object-media-store.js';
 import { readMediaStorageSelection } from './media/environment.js';
 import { createLocalScriptStore } from './adapters/local-script-store.js';
 import { createLocalScriptRuntime, isLocalBashAvailable } from './adapters/local-script-runtime.js';
+import { findOpenCvPython, createOpenCvVideoOperations } from './adapters/opencv-video.js';
 import { createWorkspaceMediaImportOperation, projectInstallationId } from './adapters/workspace-media.js';
 
 const LOCAL_SCRIPT_OPERATIONS = Object.freeze(['sam.script.save', 'sam.script.get', 'sam.superbash']);
@@ -31,6 +32,8 @@ const LOCAL_MEDIA_OPERATIONS = Object.freeze([
   'media.image.normalize_color',
   'media.model.inspect',
   'media.model.validate',
+  'media.video.inspect',
+  'media.video.sample_frames',
 ]);
 
 /**
@@ -101,15 +104,21 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
     },
     authorize: permit,
   }});
-  if (assetStore) samOS.install([createWorkspaceMediaImportOperation({
-    root,assetStore,
-    resolveTrustedContext: async () => {
+  if (assetStore) {
+    const resolvePrincipal = async () => {
       const principal = readTrustedIdentity();
       if (!principal) throw new Error('sam_authenticated_session_required');
       return principal;
-    },
-    authorize: permit,
-  })]);
+    };
+    samOS.install([createWorkspaceMediaImportOperation({
+      root, assetStore, resolveTrustedContext: resolvePrincipal, authorize: permit,
+    })]);
+    const opencvPython = findOpenCvPython();
+    if (opencvPython) samOS.install(createOpenCvVideoOperations({
+      assetStore, resolveTrustedContext: resolvePrincipal, authorize: permit,
+      pythonExecutable: opencvPython,
+    }));
+  }
   return createSamCapabilityAdapter({
     os:samOS,
     // Additional core operations are exposed only when declared by a packaged

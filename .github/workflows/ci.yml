@@ -40,6 +40,43 @@ jobs:
       - name: Verify SDK shard
         run: node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:shard:${{ matrix.shard }}
 
+      # Keep the default SDK free of OpenCV/NumPy. Exercise the actual native
+      # engine only for changes to this media capability or explicit CI runs.
+      - name: Detect OpenCV media changes
+        id: opencv_media
+        if: matrix.shard == 'integration'
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch origin "$GITHUB_BASE_REF" --quiet
+            base="origin/$GITHUB_BASE_REF"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            base="${{ github.event.before }}"
+          else
+            base=""
+          fi
+          changed=true
+          if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            if git diff --name-only "$base"...HEAD | grep -qE '^(python/agentsam_sdk/media/|python/tests/test_opencv_media.py|python/pyproject.toml|src/sam/adapters/opencv-video.js|src/sam/adapters/workspace-media.js|src/sam/shell-host.js|test/integration/sam-opencv-media.test.mjs|\.github/workflows/ci.yml)'; then
+              changed=true
+            else
+              changed=false
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Verify real OpenCV video decoding and SAM-owned frame derivatives
+        if: matrix.shard == 'integration' && steps.opencv_media.outputs.changed == 'true'
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+          fi
+          python3 -m venv "$RUNNER_TEMP/sam-opencv"
+          "$RUNNER_TEMP/sam-opencv/bin/python" -m pip install -e './python[opencv]'
+          "$RUNNER_TEMP/sam-opencv/bin/python" -m unittest discover -s python/tests -p test_opencv_media.py -v
+          AGENTSAM_OPENCV_PYTHON="$RUNNER_TEMP/sam-opencv/bin/python" node --test test/integration/sam-opencv-media.test.mjs
+
   checks:
     name: checks (contracts, quality, dependency health)
     runs-on: ubuntu-latest
