@@ -109,7 +109,8 @@ if(mode==='--plan')process.exit(0);
 const localPublish=mode==='--publish-local';
 if(localPublish){
  // Local publishing deliberately uses the operator's npm login, never a fabricated CI identity.
- if(process.env.CI==='true'||!process.stdin.isTTY)throw Error('local_publish_requires_interactive_terminal');
+ const explicitNonInteractiveApproval = process.env.AGENTSAM_RELEASE_CONFIRM === version && process.argv[3] === `--confirm=${version}`;
+ if(process.env.CI==='true'||(!process.stdin.isTTY&&!explicitNonInteractiveApproval))throw Error('local_publish_requires_interactive_terminal');
  if(process.argv[3]!==`--confirm=${version}`)throw Error(`local_publish_requires_--confirm=${version}`);
  const git=(...args)=>{
   const result=spawnSync('git',args,{cwd:root,encoding:'utf8'});
