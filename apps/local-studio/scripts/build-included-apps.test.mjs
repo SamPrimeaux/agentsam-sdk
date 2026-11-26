@@ -153,10 +153,13 @@ test('production host builds regenerate and stage all included apps; scoped buil
 
 test('console staging generates only the required identity portal assets before existing build steps', () => {
   const stage = fs.readFileSync(path.join(LOCAL_STUDIO, 'scripts', 'stage-console-host.mjs'), 'utf8');
+  const themeSync = stage.indexOf("execFileSync('npm', ['run', 'sync:theme-contract']");
   const sync = stage.indexOf("execFileSync('npm', ['run', 'sync:identity-portals']");
   const frontend = stage.indexOf("execFileSync('npm', ['run', 'build:frontend']");
   const assets = stage.indexOf("path.join(app, 'bin/build-assets.mjs')");
-  assert.ok(sync >= 0 && frontend > sync && assets > frontend, 'identity assets must be synced before frontend and asset packaging');
+  assert.ok(themeSync >= 0 && sync > themeSync && frontend > sync && assets > frontend,
+    'canonical theme contracts and identity assets must sync before frontend and asset packaging');
+  assert.match(stage, /removeLegacyReviseAssets/);
   assert.doesNotMatch(stage, /execFileSync\('npm', \['run', 'build'\], \{ cwd: app/, 'avoid unrelated Ecommerce prebuild and CMS synchronization');
   assert.doesNotMatch(stage, /section-library|revise-theme|npm', \['ci', '--ignore-scripts'/,
     'Local Studio staging must not install the Ecommerce application dependency tree or excluded theme UI packages');
