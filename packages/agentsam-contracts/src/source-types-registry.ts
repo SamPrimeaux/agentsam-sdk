@@ -11,7 +11,10 @@ import type {
   AgentSourceIdentificationResult,
 } from './source-types';
 
-const formatsById = new Map(sourceCatalog.formats.map(format => [format.id, format]));
+type CatalogFormat = { extensions: string[]; mediaTypes: string[]; variants?: string[] };
+const formatsById = new Map<string, CatalogFormat>(
+  sourceCatalog.formats.map(format => [format.id, format as unknown as CatalogFormat]),
+);
 const kindsById = new Set(sourceCatalog.sourceKinds.map(kind => kind.id));
 const statuses = new Set<string>(AGENT_SOURCE_IDENTIFICATION_STATUSES);
 const confidences = new Set<string>(AGENT_SOURCE_IDENTIFICATION_CONFIDENCE);
