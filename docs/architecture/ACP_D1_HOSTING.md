@@ -54,6 +54,13 @@ sequence tables so tests exercise the same contracts. They are not a production
 source of truth, and `agentsam run` no longer silently falls back to a local
 database when no hosted URL is configured.
 
+The hosted route now persists runs and Queue Control jobs to D1, but this SDK
+repository still has no production consumer that claims `agentsam_queue_job`
+and invokes the agent executor. This work does not pretend queued persistence
+is execution. `createAgentRunJobHandler` accepts an injected control client so
+a host runner can report timeout outcomes; connecting `agentsamd` to claim,
+execute, acknowledge, and reconcile these D1 jobs remains a separate integration.
+
 Other shared platform tables—approvals, error log, escalations, memory, plugins,
 tools, widgets, workflows, and usage integrity—remain owned by D1 and their
 existing services. They should not be copied into the ACP's project-local test
