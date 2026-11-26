@@ -166,6 +166,9 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
   const pending = useRef<CreativeArtifact[] | null>(null);
   const saveTimer = useRef<number | null>(null);
   const saving = useRef(false);
+  const failed = useRef(false);
+  const observed = useRef(false);
+  const flushRef = useRef<() => Promise<void>>(async () => {});
   const urlPinned = useRef(false);
 
   useEffect(() => {
@@ -176,6 +179,8 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       setLegacyCanvas(false);
       setLocalFallback(false);
       records.current.clear();
+      observed.current = false;
+      failed.current = false;
       try {
         const params = new URL(tab.url || "/canvas", window.location.origin).searchParams;
         const requestedId = params.get("canvas") || "";
@@ -249,13 +254,11 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
   }, [tab.id, loadAttempt]);
 
   const persistArtifacts = useCallback(async (items: CreativeArtifact[]) => {
-    let changed = false;
     const ids = new Set(items.map((item) => item.id));
     for (const artifact of items) {
       const serialized = JSON.stringify(artifact);
       const previous = records.current.get(artifact.id);
       if (previous?.serialized === serialized) continue;
-      changed = true;
       const document = toCanvasDocument(artifact, project ? { id: project.id, name: project.name } : null);
       if (previous) {
         const response = await fetch(API + "/" + encodeURIComponent(artifact.id), {
@@ -264,8 +267,17 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
           headers: { "content-type": "application/json", "if-match": previous.etag },
           body: JSON.stringify({ document }),
         });
-        const payload = await readJson<CanvasResponse>(response);
-        const etag = response.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
+        // A lost response or another instance saving the exact same edit is safe
+        // to acknowledge. Never replace a genuinely newer, different document.
+        const result = response.status === 409
+          ? await fetch(API + "/" + encodeURIComponent(artifact.id), { credentials: "same-origin" })
+          : response;
+        const payload = await readJson<CanvasResponse>(result);
+        if (response.status === 409 && JSON.stringify(payload.document?.creativeWorkspace?.artifact) !== serialized) {
+          throw new Error("revision_conflict");
+        }
+        const etag = result.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
+        if (!etag) throw new Error("canvas_revision_missing");
         records.current.set(artifact.id, { etag, serialized });
       } else {
         const response = await fetch(API, {
@@ -275,7 +287,11 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
           body: JSON.stringify({ id: artifact.id, document }),
         });
         const payload = await readJson<CanvasResponse>(response);
+        if (response.status === 200 && JSON.stringify(payload.document?.creativeWorkspace?.artifact) !== serialized) {
+          throw new Error("revision_conflict");
+        }
         const etag = response.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
+        if (!etag) throw new Error("canvas_revision_missing");
         records.current.set(artifact.id, { etag, serialized });
         if (!urlPinned.current) {
           setTabUrl(tab.id, "/canvas?workspace=creative&canvas=" + encodeURIComponent(artifact.id));
@@ -285,7 +301,6 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
     }
     for (const [id, record] of [...records.current.entries()]) {
       if (ids.has(id)) continue;
-      changed = true;
       const response = await fetch(API + "/" + encodeURIComponent(id), {
         method: "DELETE",
         credentials: "same-origin",
@@ -294,41 +309,86 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       if (!response.ok && response.status !== 404) await readJson<CanvasResponse>(response);
       records.current.delete(id);
     }
-    setSaveState(changed ? "saved" : "saved");
+    setSaveState("saved");
   }, [project, setTabUrl, tab.id]);
 
   const flush = useCallback(async () => {
-    if (saving.current) return;
+    if (saving.current || failed.current) return;
     saving.current = true;
+    let attempted: CreativeArtifact[] | null = null;
     try {
       while (pending.current) {
-        const snapshot = pending.current;
+        attempted = pending.current;
         pending.current = null;
         setSaveState("saving");
-        await persistArtifacts(snapshot);
+        await persistArtifacts(attempted);
+        attempted = null;
       }
+      setLoadingError("");
     } catch (error) {
+      // Preserve newer edits if they arrived during the failed request; otherwise
+      // retain the exact attempted snapshot. Do not spin on a persistent 409.
+      pending.current ??= attempted;
+      failed.current = true;
       setSaveState("error");
       setLoadingError(error instanceof Error ? error.message : "creative_workspace_save_failed");
     } finally {
       saving.current = false;
-      if (pending.current) void flush();
+      if (pending.current && !failed.current) void flushRef.current();
     }
   }, [persistArtifacts]);
+  useEffect(() => { flushRef.current = flush; }, [flush]);
 
   const onArtifactsChange = useCallback((items: CreativeArtifact[]) => {
-    pending.current = items;
-    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => { saveTimer.current = null; void flush(); }, 420);
-  }, [flush]);
-
-  useEffect(() => () => {
-    if (saveTimer.current !== null) {
-      window.clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-      if (pending.current) void flush();
+    if (!observed.current) {
+      observed.current = true;
+      // The editor normalizes loaded artifacts on hydration. That is not a user
+      // edit; adopt the normalized representation without writing stale versions.
+      for (const artifact of items) {
+        const record = records.current.get(artifact.id);
+        if (record) record.serialized = JSON.stringify(artifact);
+      }
+      if (items.length === records.current.size && items.every(item => records.current.has(item.id))) {
+        setSaveState("saved");
+        return;
+      }
     }
-  }, [flush]);
+    pending.current = items;
+    if (failed.current) return;
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => { saveTimer.current = null; void flushRef.current(); }, 420);
+  }, []);
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!pending.current && !saving.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      if (saveTimer.current !== null) {
+        window.clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      if (pending.current && !failed.current) void flushRef.current();
+    };
+  }, []);
+
+  const retrySave = () => {
+    failed.current = false;
+    void flushRef.current();
+  };
+  const exportUnsaved = () => {
+    if (!pending.current) return;
+    const changed = pending.current.filter(item => records.current.get(item.id)?.serialized !== JSON.stringify(item));
+    const archivedIds = [...records.current.keys()].filter(id => !pending.current?.some(item => item.id === id));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ schema: CREATIVE_SCHEMA, artifacts: changed, archivedIds }, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "agentsam-unsaved-canvas.json"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   const onActiveArtifactChange = useCallback((artifactId: string | null, artifact?: CreativeArtifact | null) => {
     const next = artifactId
@@ -352,7 +412,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
   if (!ready) return <div className="flex h-full min-h-0 items-center justify-center gap-2 text-xs text-muted-foreground"><LoaderCircle size={15} className="animate-spin"/> Loading Creative Workspace…</div>;
 
   return <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-    <DesignCanvasApp
+    <div className="min-h-0 min-w-0 flex-1 overflow-hidden"><DesignCanvasApp
       embedded
       {...(localFallback ? {} : { initialArtifacts, onArtifactsChange })}
       initialWorkspace={initialWorkspace}
@@ -378,13 +438,19 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         if (current?.kind === "files") store.setActiveSideTab(tab.id);
         else store.setWorkSurface("files");
       }}
-    />
-    <div className="pointer-events-none absolute right-3 top-2 z-30 flex items-center gap-1 rounded-md border border-border/70 bg-background/90 px-2 py-1 text-[10px] text-muted-foreground shadow-sm">
+    /></div>
+    <div role="status" className="flex shrink-0 items-center justify-end gap-1 border-t border-border/70 bg-background px-3 py-1 text-[10px] text-muted-foreground">
       {localFallback ? <>Local draft · not synced</> :
        saveState === "saving" ? <><LoaderCircle size={11} className="animate-spin"/> Saving</> :
        saveState === "error" ? <><AlertCircle size={11} className="text-destructive"/> Save issue</> :
        saveState === "saved" ? <><Check size={11}/> Saved</> : <>Private workspace</>}
     </div>
-    {saveState === "error" ? <div role="alert" className="absolute bottom-3 left-3 right-3 z-40 rounded-md border border-destructive/40 bg-background px-3 py-2 text-xs text-destructive shadow-lg">{loadingError || "Your changes could not be saved. Reloading will not discard the source document."}</div> : null}
+    {saveState === "error" ? <div role="alert" className="shrink-0 border-t border-destructive/40 bg-background px-3 py-2 text-xs">
+      <p className="text-destructive">{loadingError === "revision_conflict" ? "A newer revision exists. Your unsaved edits are retained while this editor is open; export them before closing." : "Could not save changes. Your edits remain in this editor."}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button type="button" className="rounded-md border border-border px-3 py-2" onClick={retrySave}>Retry save</button>
+        <button type="button" className="rounded-md border border-border px-3 py-2" onClick={exportUnsaved}>Export unsaved edits</button>
+      </div>
+    </div> : null}
   </div>;
 }
