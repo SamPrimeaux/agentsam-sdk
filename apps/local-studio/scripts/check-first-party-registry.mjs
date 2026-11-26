@@ -11,7 +11,10 @@ import { fileURLToPath } from 'node:url';
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(resolve(appRoot, p), 'utf8'));
 
-export function requiredPublishedPackages(manifests, lock = null) {
+export function requiredPublishedPackages(manifests, lock = null, {
+  appRoot: root = appRoot,
+  allowWorkspaceLinks = true,
+} = {}) {
   const local = new Set(manifests.filter(({ path }) => path !== 'package.json')
     .map(({ manifest }) => manifest.name).filter(Boolean));
   const required = new Map();
