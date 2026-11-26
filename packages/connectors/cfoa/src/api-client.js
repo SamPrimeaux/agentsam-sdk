@@ -86,6 +86,7 @@ export class CloudflareApiClient {
     this.connectionId = connectionId;
     this.grantedScopes = Array.isArray(grantedScopes) ? grantedScopes : [];
     this.capabilityId = capabilityId;
+    this.permissionCatalog = permissionCatalog;
     this.fetchImpl = bindFetchImpl(fetchImpl);
   }
 
