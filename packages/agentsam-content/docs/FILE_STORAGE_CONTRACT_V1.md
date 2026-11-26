@@ -7,7 +7,9 @@ Status: portable contract and operation service; host integrations pending.
 - **Asset authority:** `ContentAsset` (`ast_*`) remains the only logical file/asset identity. `providerRefs` record physical objects; `targetId` resolves an account-authorized physical storage target; variants and content revisions remain canonical.
 - **Metadata authority:** an injected `AccountFileMetadata` implementation owned by the host (D1 for hosted, SQLite for native) persists assets, search indexes, usage, revision receipts and trash state. This package creates no competing DB and chooses no binding names.
 - **Physical bytes:** `FileByteAdapter` implementations own genuine native filesystem objects, Cloudflare R2 objects, Google Drive objects or other authorized backends. Neither D1 nor SQLite is the default home for large originals. `browser-indexeddb` is explicitly named as a browser storage target, not a native filesystem or an R2 mirror.
-- **Provider credentials:** OAuth/connection IDs are opaque references. No secret/token/private filesystem path is placed into a `FileStorageTarget`, sent to the client as a URL, or written into asset metadata.
+- **Storage routing and provider authorization:** there is no universal `connectionId` or storage-target registry. For R2, the host resolves the existing `r2_storage_routes` record (principal + app + purpose) to `r2_buckets`. The bucket row supplies its access mode, binding name and provider-specific OAuth owner/account references; OAuth credentials remain in `user_oauth_tokens`, while Worker bindings are resolved from the host environment. Device and database permissions remain with their existing host authorities.
+- **Account preferences:** `user_storage_provider_preferences` records provider preferences; it is not a bucket route or a connection registry. `project_storage` is project-scoped and must not be treated as account-wide routing.
+- **Existing asset metadata:** `media_assets` is the provider-neutral media metadata authority; `cms_assets` is site-scoped CMS media; `cms_artifacts` stores immutable implementation artifacts. These are distinct models, not interchangeable file tables.
 
 ## Contracts
 
