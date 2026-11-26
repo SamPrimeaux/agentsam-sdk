@@ -26,10 +26,9 @@ export interface FileStorageTarget {
   label: string;
   state: FileStorageState;
   capabilities: FileOperation[];
-  /** Opaque host-owned authorization or device reference; never tokens/secrets. */
-  connectionId?: string;
+  /** Host-only device permission handle when the target is local/browser-backed. */
   deviceId?: string;
-  /** Descriptive only; hosts resolve physical locations through the connection. */
+  /** Descriptive only; hosts resolve physical locations through the target identity. */
   description?: string;
 }
 
