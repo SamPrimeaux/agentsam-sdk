@@ -111,7 +111,7 @@ test('missing permission-catalog fetch implementation returns a structured trans
   await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--list-packs'], {
     hostOrigin: 'https://agentsam.example',
     authorityLoader: async () => ({ value: 'aak_test' }),
-    fetchImpl: null,
+    fetchImpl: {},
     write: () => {},
   }), 'transport_not_configured');
 });
