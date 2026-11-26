@@ -96,7 +96,10 @@ test('site-owned pages preview and publish from canonical cms_pages when the dra
   assert.equal(published.route_path,'/work/fuelnfreetime');
   assert.equal(objects.get(published.key),preview.html);
   const saved=db.prepare('SELECT slug,route_path,status,title FROM cms_pages WHERE id=?').get(pageId);
-  assert.deepEqual(saved,{slug:'work/fuelnfreetime',route_path:'/work/fuelnfreetime',status:'published',title:'Fuel N Free Time'});
+  assert.equal(saved.slug,'work/fuelnfreetime');
+  assert.equal(saved.route_path,'/work/fuelnfreetime');
+  assert.equal(saved.status,'published');
+  assert.equal(saved.title,'Fuel N Free Time');
  }finally{db.close()}
 });
 
