@@ -896,6 +896,23 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+
+    // Hosted ACP always persists to the authenticated account's canonical D1
+    // rows. Resolve either the browser session or the existing CLI bearer
+    // authority before exposing run, event, queue, or timeout operations.
+    if (url.pathname === "/api/agent-control" || url.pathname.startsWith("/api/agent-control/")) {
+      let accountId = null;
+      try {
+        const principal = await resolveSessionUser(request, env);
+        accountId = principal
+          ? await resolveStudioAccountIdForUser(env.DB, principal.id)
+          : await resolveStudioGoalsCliAccount(request, env);
+      } catch {
+        return json({ ok: false, error: "unauthorized" }, 401);
+      }
+      return handleAgentControlRequest(request, env, accountId);
+    }
+
     // Public merchant entry lives outside /admin. Guests see the existing
     // identity portal; only the signed-in CMS API may create a real store.
     const merchantStart = await serveStudioMerchantStart(request,env,MERCHANT_ROUTES);
