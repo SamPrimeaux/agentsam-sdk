@@ -236,11 +236,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   if (!chat) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
 
   // Failed model responses stay inside the conversation transcript — never replace the product.
-  const empty = chat.messages.length === 0 || (chat.messages.length === 1 && chat.messages[0].id === 'welcome-msg');
+  const hasConversation = chat.messages.some(message => message.role === 'user' && message.id !== 'welcome-msg') && data.conversation?.id === chat.id;
+  const empty = !chat.messages.some(message => message.role === 'user' && message.id !== 'welcome-msg');
   const streaming = state.streamingIds.includes(chat.id);
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
-  const mobileWorkOpen = compactWorkLayout && workSurface !== 'chat';
+  const mobileWorkOpen = compactWorkLayout && (state.sideOpen || workSurface !== 'chat');
   // Work mirrors the reference: stage on the left, chat on the right.
   // Chat mode keeps the established lead-left / Stage-right layout.
   const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout;
@@ -263,7 +264,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     {data.mode === 'work' && !isMobile ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = isMobile ? (empty ? null : <div className="agentsam-header-utilities">
+  const headerActions = isMobile ? (!hasConversation || mobileWorkOpen ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions additionalActions={mobileMoreActions} mobile />
@@ -279,7 +280,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
         onClick={toggleSideWorkspace}
       >{state.sideOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}</IconAction>
     </div>
-    {!empty && <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
+    {hasConversation && <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions />
       <Nav.ShareButton />
@@ -374,7 +375,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
             <div className="agentsam-floating-chat-composer">{leadComposer}</div>
           </>}
         </section>
-      ) : leadComposerDetached && (
+      ) : leadComposerDetached && !compactWorkLayout && (
         <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
           {leadComposer}
         </div>

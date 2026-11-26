@@ -424,11 +424,23 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         const store = useWorkStore.getState();
         const chatId = tab.parentChatId || store.activeChatId;
         if (!chatId) return;
-        const current = store.drafts[chatId] || "";
-        const reference = "Canvas: " + context.title + " (" + context.artifactType + ", " + (context.artifactId || "unsaved") + ")" +
-          (context.selection ? "\nSelection: " + (context.selection.label || context.selection.kind) + " (" + context.selection.id + ")" : "");
+        if (!store.chats.some(chat => chat.id === chatId)) return;
+        const annotation = {
+          id: crypto.randomUUID(),
+          label: context.selection?.label || context.title,
+          page: context.title,
+          tag: context.selection?.kind || "canvas",
+          text: ["Canvas " + (context.artifactId || "unsaved") + " (" + context.artifactType + ")",
+            context.selection ? "Selected object: " + context.selection.id : ""].filter(Boolean).join(" · "),
+        };
         store.setActiveChat(chatId);
-        store.setDraft(chatId, current ? current + "\n\n" + reference : reference + "\n\n");
+        store.setPendingAnnotations(chatId, items => [...items.filter(item => item.text !== annotation.text), annotation].slice(-8));
+        // On narrow screens the one lead composer lives in Chat, not on top
+        // of the editor. The selection remains a removable context attachment.
+        if (window.matchMedia("(max-width: 1099px)").matches) {
+          store.setWorkSurface("chat");
+          store.setSideOpen(false);
+        }
       }}
       onOpenCode={() => useWorkStore.getState().setWorkSurface("code")}
       outputsOpen={outputsOpen}

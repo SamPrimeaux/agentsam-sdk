@@ -222,7 +222,6 @@ export function NavConversationActions({ additionalActions = [], mobile = false 
   extras.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
   additionalActions.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
   if (data.onArchiveConversation) add({ id: 'archive', label: 'Archive', icon: <Archive />, separatorBefore: true, onSelect: () => data.onArchiveConversation?.(conversation.id) });
-  else if (data.onDeleteConversation) add({ id: 'archive', label: 'Archive (save to account first)', icon: <Archive />, separatorBefore: true, disabled: true });
   if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete', icon: <Trash2 />, destructive: true, separatorBefore: !data.onArchiveConversation && !actions.some(item => item.id === 'archive'), onSelect: () => setDeleting(true) });
   if (data.onAssignConversationToProject && data.projects?.length) add({
     id: 'project', label: 'Move to project', icon: <Folder />, separatorBefore: true,

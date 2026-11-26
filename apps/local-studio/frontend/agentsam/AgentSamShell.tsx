@@ -814,7 +814,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       <DesktopStartupOverlay />
       <AgentSamStatusBuddy />
       <AgentSamDuoHandoff />
-      <AnnotationHelper />
+      <AnnotationHelper key={JSON.stringify([pathname, state.activeChatId, state.activeSideTabId, state.sideOpen, state.workSurface])} />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>
   </Nav.Provider></TooltipProvider></ToolPermissionProvider></CompanionProvider>;
