@@ -92,7 +92,7 @@ test("password-protected sites disallow crawling and publish an empty sitemap", 
     const robots = await handlePublicSearchDiscovery(
       new Request("https://protected.example.test/robots.txt"), { DB }, new URL("https://protected.example.test/robots.txt"),
     );
-    assert.match(await robots.text(), /Disallow: \/$/);
+    assert.match((await robots.text()).trimEnd(), /Disallow: \/$/);
     assert.equal(robots.headers.get("cache-control"), "private, no-store");
 
     const sitemap = await handlePublicSearchDiscovery(

@@ -19,3 +19,5 @@ export function validateEmbed(e) {
   }
   return out;
 }
+
+export { registerCustomerAccountPortal } from './customer-account-portal.js';

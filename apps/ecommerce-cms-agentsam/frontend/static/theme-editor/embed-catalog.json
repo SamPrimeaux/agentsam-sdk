@@ -681,6 +681,138 @@
       ]
     },
     {
+      "key": "customer_account_portal",
+      "name": "Customer account portal",
+      "icon": "user",
+      "tagline": "Storefront sign-in and account creation, powered by AgentSam Identity.",
+      "category": "Customer accounts",
+      "provider": "Storefront embeds",
+      "default_config": {
+        "enabled": false,
+        "login_label": "Sign in",
+        "signup_label": "Create account",
+        "show_signup": true,
+        "style": "button",
+        "alignment": "right",
+        "accent": "",
+        "background": "",
+        "font_color": "",
+        "inherit_typography": true,
+        "font_family": "inherit",
+        "font_size": 16,
+        "border_radius": 16
+      },
+      "registry_required": true,
+      "surfaces": [
+        "storefront_embed"
+      ],
+      "editor_fields": [
+        {
+          "key": "enabled",
+          "label": "Enable customer account links",
+          "type": "toggle",
+          "group": "Visibility"
+        },
+        {
+          "key": "login_label",
+          "label": "Sign-in label",
+          "type": "text",
+          "group": "Labels"
+        },
+        {
+          "key": "signup_label",
+          "label": "Create-account label",
+          "type": "text",
+          "group": "Labels"
+        },
+        {
+          "key": "show_signup",
+          "label": "Show account creation",
+          "type": "toggle",
+          "group": "Visibility"
+        },
+        {
+          "key": "style",
+          "label": "Style",
+          "type": "radio",
+          "group": "Appearance",
+          "options": [
+            "button",
+            "link"
+          ]
+        },
+        {
+          "key": "alignment",
+          "label": "Alignment",
+          "type": "radio",
+          "group": "Appearance",
+          "options": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "font_family",
+          "label": "Font",
+          "type": "select",
+          "group": "Typography and shape",
+          "options": [
+            "inherit",
+            "system",
+            "serif",
+            "rounded",
+            "mono"
+          ]
+        },
+        {
+          "key": "font_size",
+          "label": "Font size",
+          "type": "range",
+          "group": "Typography and shape",
+          "min": 12,
+          "max": 22,
+          "unit": "px"
+        },
+        {
+          "key": "border_radius",
+          "label": "Border radius",
+          "type": "range",
+          "group": "Typography and shape",
+          "min": 0,
+          "max": 32,
+          "unit": "px"
+        },
+        {
+          "key": "inherit_typography",
+          "label": "Inherit theme typography",
+          "type": "toggle",
+          "group": "Typography and shape"
+        }
+      ]
+    },
+    {
       "key": "grow_capture",
       "name": "AgentSamGrow capture",
       "icon": "megaphone",

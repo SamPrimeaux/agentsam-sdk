@@ -36,8 +36,9 @@ function listPortableMigrationFiles(opts = {}) {
     '005_identity_company_native.sql',
     '006_identity_account_security.sql',
     '007_identity_session_revoke_reason.sql',
-    '008_identity_accounts.sql',
   ];
+  if (opts.includeAccountMirror !== false) files.push('008_identity_accounts.sql');
+  files.push('009_identity_scope.sql');
   if (opts.includeOAuthServer) {
     files.push('003_identity_oauth_server.sql');
     files.push('004_identity_oauth_consent_catalog.sql');
@@ -64,10 +65,14 @@ async function runSql(db, sql) {
       if (!isIgnorableMigrationError(err) && !/alter table/i.test(sql)) throw err;
     }
   }
-  const stripped = sql.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Remove full-line SQL comments before splitting. A semicolon inside a comment
+  // must not become a phantom statement (notably the scope migration's prose).
+  const stripped = sql
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*--[^\n]*$/gm, '');
   const statements = stripped
     .split(';')
-    .map((s) => s.replace(/--[^\n]*/g, '').trim())
+    .map((statement) => statement.trim())
     .filter(Boolean);
   for (const statement of statements) {
     try {
@@ -88,7 +93,7 @@ async function runSql(db, sql) {
  * Same SQL sources for both; executor differs by driver API.
  *
  * @param {{ prepare?: Function, exec?: Function }} target
- * @param {{ includeOAuthServer?: boolean }} [opts]
+ * @param {{ includeOAuthServer?: boolean, includeAccountMirror?: boolean }} [opts]
  */
 export async function applyPortableIdentityMigrations(target, opts = {}) {
   if (!target || (typeof target.exec !== 'function' && typeof target.prepare !== 'function')) {
@@ -105,7 +110,7 @@ export async function applyPortableIdentityMigrations(target, opts = {}) {
 /**
  * Stable compatibility alias — same portable pack, same sources.
  * @param {{ prepare?: Function, exec?: Function }} db
- * @param {{ includeOAuthServer?: boolean }} [opts]
+ * @param {{ includeOAuthServer?: boolean, includeAccountMirror?: boolean }} [opts]
  */
 export async function applySqliteIdentityMigrations(db, opts = {}) {
   return applyPortableIdentityMigrations(db, opts);

@@ -124,7 +124,7 @@
  */
 
 /** Portable pack schema_version after 005_identity_company_native. */
-export const IDENTITY_STORE_SCHEMA_VERSION = 2;
+export const IDENTITY_STORE_SCHEMA_VERSION = 3;
 
 export const IDENTITY_PACKS = Object.freeze({
   CORE: 'identity.core',

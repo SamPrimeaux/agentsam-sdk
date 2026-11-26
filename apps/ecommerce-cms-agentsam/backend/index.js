@@ -46,6 +46,8 @@ import {
 } from "./webhooks/resend.js";
 import { handleCompletefulWebhook } from "./webhooks/completeful.js";
 import { handleNewsletterSignup, handleNewsletterConfirm, handleNewsletterUnsubscribe } from "./storefront/newsletter.js";
+import { handleStorefrontAccessApi, storefrontAccessGate } from "./storefront/access.js";
+import { handleStorefrontIdentityCompanyApi, handleStorefrontIdentityRequest } from "./storefront/identity.js";
 
 // Serve an object straight out of the media R2 bucket. Public — these are
 // product/marketing images meant to be viewed on the storefront.
@@ -172,6 +174,19 @@ export default {
     const path = url.pathname;
     // Asset URLs are derived from the site's own domain; first request per isolate configures it.
     await ensureAssetStorage(env, request).catch(() => null);
+
+    // Store password access is site-scoped and must run before any public storefront API/page.
+    const storeAccessApi = await handleStorefrontAccessApi(request, env, url);
+    if (storeAccessApi) return noStore(storeAccessApi);
+    const storefrontIdentityCompany = await handleStorefrontIdentityCompanyApi(request, env, url);
+    if (storefrontIdentityCompany) return storefrontIdentityCompany;
+    const storeAccessGate = await storefrontAccessGate(request, env, url);
+    if (storeAccessGate) return noStore(storeAccessGate);
+
+    // Customer auth portals are the canonical Identity package, mounted after the site gate.
+    const storefrontIdentity = await handleStorefrontIdentityRequest(request, env, url);
+    if (storefrontIdentity) return noStore(storefrontIdentity);
+
     const searchDiscovery = await handlePublicSearchDiscovery(request, env, url);
     if (searchDiscovery) return searchDiscovery;
     if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);

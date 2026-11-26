@@ -29,8 +29,12 @@
     "test:collections": "node --experimental-strip-types --test tests/cms-collections-alignment.test.mjs backend/cms/account-owned-catalog.test.mjs",
     "sync:theme-contract": "node scripts/sync-theme-contract.mjs",
     "check:theme-contract": "node scripts/sync-theme-contract.mjs --check",
-    "prebuild": "npm run sync:theme-contract",
-    "preverify:cms": "node scripts/compile-portable-styles.mjs"
+    "prebuild": "npm run sync:theme-contract && npm run sync:theme-embed-catalog && npm run sync:identity-portals && npm run sync:identity-migration",
+    "preverify:cms": "node scripts/compile-portable-styles.mjs",
+    "sync:identity-portals": "node scripts/sync-identity-portals.mjs",
+    "sync:identity-migration": "node scripts/sync-identity-migration.mjs",
+    "test:storefront-identity": "node --test tests/storefront-identity-migration.test.mjs tests/storefront-identity-portals.test.mjs tests/customer-account-portal-registry.test.mjs tests/storefront-access-gate.test.mjs",
+    "sync:theme-embed-catalog": "node scripts/sync-theme-embed-catalog.mjs"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-cms": "2.6.18",
@@ -43,7 +47,10 @@
     "@jsquash/webp": "1.5.0",
     "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
     "ajv": "8.20.0",
-    "three": "0.187.0"
+    "three": "0.187.0",
+    "@inneranimalmedia/agentsam-identity": "2.6.20",
+    "@inneranimalmedia/agentsam-vault": "2.6.18",
+    "@inneranimalmedia/agentsam-embeds": "2.6.19"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

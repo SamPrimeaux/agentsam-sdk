@@ -13,6 +13,7 @@ test("identity password-gate grants are site-bound, expire and rotate with the c
     siteId: "site-a",
     passwordHash: hashHex,
     passwordSalt: saltHex,
+    signingSecret: 'test-storefront-signing-secret-at-least-32-bytes',
     now: 1_000_000,
   };
   const token = await createPasswordGateToken(input);
@@ -20,6 +21,9 @@ test("identity password-gate grants are site-bound, expire and rotate with the c
   assert.equal(await verifyPasswordGateToken(token, input), true);
   assert.equal(await verifyPasswordGateToken(token, { ...input, siteId: "site-b" }), false);
   assert.equal(await verifyPasswordGateToken(token, { ...input, passwordHash: "rotated-hash" }), false);
+  assert.equal(await verifyPasswordGateToken(token, { ...input, signingSecret: 'different-storefront-secret-at-least-32-bytes' }), false);
+  assert.equal(await verifyPasswordGateToken(token, { ...input, signingSecret: '' }), false);
+  assert.equal(await verifyPasswordGateToken(token, { ...input, signingSecret: undefined }), false);
   assert.equal(
     await verifyPasswordGateToken(token, { ...input, now: 1_000_000 + 8 * 24 * 60 * 60 * 1000 }),
     false,
@@ -48,4 +52,15 @@ test("store password portal escapes merchant content and rejects unsafe destinat
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /name="return_to" value="\/"/);
   assert.match(html, /#789b7c/);
+});
+
+
+test("password-gate signatures require a host secret independent of database credentials", async () => {
+  const { hashHex, saltHex } = await hashPassword("merchant-selected-password");
+  const credentialOnly = { siteId: "site-a", passwordHash: hashHex, passwordSalt: saltHex };
+  await assert.rejects(() => createPasswordGateToken(credentialOnly), /signing_secret_required/);
+  await assert.rejects(() => createPasswordGateToken({
+    ...credentialOnly,
+    signingSecret: "too-short",
+  }), /signing_secret_required/);
 });

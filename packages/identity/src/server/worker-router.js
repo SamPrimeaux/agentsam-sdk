@@ -43,7 +43,10 @@ function resolveIdentityAdapter(env, options = {}) {
     .trim()
     .toLowerCase();
   if (profile === 'portable' || profile === 'portable-d1') {
-    return createPortableD1IdentityAdapter(env.DB);
+    return createPortableD1IdentityAdapter(env.DB, {
+      scopeId: options.scopeId,
+      mirrorAccounts: options.mirrorAccounts,
+    });
   }
   return createIamCompatIdentityAdapter(env.DB);
 }
@@ -60,13 +63,13 @@ function resolveLoginPath(identity) {
   return identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN) || '/auth/login';
 }
 
-function resolveKv(env) {
-  return env?.SESSION_CACHE || env?.KV || null;
+function resolveKv(env, options = {}) {
+  return options.kv || env?.SESSION_CACHE || env?.KV || null;
 }
 
 function buildPasswordResetService(env, adapter, options = {}) {
   if (options.passwordReset) return options.passwordReset;
-  const kv = resolveKv(env);
+  const kv = resolveKv(env, options);
   if (!kv || !adapter) return null;
   return createPasswordResetService({
     kv,
@@ -175,6 +178,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     adapter,
     app: options.app,
     routeRegistry: options.routeRegistry,
+    cookieName: options.cookieName,
   });
   const loginPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN);
   const signupPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.SIGNUP)
@@ -608,7 +612,8 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
 
   if (method === 'GET' && authPages.has(path)) {
     if (env.ASSETS?.fetch) {
-      const assetUrl = new URL(path, url.origin);
+      const assetPath = options.portalAssetPaths?.[path] || path;
+      const assetUrl = new URL(assetPath, url.origin);
       return env.ASSETS.fetch(new Request(assetUrl, request));
     }
     return jsonResponse({ error: 'assets_binding_required', path }, 500);

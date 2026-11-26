@@ -1,0 +1,13 @@
+{
+  "appId": "ecommerce-cms-agentsam-storefront-identity",
+  "routes": {
+    "identity.login": "/auth/login",
+    "identity.signup": "/auth/signup",
+    "identity.reset": "/auth/reset",
+    "identity.recovery": "/auth/login",
+    "identity.oauth.start": "/api/oauth/:provider/start",
+    "identity.oauth.callback": "/api/oauth/:provider/callback",
+    "app.authenticated": "/",
+    "app.home": "/"
+  }
+}

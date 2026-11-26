@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { createCmsTestDb } from "./cms-test-db.mjs";
 import { createCmsSite, ensureDefaultCmsSite } from "../backend/cms/site-context.mjs";
 import { postStorePreferences } from "../backend/admin/store.js";
@@ -11,6 +12,7 @@ import {
   storefrontAccessGate,
   verifyStorefrontAccessToken,
 } from "../backend/storefront/access.js";
+import { handleStorefrontIdentityRequest } from "../backend/storefront/identity.js";
 
 function d1(db) {
   return {
@@ -93,7 +95,7 @@ test("store passwords use Identity credential primitives and accept existing adm
 test("store access rejects empty and oversized passwords before password verification", async () => {
   const { sqlite, DB } = await siteFixture();
   try {
-    const env = { DB };
+    const env = { DB, STOREFRONT_ACCESS_SECRET: 'test-storefront-access-signing-secret-at-least-32-bytes' };
     for (const password of ["", "x".repeat(129)]) {
       const request = new Request("https://store.example.test/api/storefront/access", {
         method: "POST",
@@ -118,7 +120,7 @@ test("store password protection gates storefront pages and public APIs, then gra
     });
     assert.equal(saved.status, 200, await saved.clone().text());
 
-    const env = { DB };
+    const env = { DB, STOREFRONT_ACCESS_SECRET: 'test-storefront-access-signing-secret-at-least-32-bytes' };
     const pageRequest = new Request("https://store.example.test/products/one");
     const blockedPage = await storefrontAccessGate(pageRequest, env);
     assert.equal(blockedPage.status, 200);
@@ -157,9 +159,10 @@ test("store password protection gates storefront pages and public APIs, then gra
 });
 
 test("access tokens are signed, expire, and cannot be replayed on another CMS site", async () => {
-  const key = { siteId: "site-a", passwordHash: "hash-a", passwordSalt: "salt-a", now: 1_000_000 };
+  const key = { siteId: "site-a", passwordHash: "hash-a", passwordSalt: "salt-a", signingSecret: "test-storefront-access-signing-secret-at-least-32-bytes", now: 1_000_000 };
   const token = await createStorefrontAccessToken(key);
   assert.equal(await verifyStorefrontAccessToken(token, key), true);
+  assert.equal(await verifyStorefrontAccessToken(token, { ...key, signingSecret: 'wrong-storefront-signing-secret-at-least-32-bytes' }), false);
   assert.equal(await verifyStorefrontAccessToken(token, { ...key, siteId: "site-b" }), false);
   assert.equal(await verifyStorefrontAccessToken(token, { ...key, passwordHash: "hash-b" }), false);
   assert.equal(await verifyStorefrontAccessToken(token, { ...key, now: 1_000_000 + 8 * 24 * 60 * 60 * 1000 }), false);
@@ -180,7 +183,7 @@ test("password changes invalidate previously issued access sessions", async () =
   const { sqlite, DB, site } = await siteFixture();
   try {
     await savePreferences(DB, "merchant", site.id, { passwordProtection: true, storePassword: "first-store-password" });
-    const env = { DB };
+    const env = { DB, STOREFRONT_ACCESS_SECRET: 'test-storefront-access-signing-secret-at-least-32-bytes' };
     const firstRequest = new Request("https://store.example.test/api/storefront/access", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -205,7 +208,7 @@ test("site passwords and access sessions stay isolated between sites", async () 
     sqlite.prepare("UPDATE cms_sites SET primary_domain=? WHERE id=?").run("second.example.test", second.id);
     await savePreferences(DB, "merchant", site.id, { passwordProtection: true, storePassword: "first-store-password" });
     await savePreferences(DB, "merchant", second.id, { passwordProtection: true, storePassword: "second-store-password" });
-    const env = { DB };
+    const env = { DB, STOREFRONT_ACCESS_SECRET: 'test-storefront-access-signing-secret-at-least-32-bytes' };
     const firstLogin = new Request("https://store.example.test/api/storefront/access", {
       method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ password: "first-store-password", return_to: "/" }),
@@ -215,6 +218,141 @@ test("site passwords and access sessions stay isolated between sites", async () 
     const secondStoreRequest = new Request("https://second.example.test/", { headers: { cookie } });
     const blocked = await storefrontAccessGate(secondStoreRequest, env);
     assert.equal(blocked.status, 200);
+  } finally {
+    sqlite.close();
+  }
+});
+
+
+test("enabled store protection fails closed when the Worker has no signing secret", async () => {
+  const { sqlite, DB, site } = await siteFixture();
+  try {
+    await savePreferences(DB, "merchant", site.id, {
+      passwordProtection: true,
+      storePassword: "secure-store-password",
+    });
+    const response = await storefrontAccessGate(new Request("https://store.example.test/"), { DB });
+    assert.equal(response.status, 503);
+    assert.match(await response.text(), /could not be verified/i);
+  } finally {
+    sqlite.close();
+  }
+});
+
+
+test("storefront Identity mounts the canonical login/signup portals and creates a site-scoped customer session", async () => {
+  const { sqlite, DB, site } = await siteFixture();
+  try {
+    sqlite.exec(readFileSync(new URL('../db/migrations/011_storefront_identity.sql', import.meta.url), 'utf8'));
+    let requestedAsset = null;
+    const env = {
+      DB,
+      ASSETS: {
+        async fetch(request) {
+          requestedAsset = new URL(request.url).pathname;
+          return new Response('canonical identity portal', { headers: { 'content-type': 'text/html' } });
+        },
+      },
+    };
+
+    const loginPage = await handleStorefrontIdentityRequest(
+      new Request('https://store.example.test/auth/login'),
+      env,
+    );
+    assert.equal(loginPage.status, 200);
+    assert.equal(requestedAsset, '/identity-portal/pages/login.html');
+    assert.equal(await loginPage.text(), 'canonical identity portal');
+
+    const signup = await handleStorefrontIdentityRequest(
+      new Request('https://store.example.test/api/auth/signup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'customer@example.test', password: 'customer-password-123', name: 'Store Customer' }),
+      }),
+      env,
+    );
+    assert.equal(signup.status, 200, await signup.clone().text());
+    const setCookie = signup.headers.get('set-cookie');
+    assert.match(setCookie || '', /^__Host-iam-storefront-customer=/);
+    const sessionCookie = setCookie.split(';')[0];
+
+    const me = await handleStorefrontIdentityRequest(
+      new Request('https://store.example.test/api/auth/me', { headers: { cookie: sessionCookie } }),
+      env,
+    );
+    assert.equal(me.status, 200, await me.clone().text());
+    const payload = await me.json();
+    assert.equal(payload.authenticated, true);
+    assert.equal(payload.user.email, 'customer@example.test');
+    assert.equal(payload.user.displayName, 'Store Customer');
+    assert.equal(site.id, sqlite.prepare('SELECT scope_id FROM identity_users WHERE email=?').get('customer@example.test').scope_id);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test("store password endpoint enforces same-origin posts and rate-limits repeated failures", async () => {
+  const { sqlite, DB, site } = await siteFixture();
+  const values = new Map();
+  const CMS_CACHE = {
+    async get(key) { return values.get(key) ?? null; },
+    async put(key, value) { values.set(key, value); },
+    async delete(key) { values.delete(key); },
+  };
+  const env = {
+    DB,
+    CMS_CACHE,
+    STOREFRONT_ACCESS_SECRET: 'test-storefront-access-signing-secret-at-least-32-bytes',
+  };
+  try {
+    await savePreferences(DB, "merchant", site.id, {
+      passwordProtection: true,
+      storePassword: "secure-store-password",
+    });
+
+    const crossOrigin = await handleStorefrontAccessApi(
+      new Request("https://store.example.test/api/storefront/access", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://attacker.example" },
+        body: JSON.stringify({ password: "secure-store-password" }),
+      }),
+      env,
+      new URL("https://store.example.test/api/storefront/access"),
+    );
+    assert.equal(crossOrigin.status, 403);
+
+    let lastResponse;
+    for (let i = 0; i < 10; i++) {
+      lastResponse = await handleStorefrontAccessApi(
+        new Request("https://store.example.test/api/storefront/access", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "https://store.example.test",
+            "cf-connecting-ip": "203.0.113.42",
+          },
+          body: JSON.stringify({ password: "incorrect-password" }),
+        }),
+        env,
+        new URL("https://store.example.test/api/storefront/access"),
+      );
+      assert.equal(lastResponse.status, 401);
+    }
+    const limited = await handleStorefrontAccessApi(
+      new Request("https://store.example.test/api/storefront/access", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://store.example.test",
+          "cf-connecting-ip": "203.0.113.42",
+        },
+        body: JSON.stringify({ password: "secure-store-password" }),
+      }),
+      env,
+      new URL("https://store.example.test/api/storefront/access"),
+    );
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get("retry-after"), "600");
   } finally {
     sqlite.close();
   }

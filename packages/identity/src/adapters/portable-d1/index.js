@@ -10,7 +10,9 @@ import { createPortableIdentityStore } from '../portable-store.js';
 
 /**
  * @param {{ prepare: Function }} db Cloudflare D1 binding or D1-shaped fixture
- * @param {{ sessionTtlSeconds?: number, skipSchemaCheck?: boolean }} [options]
+ * @param {{ sessionTtlSeconds?: number, skipSchemaCheck?: boolean, scopeId?: string, mirrorAccounts?: boolean }} [options]
+ * `scopeId` isolates user, session, OAuth and audit records within a shared D1 database.
+ * `mirrorAccounts:false` avoids writing customer identities into a host's merchant accounts table.
  */
 export function createPortableD1IdentityAdapter(db, options = {}) {
   if (!db?.prepare) throw new Error('portable_d1_identity_adapter_requires_db');

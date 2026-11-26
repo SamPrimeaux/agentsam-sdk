@@ -54,6 +54,9 @@ if (fs.existsSync(iamSceneBrowserSource)) {
   throw new Error("Incomplete Ecommerce release: iamscene browser runtime is missing");
 }
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// Customer Identity portals are public storefront routes, not admin pages.
+// Publish their generated assets at the root path used by the Identity worker router.
+await copy(source("frontend/static/identity-portal"), path.join(dest, "identity-portal"));
 // The analytics routes are served by the packaged React SPA and shared analytics
 // packages. The original standalone HTML/Babel export is not an app runtime:
 // don't ship its 21 vendor assets a second time under the CMS package prefix.
