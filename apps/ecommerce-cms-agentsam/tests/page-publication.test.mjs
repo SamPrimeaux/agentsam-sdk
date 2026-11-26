@@ -110,7 +110,7 @@ test('canonical pages without a legacy cms_page_drafts row remain previewable an
   );
   const preview=await previewMerchantPage(env,'owner1','site_one','about',pageId);
   assert.equal(preview.ok,true,JSON.stringify(preview));
-  assert.match(preview.html,/<h1>About<\\/h1>/);
+  assert.ok(preview.html.includes('<h1>About</h1>'));
   const published=await publishMerchantPage(env,'owner1','site_one','about',pageId);
   assert.equal(published.ok,true,JSON.stringify(published));
   assert.equal(published.route_path,'/about');
