@@ -24,7 +24,7 @@
   "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
   "registry": {
     "kind": "npm",
-    "name": "@inneranimalmedia/agentsam-identity",
+    "name": "@inneranimalmedia/agentsam-sdk",
     "public_claim": true
   },
   "review_required": [
