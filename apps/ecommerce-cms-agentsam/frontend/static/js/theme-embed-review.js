@@ -634,7 +634,9 @@
       if(!response.ok)throw Error('Catalog unavailable');
       const data=await response.json();
       if(data.schema!=='agentsam.theme-embed-ui-catalog.v1' || !Array.isArray(data.apps))throw Error('Invalid catalog');
-      catalog=data.apps.filter(app=>app.key && app.name && app.default_config);
+      catalog=data.apps.filter(app=>app.key && app.name && app.default_config &&
+        Array.isArray(app.surfaces) && app.surfaces.includes('storefront_embed') &&
+        (!app.registry_required || canInstall));
       try { await refreshInstalled(); } catch { installed = []; }
       renderList();
     }catch{
