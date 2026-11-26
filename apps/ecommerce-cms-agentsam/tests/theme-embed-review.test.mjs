@@ -34,7 +34,12 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     calls.push({url:String(url),method:(options.method||'GET').toUpperCase(),body:options.body||null});
     if(String(url).includes('/embed-catalog.json')) return {ok:true,json:async()=>catalog};
     if(String(url).includes('/catalog-resources') && (options.method||'GET').toUpperCase()==='GET')
-      return {ok:true,json:async()=>({ok:true,installed:[],catalog:catalog.apps})};
+      return {ok:true,json:async()=>({
+        ok:true,installed:[],
+        catalog:catalog.apps.map(app=>({key:app.key,installable:true})),
+        registered_embeds:catalog.apps.filter(app=>app.registry_required)
+          .map(app=>({...app,registration:{artifactReady:true,previewOnly:false}})),
+      })};
     if(String(url).includes('/catalog-resources') && (options.method||'').toUpperCase()==='POST')
       return {ok:true,status:201,json:async()=>({ok:true,section_key:'announcement-bar-test',catalog_key:'announcement_bar'})};
     return {ok:true,json:async()=>({})};
