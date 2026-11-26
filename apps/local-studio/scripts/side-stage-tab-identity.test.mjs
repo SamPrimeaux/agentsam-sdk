@@ -15,7 +15,7 @@ test('plugin side-stage tabs use contribution identity rather than provider iden
 test('side-stage menu remains account registry driven, not a personal hard-coded list', () => {
   const actions = source('agentsam/side-stage-actions.ts');
   const stage = source('src/components/workbench/side-stage.tsx');
-  assert.match(actions, /listLocalStudioConnections\(\)/);
-  assert.match(actions, /payload\.side_stages \?\? \[\]/);
+  assert.match(actions, /listLocalStudioSideStages\(\)/);
+  assert.match(actions, /stages\.filter\(stage => stage\.enabled !== false\)/);
   assert.match(stage, /stages\.filter\([^)]*\)\.map\(\(stage\)/);
 });
