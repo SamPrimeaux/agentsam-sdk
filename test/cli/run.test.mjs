@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import Ajv2020 from 'ajv/dist/2020.js';
 import { createLocalSqliteDatabase } from '../../src/local/sqlite.js';
 import { applyRuntimeMigrations } from '../../src/local/migrations.js';
 import { runtimeDatabasePath } from '../../src/local/runtime-store.js';
@@ -13,7 +14,13 @@ import {
 } from '../../src/acp/client.js';
 import { runRun } from '../../src/commands/run.js';
 
-async function fixture(t) {
+const schemaAjv = new Ajv2020({ allErrors: true, strict: false });
+const readRunSchema = name => JSON.parse(fs.readFileSync(new URL('../../packages/agentsam-contracts/schemas/' + name, import.meta.url), 'utf8'));
+const validateRun = schemaAjv.compile(readRunSchema('run.v1.schema.json'));
+const validateRunStart = schemaAjv.compile(readRunSchema('run-start.v1.schema.json'));
+const validateRunReceipt = schemaAjv.compile(readRunSchema('run-receipt.v1.schema.json'));
+
+async function fixture(t, { childStatus = 'running', timeoutChild = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-run-'));
   fs.writeFileSync(path.join(root, 'package.json'), '{"name":"acp-test","private":true}\n');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -30,8 +37,8 @@ async function fixture(t) {
     INSERT INTO agentsam_agent_run (
       id, account_id, parent_run_id, source_client, surface, mode, status,
       started_at_unix, updated_at_unix
-    ) VALUES (?, ?, ?, 'test', 'cli', 'agent', 'running', 101, 101)
-  `).bind('arun_child', 'acct_1', 'arun_parent').run();
+    ) VALUES (?, ?, ?, 'test', 'cli', 'agent', ?, 101, 101)
+  `).bind('arun_child', 'acct_1', 'arun_parent', childStatus).run();
   await db.prepare(`
     INSERT INTO agentsam_agent_run_event (
       event_id, run_id, seq, event_type, phase, label, evidence_json, created_at_unix
@@ -42,6 +49,13 @@ async function fixture(t) {
       event_id, run_id, parent_run_id, seq, event_type, phase, label, evidence_json, created_at_unix
     ) VALUES (?, ?, ?, 0, 'run.started', 'boot', 'Child started', '{}', 101)
   `).bind('evt_child_0', 'arun_child', 'arun_parent').run();
+  if (timeoutChild) {
+    await db.prepare(`
+      INSERT INTO agentsam_agent_run_event (
+        event_id, run_id, parent_run_id, seq, event_type, phase, label, evidence_json, created_at_unix
+      ) VALUES (?, ?, ?, 1, 'run.timed_out', 'complete', 'Child timed out', '{}', 102)
+    `).bind('evt_child_timeout', 'arun_child', 'arun_parent').run();
+  }
   db.close();
   return root;
 }
@@ -53,7 +67,9 @@ test('local ACP client reads run/tree/events, requests cancel, and projects rece
   const run = await client.getRun('arun_parent');
   assert.equal(run.schema, 'agentsam.run.v1');
   assert.equal(run.status, 'running');
+  assert.equal(run.storageStatus, 'running');
   assert.equal(run.modelCallCount, 2);
+  assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
 
   const tree = await client.tree('arun_parent');
   assert.equal(tree.children.length, 1);
@@ -73,6 +89,7 @@ test('local ACP client reads run/tree/events, requests cancel, and projects rece
   assert.equal(receipt.schema, 'agentsam.run-receipt.v1');
   assert.equal(receipt.childRunCount, 1);
   assert.equal(receipt.eventCount, 1);
+  assert.equal(validateRunReceipt(receipt), true, schemaAjv.errorsText(validateRunReceipt.errors));
   assert.equal(receipt.usage.costUsd, 0.0125);
 });
 
@@ -161,6 +178,7 @@ test('agentsam run start creates a queued provider-neutral root run without invo
   assert.equal(started.schema, 'agentsam.run-start.v1');
   assert.match(started.run_id, /^arun_/);
   assert.equal(started.status, 'queued');
+  assert.equal(validateRunStart(started), true, schemaAjv.errorsText(validateRunStart.errors));
   assert.equal(started.queue_job.kind, 'agent.run');
   assert.equal(started.queue_job.source_run_id, started.run_id);
   assert.equal(started.queue_job.payload.parent_run_id, null);
@@ -226,4 +244,14 @@ test('HTTP ACP start uses the same POST /v1/runs contract as any hosted provider
     role: 'lead',
     runtime_requirements: { capabilities: ['exec'] },
   });
+});
+
+
+test('timeout event exposes timed_out lifecycle status while storage remains failed', async (t) => {
+  const root = await fixture(t, { childStatus:'failed', timeoutChild:true });
+  const client = new LocalAgentControlClient({ cwd: root });
+  const run = await client.getRun('arun_child');
+  assert.equal(run.status, 'timed_out');
+  assert.equal(run.storageStatus, 'failed');
+  assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
 });
