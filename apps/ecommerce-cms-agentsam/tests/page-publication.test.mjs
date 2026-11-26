@@ -72,6 +72,51 @@ test('create, preview, publish and serve a canonical page with one stable cms_pa
  }finally{db.close()}
 });
 
+test('site-owned pages preview and publish from canonical cms_pages when the draft row only contains section metadata',async()=>{
+ const {db,objects,env}=setup();try {
+  const pageId='cmsp_nested';
+  db.prepare(`INSERT INTO cms_pages
+   (id,site_id,slug,route_path,page_type,title,status,template_sku,nav_visible,requires_auth,sort_order,seo_json,metadata_json,created_at,updated_at)
+   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    pageId,'site_one','work/fuelnfreetime','/work/fuelnfreetime','case_study',
+    'Fuel N Free Time','draft',null,1,0,0,'{}','{}',1700000000,1700000000
+  );
+  const canonicalDraft={page_id:pageId,sections:[],updated_at:'2026-11-26T15:00:00.000Z'};
+  await env.DB.prepare('INSERT INTO cms_page_drafts(page_id,user_id,draft_data) VALUES(?,?,?)')
+    .bind(pageId,'owner1',JSON.stringify(canonicalDraft)).run();
+
+  const preview=await previewMerchantPage(env,'owner1','site_one','work/fuelnfreetime',pageId);
+  assert.equal(preview.ok,true,JSON.stringify(preview));
+  assert.match(preview.html,/<h1>Fuel N Free Time<\\/h1>/);
+  assert.match(preview.html,/noindex,nofollow/);
+
+  const published=await publishMerchantPage(env,'owner1','site_one','work/fuelnfreetime',pageId);
+  assert.equal(published.ok,true,JSON.stringify(published));
+  assert.equal(published.slug,'work/fuelnfreetime');
+  assert.equal(published.route_path,'/work/fuelnfreetime');
+  assert.equal(objects.get(published.key),preview.html);
+  const saved=db.prepare('SELECT slug,route_path,status,title FROM cms_pages WHERE id=?').get(pageId);
+  assert.deepEqual(saved,{slug:'work/fuelnfreetime',route_path:'/work/fuelnfreetime',status:'published',title:'Fuel N Free Time'});
+ }finally{db.close()}
+});
+
+test('canonical pages without a legacy cms_page_drafts row remain previewable and publishable',async()=>{
+ const {db,env}=setup();try {
+  const pageId='cmsp_without_legacy_draft';
+  db.prepare(`INSERT INTO cms_pages
+   (id,site_id,slug,route_path,page_type,title,status,template_sku,nav_visible,requires_auth,sort_order,seo_json,metadata_json,created_at,updated_at)
+   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    pageId,'site_one','about','/about','about','About','draft',null,1,0,0,'{}','{}',1700000000,1700000000
+  );
+  const preview=await previewMerchantPage(env,'owner1','site_one','about',pageId);
+  assert.equal(preview.ok,true,JSON.stringify(preview));
+  assert.match(preview.html,/<h1>About<\\/h1>/);
+  const published=await publishMerchantPage(env,'owner1','site_one','about',pageId);
+  assert.equal(published.ok,true,JSON.stringify(published));
+  assert.equal(published.route_path,'/about');
+ }finally{db.close()}
+});
+
 test('rich content renderer rejects executable HTML and dangerous URLs',()=>{
  const clean=sanitizeMerchantBody('<img src="javascript:alert(1)" onerror="evil()"><a href="javascript:alert(1)" onclick="evil()">link</a><script>alert(1)</script><svg onload="evil()"><circle/></svg><p>Hello <em>visitor</em></p>');
  assert.equal(clean,'link<p>Hello <em>visitor</em></p>');
