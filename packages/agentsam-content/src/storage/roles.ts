@@ -54,23 +54,3 @@ export function rankStorageCandidates(
     .sort((a, b) => b.confidence - a.confidence);
 }
 
-export function resolveStorageRole(
-  roles: StorageRoleMap | undefined,
-  role: StorageRole,
-): StorageRoleBinding | undefined {
-  return roles?.[role];
-}
-
-/** Throws a message the CLI/TUI can act on instead of failing deep in a provider. */
-export function requireStorageRole(
-  roles: StorageRoleMap | undefined,
-  role: StorageRole,
-): StorageRoleBinding {
-  const found = resolveStorageRole(roles, role);
-  if (!found) {
-    throw new Error(
-      `No storage mapped for role "${role}". Run \`agentsam doctor\` to discover and map existing storage.`,
-    );
-  }
-  return found;
-}
