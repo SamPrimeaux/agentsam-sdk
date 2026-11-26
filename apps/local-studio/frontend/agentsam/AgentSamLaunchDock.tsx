@@ -1,4 +1,4 @@
-import { BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
+import { Store, Settings, ShoppingBag, Package, BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useNavigate } from '@tanstack/react-router';
 import { useWorkStore } from '@/lib/work/store';
@@ -23,15 +23,29 @@ export function AgentSamLaunchDock() {
   const conversationRoute = path === '/admin/agentsam' || path.startsWith('/admin/chats');
   const libraryRoute = path === '/admin/library' || path === '/admin/artifacts' || path === '/admin/media';
   const libraryView = new URLSearchParams(routeSearch).get('view') || 'all';
+  const storePath = installedAdminPage?.split('?')[0] || path;
+  const storeRoute = ['/admin/store','/admin/pages','/admin/preferences','/admin/products','/admin/orders'].includes(storePath);
   // The sidebar drawer takes precedence. Beyond the nav provider's 901px
   // mobile threshold, only Work opts into the 902–1099px compact dock.
-  if ((isMobile && open) || (!launchRoute && !conversationRoute && !libraryRoute)) return null;
+  if ((isMobile && open) || (!launchRoute && !conversationRoute && !libraryRoute && !storeRoute)) return null;
   const showPage = (path: string) => {
     setOpen(false);
     // A dedicated route must not open a second SideStage over itself.
     setSideOpen(false);
     data.onNavigate?.(path);
   };
+
+  if (storeRoute) {
+    const siteId = new URLSearchParams(routeSearch).get('site_id') || new URLSearchParams(location.search).get('site_id');
+    const scoped = (href:string) => siteId ? href+'?site_id='+encodeURIComponent(siteId) : href;
+    return <Nav.LaunchDock label="Store navigation" items={[
+      {id:'store',label:'Online Store',icon:<Store/>,active:storePath==='/admin/store',onSelect:()=>showPage(scoped('/admin/store'))},
+      {id:'pages',label:'Pages',icon:<Files/>,active:storePath==='/admin/pages',onSelect:()=>showPage(scoped('/admin/pages'))},
+      {id:'products',label:'Products',icon:<Package/>,active:storePath==='/admin/products',onSelect:()=>showPage(scoped('/admin/products'))},
+      {id:'orders',label:'Orders',icon:<ShoppingBag/>,active:storePath==='/admin/orders',onSelect:()=>showPage(scoped('/admin/orders'))},
+      {id:'preferences',label:'Preferences',icon:<Settings/>,active:storePath==='/admin/preferences',onSelect:()=>showPage(scoped('/admin/preferences'))},
+    ]}/>;
+  }
 
   if (libraryRoute) {
     const showArtifacts = (view: 'all' | 'yours' | 'shared' | 'recent') => {
