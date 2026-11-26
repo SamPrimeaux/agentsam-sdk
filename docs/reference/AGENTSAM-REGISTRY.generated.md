@@ -224,7 +224,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | `moviemode` | MovieMode | `@inneranimalmedia/agentsam-copro-studio` | — |
 | `samsketch` | SamSketch | `@inneranimalmedia/samsketch` | — |
 
-An APP definition is not a user-scoped installation. `agentsam app install <id>` currently prints distribution instructions; it does not persist an installed APP record or activate its runtime.
+An APP definition is not a user-scoped installation. `agentsam app install <id>` installs and verifies the declared npm package on the device; it does not grant account access, install a native desktop bundle, or activate host-component screens.
 
 ## Package inventory
 

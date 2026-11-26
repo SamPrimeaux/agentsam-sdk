@@ -6,7 +6,7 @@
 
 ## Runtime installation versus distribution
 
-`agentsam app list` / `inspect` / `validate` discover and validate APP manifests in the current source checkout. The current `agentsam app install <id>` implementation **prints** the manifest's npm/curl distribution command; it does not execute an install, create account-scoped host state, update installed-app records, or activate a Local Studio route.
+`agentsam app list` / `inspect` / `validate` discover and validate APP manifests in the current source checkout. `agentsam app install <id>` now installs the manifest-declared npm package at the current npm latest dist-tag (or an explicitly requested exact version) and verifies its installed manifest and executable. It does not create account-scoped host state or activate a Local Studio route. Native desktop hosts require a separate native release; `--preview-package` explicitly selects the npm preview distribution.
 
 `included_apps` and `embed` control **build-time packaging**. Installing an APP after Local Studio is already downloaded requires an actual runtime installation record, permission/connection checks, launcher/mount resolution, and verification/receipt. That must be distinct from npm installation, native `agentsam setup` recipes, and plugin OAuth registration. A manifested product can be genuine and usable before that particular host-install bridge is finished.
 

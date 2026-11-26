@@ -122,7 +122,7 @@ const GROUPS = Object.freeze([
       ['app list', 'Discover distributed APP manifests'],
       ['app inspect <id>', 'Inspect and validate an APP manifest'],
       ['app validate --all', 'Validate APP contract across the checkout'],
-      ['app install <id>', 'Print distribution instructions; not a runtime install'],
+      ['app install <id>', 'Install and verify the declared npm app package'],
       ['app preview <id>', 'Launch APP-provided preview command'],
       ['cad', 'CAD project and model workflows'],
       ['merch', 'Merchandising workflows'],

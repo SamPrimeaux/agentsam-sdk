@@ -242,6 +242,8 @@
     "TRADEMARKS.md",
     "packages/agentsam-site-scrape",
     "packages/agentsam-desktop-shell/scripts/app-discovery.mjs",
+    "apps/*/agentsam.app.json",
+    "packages/*/agentsam.app.json",
     "skills/agentsam-arch-materials",
     "skills/agentsam-arch-specifications",
     "skills/agentsam-arch-cad",
