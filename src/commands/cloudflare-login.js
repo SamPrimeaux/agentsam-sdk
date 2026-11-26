@@ -6,11 +6,30 @@
  */
 import { resolveAccountAuthority } from '../lib/auth.js';
 import { promptToOpenUrl } from '../lib/open-url.js';
+import { createToolError } from '../errors/index.js';
 import {
   LOCAL_STUDIO_APP_ID,
   resolveLocalStudioHostOrigin,
   resolvePlatformAccountIssuer,
 } from '../lib/app-authority.js';
+function cloudflareLoginError(reason, message, {
+  domain = 'auth',
+  stage = 'authorize',
+  providerCode = null,
+  details = null,
+} = {}) {
+  return createToolError({
+    tool: 'cloudflare-login',
+    domain,
+    reason,
+    message,
+    stage,
+    provider: 'cloudflare',
+    provider_code: providerCode == null ? null : String(providerCode),
+    details,
+  });
+}
+
 function clean(value) {
   return value == null ? '' : String(value).trim();
 }
@@ -47,7 +66,7 @@ function parseLoginArgs(argv = []) {
     } else if (!arg.startsWith('-')) {
       out.packs.push(arg);
     } else {
-      throw new Error(`unknown cloudflare login option: ${arg}`);
+      throw cloudflareLoginError('input_invalid', `unknown cloudflare login option: ${arg}`, { stage: 'validate', details: { argument: arg } });
     }
   }
   return out;
@@ -146,7 +165,7 @@ export function buildCloudflareBrowserOAuthStartUrl(options = {}) {
 }
 
 async function fetchCloudflarePermissionCatalog(hostOrigin, accessToken, fetchImpl = globalThis.fetch) {
-  if (typeof fetchImpl !== 'function') throw new Error('cloudflare_permission_catalog_fetch_unavailable');
+  if (typeof fetchImpl !== 'function') throw cloudflareLoginError('transport_not_configured', 'Cloudflare permission catalog fetch is unavailable.', { domain: 'transport', stage: 'connect', details: { legacy_code: 'cloudflare_permission_catalog_fetch_unavailable' } });
   const response = await fetchImpl(new URL('/api/connections/cloudflare/permissions', hostOrigin + '/'), {
     headers: {
       authorization: 'Bearer ' + accessToken,
@@ -155,9 +174,26 @@ async function fetchCloudflarePermissionCatalog(hostOrigin, accessToken, fetchIm
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload?.ok !== true) {
-    const error = new Error(payload?.error || ('cloudflare_permission_catalog_http_' + response.status));
-    error.code = payload?.error || 'cloudflare_permission_catalog_unavailable';
-    throw error;
+    const reason = response.status === 401
+      ? 'auth_missing'
+      : response.status === 403
+        ? 'provider_scope_insufficient'
+        : response.status === 429
+          ? 'provider_rate_limited'
+          : response.status >= 500
+            ? 'provider_unavailable'
+            : 'provider_request_invalid';
+    const legacyCode = payload?.error || 'cloudflare_permission_catalog_unavailable';
+    throw cloudflareLoginError(
+      reason,
+      payload?.error || ('Cloudflare permission catalog unavailable (HTTP ' + response.status + ').'),
+      {
+        domain: response.status === 401 || response.status === 403 ? 'auth' : 'provider',
+        stage: 'load',
+        providerCode: legacyCode,
+        details: { legacy_code: legacyCode, http_status: response.status },
+      },
+    );
   }
   return payload;
 }
@@ -179,9 +215,11 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     refreshImpl: options.refreshImpl,
   });
   if (!authority.value) {
-    const err = new Error(authority.error || 'Sign in first: agentsam login (or export AGENTSAM_API_KEY)');
-    err.code = 'account_auth_required';
-    throw err;
+    throw cloudflareLoginError(
+      'auth_missing',
+      authority.error || 'Sign in first: agentsam login (or export AGENTSAM_API_KEY)',
+      { stage: 'authorize', details: { legacy_code: 'account_auth_required', authority_error: authority.error || null } },
+    );
   }
 
   const hostOrigin = options.hostOrigin || resolveLocalStudioHostOrigin({
@@ -218,16 +256,20 @@ export async function runCloudflareBrowserOAuthLogin(argv = [], options = {}) {
     id !== 'all' || catalog.full_catalog_opt_in !== true
   ).filter((id) => !knownPacks.has(id) && !Array.isArray(aliases[id]));
   if (unknownPacks.length) {
-    const err = new Error('Unknown Cloudflare permission pack: ' + unknownPacks.join(', '));
-    err.code = 'cloudflare_permission_pack_unavailable';
-    throw err;
+    throw cloudflareLoginError(
+      'input_invalid',
+      'Unknown Cloudflare permission pack: ' + unknownPacks.join(', '),
+      { stage: 'validate', details: { legacy_code: 'cloudflare_permission_pack_unavailable', unknown_packs: unknownPacks } },
+    );
   }
   const knownCapabilities = new Set((catalog.available_capabilities || []).map((capability) => capability.id));
   const unknownCapabilities = args.capabilities.filter((id) => !knownCapabilities.has(id));
   if (unknownCapabilities.length) {
-    const err = new Error('Unknown Cloudflare capability: ' + unknownCapabilities.join(', '));
-    err.code = 'cloudflare_capability_unavailable';
-    throw err;
+    throw cloudflareLoginError(
+      'input_invalid',
+      'Unknown Cloudflare capability: ' + unknownCapabilities.join(', '),
+      { stage: 'validate', details: { legacy_code: 'cloudflare_capability_unavailable', unknown_capabilities: unknownCapabilities } },
+    );
   }
 
   const plan = buildCloudflareBrowserOAuthStartUrl({
