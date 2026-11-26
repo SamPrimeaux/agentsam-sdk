@@ -181,7 +181,7 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
 
     const addSectionUrl = `/api/admin/cms/pages/our-story/sections?site_id=site-a&page_id=${created.page.id}`;
     const sectionResponse = await handleAdminCmsApi(
-      request(addSectionUrl, "POST", { templateKey: "portable", themePreset: "revise/editorial-statement" }),
+      request(addSectionUrl, "POST", { templateKey: "portable", themePreset: "cad-beyond/aspiration" }),
       env, new URL("https://cms.test" + addSectionUrl), { accountId: "acct-a" },
     );
     assert.equal(sectionResponse.status, 201);
