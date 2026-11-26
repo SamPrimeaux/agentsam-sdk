@@ -65,6 +65,14 @@ jobs:
           node scripts/sdk-release-publish.mjs --plan
       - name: Clean-main publish preflight
         run: npm run release:publish:preflight
+      # Ecommerce is a separately published app, not an SDK workspace. Before
+      # the SDK is published, its integration tests must resolve the SDK from
+      # this checkout rather than expect an already-published npm install.
+      - name: Link checked-out SDK for pre-publication Ecommerce tests
+        run: |
+          mkdir -p apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia
+          ln -sfn "$GITHUB_WORKSPACE" apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia/agentsam-sdk
+          node -e 'const p = require("./apps/ecommerce-cms-agentsam/node_modules/@inneranimalmedia/agentsam-sdk/package.json"); if (p.name !== "@inneranimalmedia/agentsam-sdk" || p.version !== require("./package.json").version) throw new Error("prepublish_sdk_source_link_mismatch"); console.log(`PREPUBLISH_SDK_SOURCE_LINK_PASS ${p.name}@${p.version}`)'
       - name: Run incremental release verification (no full public-package test sweep)
         run: npm run verify:release:incremental
       - name: Publish pinned public dependencies and SDK
