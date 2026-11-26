@@ -231,7 +231,7 @@ export async function activeGrantedScopes(permissionRegistry, {
   providerKey = 'cloudflare',
   accountIdentifier = '',
 } = {}) {
-  if (!ownerId || !accountIdentifier) return [];
+  if (!ownerId || !accountIdentifier) return null;
   const reader = permissionRegistry?.getActiveGrantedScopes;
   if (typeof reader !== 'function') return null;
   try {
