@@ -1,0 +1,83 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "arch.assembly.calculate",
+  "version": "0.1.0",
+  "summary": "Calculate and verify total thickness from explicitly supplied architectural assembly layers using the existing SAM architectural reference operation.",
+  "effect": "read",
+  "capabilities": [
+    "arch.assembly.thickness"
+  ],
+  "runtime": {
+    "kind": "sam_operation",
+    "operation": "arch.assembly.thickness"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "layers"
+    ],
+    "properties": {
+      "layers": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 128,
+        "items": {
+          "type": "object",
+          "required": [
+            "name",
+            "thickness_in"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "thickness_in": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "status",
+      "total_in",
+      "total_mm",
+      "source"
+    ],
+    "properties": {
+      "status": {
+        "const": "calculated_from_inputs"
+      },
+      "total_in": {
+        "type": "number",
+        "minimum": 0
+      },
+      "total_mm": {
+        "type": "number",
+        "minimum": 0
+      },
+      "source": {
+        "const": "supplied_layers"
+      },
+      "warning": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "verification": {
+    "kind": "output_schema"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": false
+  }
+}

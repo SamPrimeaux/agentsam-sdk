@@ -1,0 +1,85 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "media.asset.preflight",
+  "version": "0.1.0",
+  "summary": "Inspect an installation-owned asset through the bound native media service and verify its identifier, size and content hash.",
+  "effect": "read",
+  "capabilities": [
+    "media.asset.inspect"
+  ],
+  "runtime": {
+    "kind": "native_tool",
+    "tool_key": "media.asset.inspect"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "assetId"
+    ],
+    "properties": {
+      "assetId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "ok",
+      "assetId",
+      "contentType",
+      "byteLength",
+      "sha256"
+    ],
+    "properties": {
+      "ok": {
+        "const": true
+      },
+      "assetId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contentType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "byteLength": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "sourceAssetId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "createdAt": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "transformations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "verification": {
+    "kind": "output_schema"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": false
+  }
+}

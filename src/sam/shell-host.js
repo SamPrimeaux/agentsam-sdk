@@ -56,7 +56,7 @@ export async function resolveShellSamIdentity({ state, authorityLoader = resolve
   } catch { return null; }
 }
 
-export function createShellSamAdapter({ state, authorize, trustedIdentity = null, mediaBindings = null } = {}) {
+export function createShellSamAdapter({ state, authorize, trustedIdentity = null, mediaBindings = null, procedureOperationIds = [] } = {}) {
   if (!state?.cwd || typeof authorize !== 'function') return null;
   const readTrustedIdentity = () => {
     const session = readAccountSession({home:state.home});
@@ -112,7 +112,16 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   })]);
   return createSamCapabilityAdapter({
     os:samOS,
-    expose:[...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS].filter(id => samOS.get(id)),
+    // Additional core operations are exposed only when declared by a packaged
+    // procedure and independently installed as harmless read-only operations.
+    // An unbound procedure never creates a synthetic executor or permission.
+    expose:[...new Set([
+      ...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS,
+      ...procedureOperationIds.filter(id => {
+        const op = samOS.get(id);
+        return op?.risk === 'read_only' && op?.execution?.sideEffects === 'none';
+      }),
+    ])].filter(id => samOS.get(id)),
     // Provider dispatch performs a separate allowlist check. The bound
     // SAM handlers make the actual privileged auth decision above.
     authorize: async () => !!readTrustedIdentity(),

@@ -1,0 +1,58 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "repo.git.status",
+  "version": "0.1.0",
+  "summary": "Read current Git worktree state and return a deterministic JSON count of tracked changes and untracked files without modifying the repository.",
+  "effect": "read",
+  "capabilities": [
+    "sam.superbash"
+  ],
+  "runtime": {
+    "kind": "bash",
+    "entrypoint": "run.sh"
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "schema",
+      "ok",
+      "tracked_changes",
+      "untracked_files",
+      "engine"
+    ],
+    "properties": {
+      "schema": {
+        "const": "inneranimalmedia.primetech.git-status.v1"
+      },
+      "ok": {
+        "const": true
+      },
+      "tracked_changes": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "untracked_files": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "engine": {
+        "const": "git"
+      }
+    },
+    "additionalProperties": false
+  },
+  "verification": {
+    "kind": "output_schema",
+    "expected": "inneranimalmedia.primetech.git-status.v1"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": false
+  }
+}
