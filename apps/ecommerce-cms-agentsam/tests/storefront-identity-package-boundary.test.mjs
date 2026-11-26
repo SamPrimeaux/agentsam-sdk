@@ -8,14 +8,15 @@ const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = path.resolve(appRoot, '../..');
 const appManifest = JSON.parse(readFileSync(path.join(appRoot, 'package.json'), 'utf8'));
 const sdkManifest = JSON.parse(readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8'));
+const vaultManifest = JSON.parse(readFileSync(path.join(repositoryRoot, 'packages/agentsam-vault/package.json'), 'utf8'));
 
-test('Ecommerce consumes Identity and Vault through the canonical SDK package', () => {
+test('Ecommerce consumes Identity through the SDK and Vault through its own package', () => {
   assert.equal(
     appManifest.dependencies['@inneranimalmedia/agentsam-sdk'],
     sdkManifest.version,
   );
   assert.equal(appManifest.dependencies['@inneranimalmedia/agentsam-identity'], undefined);
-  assert.equal(appManifest.dependencies['@inneranimalmedia/agentsam-vault'], undefined);
+  assert.equal(appManifest.dependencies['@inneranimalmedia/agentsam-vault'], vaultManifest.version);
 
   const requiredExports = [
     './identity/adapters/portable-d1',
@@ -26,8 +27,6 @@ test('Ecommerce consumes Identity and Vault through the canonical SDK package', 
     './identity/frontend/auth-portal/store-access',
     './identity/frontend/auth-portal/*',
     './identity/migrations/sqlite/*',
-    './vault/resolver',
-    './vault/crypto',
   ];
   for (const key of requiredExports) {
     const target = sdkManifest.exports[key];
@@ -38,9 +37,13 @@ test('Ecommerce consumes Identity and Vault through the canonical SDK package', 
       'SDK export target missing: ' + key,
     );
   }
+
+  const identityRuntime = readFileSync(path.join(appRoot, 'backend/storefront/identity.js'), 'utf8');
+  assert.match(identityRuntime, /from '@inneranimalmedia\/agentsam-vault\/resolver'/);
+  assert.match(identityRuntime, /from '@inneranimalmedia\/agentsam-vault\/crypto'/);
 });
 
-test('Ecommerce runtime and build scripts do not bypass the SDK Identity/Vault boundary', () => {
+test('Ecommerce runtime and build scripts do not bypass the SDK Identity boundary', () => {
   const files = [
     'backend/storefront/identity.js',
     'backend/storefront/access.js',
@@ -52,5 +55,5 @@ test('Ecommerce runtime and build scripts do not bypass the SDK Identity/Vault b
   const source = files
     .map((file) => readFileSync(path.join(appRoot, file), 'utf8'))
     .join('\n');
-  assert.doesNotMatch(source, /@inneranimalmedia\/agentsam-(?:identity|vault)\//);
+  assert.doesNotMatch(source, /@inneranimalmedia\/agentsam-identity\//);
 });
