@@ -160,6 +160,6 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
     assert.ok(settings.includes(key),'missing CMS-connected theme draft control '+key);
   }
   assert.match(core,/pagePickerCategory/);
-  assert.match(core,/ui_review/);
+  assert.match(core,/AgentSamThemeEditorHost/);
   assert.match(core,/localShowcase/);
 });
