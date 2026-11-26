@@ -15,7 +15,7 @@ function timeoutDetails(error) {
   const normalizedCode = code.toLowerCase();
   const isTimeout = name.toLowerCase() === 'timeouterror'
     || ['run_timeout', 'etimedout', 'etimeout', 'deadline_exceeded'].includes(normalizedCode)
-    || /\\b(timed out|timeout|deadline exceeded)\\b/i.test(message);
+    || /\b(timed out|timeout|deadline exceeded)\b/i.test(message);
   return { isTimeout, errorCode: code || 'run_timeout', errorMessage: message };
 }
 
