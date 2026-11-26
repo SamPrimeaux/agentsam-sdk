@@ -2645,8 +2645,8 @@
       "id": "agentsam-identity",
       "install": [
         {
-          "command": "npm install @inneranimalmedia/agentsam-identity",
-          "package": "@inneranimalmedia/agentsam-identity",
+          "command": "npm install @inneranimalmedia/agentsam-sdk",
+          "package": "@inneranimalmedia/agentsam-sdk",
           "type": "npm"
         }
       ],
@@ -2657,7 +2657,7 @@
       "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
       "registry": {
         "kind": "npm",
-        "name": "@inneranimalmedia/agentsam-identity",
+        "name": "@inneranimalmedia/agentsam-sdk",
         "public_claim": true
       },
       "review_required": [
@@ -2672,7 +2672,7 @@
       "use_when": [
         "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)"
       ],
-      "version": "2.6.15",
+      "version": "2.6.20",
       "readiness": "unverified"
     },
     {
