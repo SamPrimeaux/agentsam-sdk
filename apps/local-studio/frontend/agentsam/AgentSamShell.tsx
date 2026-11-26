@@ -43,6 +43,8 @@ import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { AgentSamStatusBuddy } from './AgentSamStatusBuddy';
 import { AgentSamDuoHandoff } from './AgentSamDuoHandoff';
 import { emitCompanionStatus } from './companion-events';
+import type { CompanionStatusSignal } from './companion-events';
+import type { CompanionState } from './companions';
 import { AgentSamLaunchDock } from './AgentSamLaunchDock';
 import { CompanionProvider, useActiveCompanion } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
@@ -80,7 +82,7 @@ function initialCachedAppearance() {
 
 /** The selected pet belongs to the shared header, not to a specific page.
  * Mount into the existing packaged Console slot without creating another bar. */
-function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
+function HostedCompanionHeader({ state }: { state: CompanionState }) {
   const companion = useActiveCompanion();
   const [target, setTarget] = useState<HTMLElement | null>(null);
   useEffect(() => {
@@ -274,12 +276,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.addEventListener('agentsam:projects-changed',refresh);
     return () => {cancelled=true;window.removeEventListener('agentsam:projects-changed',refresh);};
   },[historyRevision,user?.id]);
-  const isConversation = pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats');
-  const isCadRoute = pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
-  const isSamSketchRoute = pathname === '/admin/samsketch' || pathname.startsWith('/admin/samsketch/');
-  const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
-  const isSettings = pathname === '/admin/settings' || pathname.startsWith('/admin/settings/');
-  const isCanvasRoute = pathname === '/admin/canvas' || pathname.startsWith('/admin/canvas/');
+  const normalizedPathname = pathname.split('?')[0].replace(/\/+$/, '') || '/';
+  const currentBrowserPath = typeof window !== 'undefined' ? window.location.pathname : normalizedPathname;
+  const hideShellAssistant = currentBrowserPath.startsWith('/admin/agentsam') || currentBrowserPath.startsWith('/admin/canvas');
+  const isConversation = normalizedPathname === '/admin/agentsam' || normalizedPathname.startsWith('/admin/chats/');
+  const isCadRoute = normalizedPathname === '/admin/cad' || normalizedPathname.startsWith('/admin/cad/');
+  const isSamSketchRoute = normalizedPathname === '/admin/samsketch' || normalizedPathname.startsWith('/admin/samsketch/');
+  const isSamSculptRoute = normalizedPathname === '/samsculpt' || normalizedPathname.startsWith('/samsculpt/');
+  const isSettings = normalizedPathname === '/admin/settings' || normalizedPathname.startsWith('/admin/settings/');
+  const isCanvasRoute = normalizedPathname === '/admin/canvas' || normalizedPathname.startsWith('/admin/canvas/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   const [navigationLoaded, setNavigationLoaded] = useState(false);
   const [navigationError, setNavigationError] = useState(false);
@@ -465,9 +470,40 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     };
   }, [pathname]);
 
-  const petState = state.activeChatId && state.streamingIds.includes(state.activeChatId) ? "working" : "idle";
+  const runtimePetState: CompanionState = state.activeChatId && state.streamingIds.includes(state.activeChatId) ? "working" : "idle";
+  const [companionSignalState, setCompanionSignalState] = useState<CompanionState | null>(null);
   useEffect(() => {
-    emitCompanionStatus({ type: petState === 'working' ? 'work-started' : 'runtime-idle' });
+    let resetTimer: number | undefined;
+    const onCompanionStatus = (event: Event) => {
+      const signal = (event as CustomEvent<CompanionStatusSignal>).detail;
+      if (!signal) return;
+      let next: CompanionState | null = null;
+      switch (signal.type) {
+        case 'work-started': next = 'working'; break;
+        case 'runtime-idle': next = null; break;
+        case 'tests-passed': next = 'success'; break;
+        case 'syntax-warning': next = 'attention'; break;
+        case 'blocked': next = 'error'; break;
+        case 'awaiting-approval': next = 'waiting'; break;
+        case 'state': next = signal.state; break;
+      }
+      if (resetTimer) window.clearTimeout(resetTimer);
+      setCompanionSignalState(next);
+      if (next === 'success' || next === 'attention' || next === 'error') {
+        resetTimer = window.setTimeout(() => setCompanionSignalState(null), 3200);
+      }
+    };
+    window.addEventListener('agentsam:companion:status', onCompanionStatus);
+    return () => {
+      window.removeEventListener('agentsam:companion:status', onCompanionStatus);
+      if (resetTimer) window.clearTimeout(resetTimer);
+    };
+  }, []);
+  const petState = companionSignalState ?? runtimePetState;
+  useEffect(() => {
+    emitCompanionStatus({ type: runtimePetState === 'working' ? 'work-started' : 'runtime-idle' });
+  }, [runtimePetState]);
+  useEffect(() => {
     if (!isPackagedDesktop()) return;
     void emitTauriEvent("agentsam:pet:state", { state: petState }).catch(() => {});
   }, [petState]);
@@ -773,12 +809,12 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <NotificationsMenu />
         </Nav.Topbar> : null}
         <OfflineBanner />
-        <div className="platform-console-stage" data-assistant-focused={!isConversation && !isCanvasRoute && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
+        <div className="platform-console-stage" data-assistant-focused={!hideShellAssistant && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
           <main className="agentsam-route">{pathname === '/admin/home'
             ? <iframe ref={embeddedHomeFrame} title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
                 className="agentsam-embedded-home-frame h-full min-h-0 w-full flex-1 border-0" />
             : <Outlet />}</main>
-          {!isConversation && !isCanvasRoute && state.sideOpen ? <>
+          {!hideShellAssistant && state.sideOpen ? <>
             {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}
             <aside className="platform-console-assistant" aria-label="AgentSam Side Assistant"
               style={{ "--platform-assistant-width": globalAssistantWidth + "px" } as CSSProperties}>

@@ -10,6 +10,7 @@ function stateForSignal(signal: CompanionStatusSignal): CompanionState {
     case 'tests-passed': return 'success';
     case 'syntax-warning': return 'attention';
     case 'blocked': return 'error';
+    case 'awaiting-approval': return 'waiting';
     case 'state': return signal.state;
   }
 }
@@ -30,7 +31,7 @@ export function AgentSamStatusBuddy() {
       setState(next);
       const explicitMessage = 'message' in signal ? signal.message : undefined;
       const defaultMessages: Partial<Record<CompanionState, string>> = {
-        working: 'Working alongside you', resting: 'Runtime is resting', success: 'Tests passed',
+        working: 'Working alongside you', waiting: 'Waiting for your approval', resting: 'Runtime is resting', success: 'Tests passed',
         attention: 'A warning needs a look', error: 'Something needs attention',
       };
       setMessage(explicitMessage || defaultMessages[next] || 'Keeping watch');

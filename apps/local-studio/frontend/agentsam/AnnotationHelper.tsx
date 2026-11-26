@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MousePointer2, ArrowUp } from 'lucide-react';
-import { AgentComposer, MiniAgentSam, type AnnotationSelection } from '@inneranimalmedia/agentsam-workbench/agent';
+import { AgentComposer, MiniAgentSam, resolveAnnotationScope, type AnnotationSelection } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { useWorkStore, type ComposerAttachment } from '@/lib/work/store';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
@@ -19,17 +19,19 @@ export type DesignWorkspacePromptRequest = {
   error?: string;
 };
 
-export function AnnotationToggle({className=""}:{className?:string}={}) {
+export function AnnotationToggle({className="",scopeId}:{className?:string;scopeId?:string}={}) {
   const [active, setActive] = useState(false);
   useEffect(() => {
     const update = (event: Event) => setActive(Boolean((event as CustomEvent<{ selecting: boolean }>).detail?.selecting));
     window.addEventListener('agentsam:annotation-state', update);
     return () => window.removeEventListener('agentsam:annotation-state', update);
   }, []);
-  return <IconAction type="button" className={`as-nav-button as-side-stage-annotation ${className}`.trim()} data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} label={active ? 'Stop annotating' : 'Annotate page'} hint={active ? 'Stop annotating (Esc)' : 'Select an element to annotate'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></IconAction>;
+  return <IconAction type="button" className={`as-nav-button as-side-stage-annotation ${className}`.trim()} data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} label={active ? 'Stop annotating' : 'Annotate page'} hint={active ? 'Stop annotating (Esc)' : 'Select an element to annotate'} onClick={() => window.dispatchEvent(new CustomEvent('agentsam:annotate', { detail: { scopeId } }))}><MousePointer2 size={18} /></IconAction>;
 }
+
 export function AnnotationHelper() {
   const [selecting, setSelecting] = useState(false);
+  const [scopeId, setScopeId] = useState<string | null>(null);
   const [miniAttachments, setMiniAttachments] = useState<ComposerAttachment[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -55,8 +57,17 @@ export function AnnotationHelper() {
     setMiniAttachments(items => { items.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); }); return []; });
     setUploadError('');
   }, [selecting]);
-  useEffect(() => { const toggle = () => setSelecting((value) => !value); window.addEventListener('agentsam:annotate', toggle); return () => window.removeEventListener('agentsam:annotate', toggle); }, []);
+  useEffect(() => {
+    const toggle = (event: Event) => {
+      const requested = (event as CustomEvent<{ scopeId?: unknown }>).detail?.scopeId;
+      setScopeId(typeof requested === 'string' && requested.trim() ? requested.trim() : null);
+      setSelecting(value => !value);
+    };
+    window.addEventListener('agentsam:annotate', toggle);
+    return () => window.removeEventListener('agentsam:annotate', toggle);
+  }, []);
   useEffect(() => { window.dispatchEvent(new CustomEvent('agentsam:annotation-state', { detail: { selecting } })); }, [selecting]);
+  const annotationScope = useCallback(() => resolveAnnotationScope(document, scopeId), [scopeId]);
   const activeMode = useWorkStore.getState().runModes[useWorkStore.getState().activeChatId] ?? 'agent';
   return <>
     <input type="file" ref={fileInput} hidden multiple accept="image/png,image/jpeg,image/webp,.pdf,.txt,.md,.csv,.json" onChange={event => {
@@ -64,9 +75,7 @@ export function AnnotationHelper() {
       event.currentTarget.value = '';
       void attachMiniFiles(files);
     }}/>
-    <MiniAgentSam selecting={selecting} onSelectingChange={setSelecting} scope={() =>
-      Array.from(document.querySelectorAll<HTMLElement>('[data-agentsam-annotation-scope]')).find(element => element.getClientRects().length > 0) || null
-    } onSubmit={async (prompt, selection: AnnotationSelection) => {
+    <MiniAgentSam selecting={selecting} onSelectingChange={setSelecting} scope={annotationScope} onSubmit={async (prompt, selection: AnnotationSelection) => {
     const store = useWorkStore.getState();
     // A specialist editor may claim this contextual prompt and execute it through
     // its own authenticated domain API. The shared MiniAgentSam remains the only UI.

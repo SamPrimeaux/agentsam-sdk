@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useActiveCompanion } from './CompanionContext';
-import { companionStateAsset } from './companions';
+import { companionStateAsset, type CompanionState } from './companions';
 
-export type AgentSamPetState = 'idle' | 'working';
+export type AgentSamPetState = CompanionState;
 
-const FALLBACK_IMAGES: Record<AgentSamPetState, string> = {
+const FALLBACK_IMAGES: Record<'idle' | 'working', string> = {
   idle: '/brand/agentsam-gorilla/v1/pet/animated/head-idle.gif',
   working: '/brand/agentsam-gorilla/v1/pet/animated/ledge-working.gif',
 };
@@ -18,7 +18,7 @@ export function AgentSamPetTrigger({ state, onActivate }: {
   const [fallback, setFallback] = useState(false);
   useEffect(() => setFallback(false), [companion.id, state]);
   const animated = companionStateAsset(companion, state);
-  const still = companion.avatarUrl || (companion.builtIn ? FALLBACK_IMAGES.idle : null);
+  const still = companion.avatarUrl || (companion.builtIn ? FALLBACK_IMAGES[state === 'working' ? 'working' : 'idle'] : null);
   const image = fallback ? still : animated || still;
   return <button
     type="button"
@@ -26,8 +26,8 @@ export function AgentSamPetTrigger({ state, onActivate }: {
     data-agent-state={state}
     data-agent-entry="shared"
     data-companion-id={companion.id}
-    title={`${companion.name} · ${state === 'working' ? 'working with AgentSam' : 'ready to work'}`}
-    aria-label={`${companion.name}, ${state === 'working' ? 'working' : 'ready'}. Open AgentSam assistant.`}
+    title={`${companion.name} · ${state === 'idle' ? 'ready to work' : state.replaceAll('-', ' ')}`}
+    aria-label={`${companion.name}, ${state === 'idle' ? 'ready to work' : state.replaceAll('-', ' ')}. Open AgentSam assistant.`}
     onClick={onActivate}
   >
     {image ? <picture>
