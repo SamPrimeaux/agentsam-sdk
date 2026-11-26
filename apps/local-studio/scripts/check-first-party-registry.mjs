@@ -9,7 +9,6 @@ import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => JSON.parse(readFileSync(resolve(appRoot, p), 'utf8'));
 
 export function requiredPublishedPackages(manifests, lock = null, {
   appRoot: root = appRoot,
