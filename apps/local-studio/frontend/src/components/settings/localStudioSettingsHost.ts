@@ -1,3 +1,4 @@
+import { loadProviderWidgetData } from "@/lib/widgets/provider-widget-data";
 import { listStudioThemes, themeManagement } from "@/lib/themes/inventory";
 import { studioAccountHost } from "@/lib/account/account-host";
 import { THEME_PROJECTS_CHANGED } from "@/lib/themes/projects";
@@ -178,6 +179,7 @@ function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget
     tags: [...(widget.tags ?? [])],
     availability: widget.availability,
     ownerPackage: widget.ownerPackage,
+    requiredProvider: 'requiredProvider' in widget ? widget.requiredProvider : undefined,
     installed: false,
     installable: false,
   }));
@@ -199,6 +201,7 @@ function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget
       tags: [...(definition?.tags ?? [])],
       availability: widget.available ? 'ready' as const : 'demo' as const,
       ownerPackage: widget.ownerPackage ?? definition?.ownerPackage,
+      requiredProvider: widget.requiredProvider ?? (definition && 'requiredProvider' in definition ? definition.requiredProvider : undefined),
       installed: widget.installed,
       installable: widget.available,
       pinned: widget.pinned,
@@ -388,7 +391,6 @@ async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
 
 function emptySnapshot(): SettingsSnapshot {
   return {
-    fixtureName: "local-studio-live",
     environmentLabel: "AgentSam",
     repositoryLabel: "Local runtime",
     health: "unknown",
@@ -629,7 +631,7 @@ export const localStudioSettingsHost: SettingsHost = {
   openPluginWorkspace(pluginKey) {
     if(typeof window === "undefined" || !/^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(pluginKey))return;
     window.dispatchEvent(new CustomEvent("agentsam:navigate",{
-      detail:{to:"/admin/settings/customize?plugin="+encodeURIComponent(pluginKey)},
+      detail:{to:"/admin/settings/customize?view=plugins&plugin="+encodeURIComponent(pluginKey)},
     }));
   },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
@@ -692,6 +694,9 @@ export const localStudioSettingsHost: SettingsHost = {
       window.dispatchEvent(new Event("agentsam:plugins-changed"));
     }
   },
+  async readWidgetData(id, configuration = {}) {
+    return loadProviderWidgetData(id, configuration);
+  },
   async readPluginWorkspace(pluginId) {
     if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
     const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace";
@@ -722,11 +727,11 @@ export const localStudioSettingsHost: SettingsHost = {
     if (!plugin) throw new Error("plugin_not_found");
     // Cloudflare owns a dedicated PKCE + resource-account connection; route it BEFORE
     // the generic OAuth adapters, which intentionally support only Google/GitHub.
+    const settingsReturnTo = options.returnTo || `/settings/plugins-settings/${encodeURIComponent(id)}`;
     if (plugin.providerKey === "cloudflare") {
-      const pluginsView = "/admin/settings/customize?view=plugins";
       await startLocalStudioProviderConnection("cloudflare", {
         returnTo: isPackagedDesktop()
-          ? buildConnectionReturnUrl("cloudflare", pluginsView) : pluginsView,
+          ? buildConnectionReturnUrl("cloudflare", settingsReturnTo) : settingsReturnTo,
         ...(options.fullCloudflareAccess === true ? { packs: ["all"] } : {}),
       });
       return;
@@ -734,8 +739,8 @@ export const localStudioSettingsHost: SettingsHost = {
     if (plugin.kind === "oauth") {
       // Provider-connection plugins use the host's existing connect routes.
       const returnTo = isPackagedDesktop()
-        ? buildConnectionReturnUrl(plugin.providerKey, "/admin/settings/customize?view=plugins")
-        : "/admin/settings/customize?view=plugins";
+        ? buildConnectionReturnUrl(plugin.providerKey, settingsReturnTo)
+        : settingsReturnTo;
       // Settings and Files invoke the same account-owned registered plugin
       // broker. Google/Drive/GitHub/Gmail callbacks still stay in their proven
       // provider services; the host does not copy OAuth logic into the UI.
@@ -745,7 +750,7 @@ export const localStudioSettingsHost: SettingsHost = {
       await openExternalUrl(response.authorize_url);
       return;
     }
-    if (plugin.installationKey === "catalog-v1") {
+    if (plugin.installationKey === "catalog-v1" || (plugin.kind === "mcp" && plugin.authType === "oauth")) {
       const response = await beginLocalStudioPublicPluginOAuth(plugin.id, options.allowWrites === true);
       if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
       await openExternalUrl(response.authorize_url);
@@ -779,7 +784,7 @@ export const localStudioSettingsHost: SettingsHost = {
       else await disconnectLocalStudioConnector(raw.connection_ref);
       return;
     }
-    if (plugin.installationKey === "catalog-v1") {
+    if (plugin.installationKey === "catalog-v1" || (plugin.kind === "mcp" && plugin.authType === "oauth")) {
       await disconnectLocalStudioPublicPlugin(plugin.id);
       return;
     }

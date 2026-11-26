@@ -34,4 +34,7 @@ test("Settings bundle has a build-only Brand dependency, not a new app runtime",
   assert.equal(manifest.devDependencies["@inneranimalmedia/agentsam-brand"], "2.6.18");
   assert.equal(manifest.dependencies?.["@inneranimalmedia/agentsam-brand"], undefined);
   assert.equal(manifest.peerDependencies?.["@inneranimalmedia/agentsam-brand"], undefined);
+  assert.equal(manifest.devDependencies["@inneranimalmedia/agentsam-workbench"], "2.6.18");
+  assert.equal(manifest.peerDependencies?.["@inneranimalmedia/agentsam-workbench"], undefined);
+  assert.equal(manifest.peerDependencies["@inneranimalmedia/agentsam-contracts"], "2.6.18");
 });
