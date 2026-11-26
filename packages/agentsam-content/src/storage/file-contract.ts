@@ -18,7 +18,7 @@ export type FileStorageState = 'connected' | 'requires-connection' | 'permission
   | 'unavailable' | 'error';
 
 export interface FileStorageTarget {
-  /** Installation/account-specific identity, never a hardcoded bucket or device path. */
+  /** Opaque host-resolved target identity. For R2 this maps to r2_buckets.id. */
   id: string;
   accountId: string;
   provider: ContentProviderName;
