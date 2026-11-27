@@ -40,6 +40,7 @@ export function Composer({
   workMode = false,
   showWorkShortcuts = false,
   artifactContext,
+  contextual = false,
 }: {
   targetId: string;
   targetKind: "chat" | "side";
@@ -52,6 +53,8 @@ export function Composer({
   /** Work landing view quick actions; the composer remains the canonical input. */
   showWorkShortcuts?: boolean;
   artifactContext?: { id: string; title: string };
+  /** Compact contextual composer; retains the canonical model and plugin picker. */
+  contextual?: boolean;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
   const { user } = useCurrentUserState();
@@ -254,7 +257,7 @@ export function Composer({
     finally { setSubmitting(false); }
   }
 
-  const attachmentPreview = pendingAttachments.length || pendingAnnotations.length ? (
+  const attachmentPreview = !contextual && (pendingAttachments.length || pendingAnnotations.length) ? (
     <div className="px-2 pt-2 pb-1" role="group" aria-label="Message context and attached files">
       <div className="flex max-h-[376px] flex-wrap items-start gap-3 overflow-y-auto pr-1">
         {pendingAnnotations.map(annotation => (
@@ -274,7 +277,14 @@ export function Composer({
         {pendingAttachments.map((attachment) => (
           <div key={attachment.id} title={attachment.name} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm">
             {attachment.previewUrl ? (
-              <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+              <ImageLightbox
+                src={attachment.previewUrl}
+                alt={attachment.name}
+                attachment={attachment.kind === "image" ? attachment : undefined}
+                chatId={targetKind === "chat" ? targetId : useWorkStore.getState().activeChatId}
+                assistant={<Composer targetId={targetId} targetKind={targetKind} placeholder="Ask about this file" contextLabel={"Image: " + attachment.name} contextual />}
+                triggerClassName="size-12 shrink-0 overflow-hidden rounded-md bg-muted"
+              >
                 <img src={attachment.previewUrl} alt="" className="size-full object-cover" />
               </ImageLightbox>
             ) : <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />}
@@ -334,7 +344,7 @@ export function Composer({
           event.target.value = "";
         }}
       />
-      {goal ? (
+      {!contextual && goal ? (
         <GoalStatusStrip
           className="mx-auto mb-2 w-full max-w-6xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
           icon={<Target className="size-3.5 text-accent" />}
@@ -372,7 +382,7 @@ export function Composer({
           }
         />
       ) : null}
-      {targetQueue.length ? (
+      {!contextual && targetQueue.length ? (
         <div className="mx-auto mb-2 flex w-full max-w-6xl flex-col gap-1.5" role="list" aria-label="Queued follow-ups">
           {targetQueue.map((item) => (
             <div key={item.id} role="listitem" data-composer-queued="" className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground opacity-70">
@@ -407,7 +417,7 @@ export function Composer({
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface', artifactContext && 'as-artifact-composer', (value.trim() || pendingAttachments.length || pendingAnnotations.length) && 'has-draft')}
+        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', contextual && 'as-image-context-composer', workMode && 'as-work-composer-surface', artifactContext && 'as-artifact-composer', (value.trim() || pendingAttachments.length || pendingAnnotations.length) && 'has-draft')}
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",
@@ -426,12 +436,12 @@ export function Composer({
           },
         }}
       />
-        {workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
+        {!contextual && workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
           <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
           <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
           <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
         </div>}
-        {targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
+        {!contextual && targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
       <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async files => { await onFiles(files); }} />
       <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} />

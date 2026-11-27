@@ -33,9 +33,9 @@ function openChatAttachment(ref: ChatAttachmentReference) {
   store.setSideOpen(true);
 }
 
-function ConversationAttachmentCard({ refInfo }: {refInfo: ChatAttachmentReference}) {
+function ConversationAttachmentCard({ refInfo, chatId }: {refInfo: ChatAttachmentReference; chatId?: string}) {
   if (refInfo.kind === 'image') return <div className="min-w-0 w-[130px] rounded-xl border border-border bg-card p-1.5 text-foreground shadow-sm">
-    <ConversationImage refInfo={refInfo} />
+    <ConversationImage refInfo={refInfo} chatId={chatId} />
     <button type="button" className="mt-1 flex w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-muted"
       title={'Open '+refInfo.name+' in Files'} onClick={()=>openChatAttachment(refInfo)}>
       <ImageIcon className="size-3.5 shrink-0"/><span className="min-w-0 flex-1 truncate">{refInfo.name}</span><ArrowUpRight className="size-3 shrink-0"/>
@@ -49,7 +49,7 @@ function ConversationAttachmentCard({ refInfo }: {refInfo: ChatAttachmentReferen
   </button>;
 }
 
-function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
+function ConversationImage({ refInfo, chatId }: { refInfo: ChatImageReference; chatId?: string }) {
   const { user } = useCurrentUserState();
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -71,7 +71,14 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
     };
   }, [user?.id, refInfo.source]);
   return url ? (
-    <ImageLightbox src={url} alt={refInfo.name} triggerClassName="block aspect-[4/3] w-full overflow-hidden rounded-xl border border-border/50 bg-black/10">
+    <ImageLightbox
+      src={url}
+      alt={refInfo.name}
+      attachment={refInfo}
+      chatId={chatId}
+      assistant={chatId ? <Composer targetId={chatId} targetKind="chat" placeholder="Ask about this file" contextLabel={"Image: " + refInfo.name} contextual /> : undefined}
+      triggerClassName="block aspect-[4/3] w-full overflow-hidden rounded-xl border border-border/50 bg-black/10"
+    >
       <img src={url} alt={refInfo.name} title={refInfo.name} className="size-full object-cover" />
     </ImageLightbox>
   ) : <span className="grid aspect-[4/3] place-items-center rounded-xl border border-border/50 bg-muted px-2 text-center text-xs opacity-70">{refInfo.name} · image stored locally</span>;
@@ -150,7 +157,7 @@ function MessageBubble({
           </span>)}
         </div>}
         {refs.length > 0 ? <div className="flex max-w-[min(100%,42rem)] flex-wrap justify-end gap-2" aria-label="Message attachments">
-          {refs.map(ref => <ConversationAttachmentCard key={ref.id} refInfo={ref} />)}
+          {refs.map(ref => <ConversationAttachmentCard key={ref.id} refInfo={ref} chatId={chatId} />)}
         </div> : null}
         {message.content ? <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
           <p className="whitespace-pre-wrap">{message.content}</p>

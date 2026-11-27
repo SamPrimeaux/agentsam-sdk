@@ -2,6 +2,12 @@
  * Deterministic connected-border flat-background removal, ported from
  * FuelNFreetime StudioWorkspace.tsx. This is not AI subject segmentation.
  * Pure RGBA core: usable in browser Canvas, Node/Sharp, or a Worker decoder.
+ *
+ * @param {Uint8Array | Uint8ClampedArray} pixels
+ * @param {number} width
+ * @param {number} height
+ * @param {{ tolerance?: number, maxPixels?: number }} [options]
+ * @returns {{ pixels: Uint8ClampedArray, removedPixels: number, method: 'flat_connected' }}
  */
 export function removeConnectedBackgroundPixels(pixels, width, height, { tolerance = 42, maxPixels = 10_000_000 } = {}) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width * height > maxPixels) {
