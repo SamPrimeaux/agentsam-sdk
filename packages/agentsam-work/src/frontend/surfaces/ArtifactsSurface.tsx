@@ -18,11 +18,11 @@ const sourceLabels: Record<WorkArtifact["source"], string> = {
 
 const createOptions = [
   { id: "docs", label: "Docs", description: "Documents and writing", icon: FileText, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/docs.avif" },
-  { id: "slides", label: "Slides", description: "Presentations and stories", icon: Presentation },
+  { id: "slides", label: "Slides", description: "Presentations and stories", icon: Presentation, cover: undefined },
   { id: "sheets", label: "Sheets", description: "Tables and calculations", icon: Table2, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/sheets.avif" },
-  { id: "design", label: "Design", description: "Layouts and visual systems", icon: Palette },
+  { id: "design", label: "Design", description: "Layouts and visual systems", icon: Palette, cover: undefined },
   { id: "data", label: "Data", description: "Dashboards and analysis", icon: BarChart3, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/data.avif" },
-  { id: "whiteboard", label: "Whiteboard", description: "Ideas and collaborative maps", icon: Shapes },
+  { id: "whiteboard", label: "Whiteboard", description: "Ideas and collaborative maps", icon: Shapes, cover: undefined },
 ] as const;
 
 function iconFor(kind: WorkArtifact["kind"]) {
