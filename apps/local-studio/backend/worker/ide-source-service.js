@@ -8,6 +8,8 @@
  */
 import { resolveConnectorAccess, connectorStatus } from './connector-oauth.js';
 import { handleGithubIdeSourceRequest, isGithubIdeSourceRequest } from './github-ide-service.js';
+import { CloudflareApiClient } from '@inneranimalmedia/agentsam-connector-cloudflare/api-client';
+import { listCloudflareR2Buckets, listCloudflareR2Objects } from '@inneranimalmedia/agentsam-connector-cloudflare/families/media';
 import {
   listCloudflareConnectionRecords,
   resolveCloudflareCredential,
@@ -82,8 +84,20 @@ async function cfAccess(env, owner, account, required, fetchImpl) {
     return {error:credential.error||'cloudflare_oauth_required',status:401};
   const granted = credential.grantedScopes || [];
   if (!required.some(scope=>granted.includes(scope))) return {error:'cloudflare_permission_missing',status:403};
-  return {token:credential.bearerToken};
+  return {token:credential.bearerToken,grantedScopes:granted};
 }
+function cloudflareR2Client(cf, account, fetchImpl) {
+  return new CloudflareApiClient({
+    apiToken: cf.token,
+    accountId: account,
+    authSource: 'oauth',
+    grantedScopes: cf.grantedScopes,
+    capabilityId: 'cloudflare.r2',
+    fetchImpl,
+    env: {},
+  });
+}
+
 async function providerJson(fetchImpl,url,token,extraHeaders={}) {
   const response=await fetchImpl(url,{headers:{authorization:'Bearer '+token,accept:'application/json',...extraHeaders}});
   const data=await response.json().catch(()=>({}));
@@ -100,9 +114,10 @@ async function providerJson(fetchImpl,url,token,extraHeaders={}) {
  * response must not turn nested keys into root files. R2 APIs sometimes return
  * flat keys even when delimiter prefixes are missing.
  */
-export function normalizeR2Listing(body, currentPrefix='') {
-  const objects=Array.isArray(body.result) ? body.result : [];
-  const prefixes=Array.isArray(body.result_info?.delimited) ? body.result_info.delimited : [];
+export function normalizeR2Listing(page, currentPrefix='') {
+  const objects=Array.isArray(page.objects) ? page.objects : Array.isArray(page.result) ? page.result : [];
+  const prefixes=Array.isArray(page.prefixes) ? page.prefixes
+    : Array.isArray(page.result_info?.delimited) ? page.result_info.delimited : [];
   const prefix=currentPrefix ? currentPrefix.replace(/\/+$/, '')+'/' : '';
   const folders=new Set();
   const files=[];
@@ -127,8 +142,8 @@ export function normalizeR2Listing(body, currentPrefix='') {
       ...[...folders].sort().map(p=>({id:p,name:p.replace(/\/$/,'').split('/').at(-1),kind:'folder',path:p})),
       ...files.sort((a,b)=>a.name.localeCompare(b.name)),
     ],
-    cursor:body.result_info?.cursor||null,
-    truncated:Boolean(body.result_info?.is_truncated),
+    cursor:page.cursor||page.result_info?.cursor||null,
+    truncated:Boolean(page.truncated ?? page.result_info?.is_truncated),
   };
 }
 
@@ -251,10 +266,14 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
         filesystemAvailable:false,note:'Container management permissions do not grant a file mount. Connect a scoped container filesystem runtime.'});
     }
     if(url.pathname.endsWith('/r2/buckets')) {
-      const response=await providerJson(f,base+'/r2/buckets?per_page=100',cf.token);
-      if(response.error)return error(response.error,response.status);
-      return json({ok:true,buckets:(response.data.result?.buckets||[]).map(b=>({name:b.name,jurisdiction:b.jurisdiction||'default'})),
-        cursor:response.data.result_info?.cursor||null});
+      try {
+        const page = await listCloudflareR2Buckets(cloudflareR2Client(cf, account, f), { perPage: 100 });
+        return json({ok:true,buckets:page.buckets.map(b=>({name:b.name,jurisdiction:b.jurisdiction||'default'})),
+          cursor:page.cursor||null,truncated:Boolean(page.truncated)});
+      } catch (providerError) {
+        const status = Number(providerError?.httpStatus || 0);
+        return error(providerError?.code || 'provider_request_failed', status >= 400 && status < 500 ? status : 502);
+      }
     }
     const bucket=sanitize(sp.get('bucket'));
     const jurisdiction=sanitize(sp.get('jurisdiction')||'default');
@@ -264,16 +283,23 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
     if(url.pathname.endsWith('/r2/objects')) {
       const prefix=sp.get('prefix')||'';
       if(prefix&&!sourcePathOk(prefix))return error('r2_prefix_invalid');
-      const query=new URL(bucketBase);
-      query.searchParams.set('delimiter','/');
-      query.searchParams.set('per_page','100');
-      if(prefix)query.searchParams.set('prefix',prefix);
-      if(sp.get('cursor'))query.searchParams.set('cursor',sp.get('cursor').slice(0,1024));
-      const response=await providerJson(f,query,cf.token,
-        jurisdiction==='default'?{}:{'cf-r2-jurisdiction':jurisdiction});
-      if(response.error)return error(response.error,response.status);
-      return json({ok:true,...normalizeR2Listing(response.data,prefix)});
+      const api = cloudflareR2Client(cf, account, f);
+      let page;
+      try {
+        page = await listCloudflareR2Objects(api, bucket, {
+          prefix,
+          delimiter: '/',
+          jurisdiction,
+          perPage: 100,
+          cursor: sp.get('cursor') ? sp.get('cursor').slice(0, 1024) : undefined,
+        });
+      } catch (providerError) {
+        const status = Number(providerError?.httpStatus || 0);
+        return error(providerError?.code || 'provider_request_failed', status >= 400 && status < 500 ? status : 502);
+      }
+      return json({ok:true,...normalizeR2Listing(page,prefix)});
     }
+
     const key=sp.get('key')||'';
     if(!key||!sourcePathOk(key))return error('r2_key_invalid');
     const response=await f(bucketBase+'/'+encodeObjectKey(key),{

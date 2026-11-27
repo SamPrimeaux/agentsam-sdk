@@ -18,6 +18,7 @@ export interface R2BucketLike {
     prefix?: string;
     cursor?: string;
     limit?: number;
+    delimiter?: string;
   }): Promise<{
     objects: Array<{
       key: string;
@@ -28,6 +29,7 @@ export interface R2BucketLike {
     }>;
     truncated: boolean;
     cursor?: string;
+    delimitedPrefixes?: string[];
   }>;
   head(key: string): Promise<{
     key: string;
@@ -68,6 +70,7 @@ export function r2(config: R2Config): ContentProvider {
         prefix: opts?.prefix ? withPrefix(opts.prefix) : prefix || undefined,
         cursor: opts?.cursor,
         limit: opts?.limit,
+        delimiter: opts?.delimiter,
       });
       return {
         objects: res.objects.map((o) => ({
@@ -78,7 +81,9 @@ export function r2(config: R2Config): ContentProvider {
           createdAt: typeof o.uploaded === "string" ? o.uploaded : o.uploaded.toISOString(),
           meta: o.customMetadata,
         })),
+        prefixes: Array.isArray(res.delimitedPrefixes) ? res.delimitedPrefixes : [],
         cursor: res.truncated ? res.cursor : undefined,
+        truncated: Boolean(res.truncated),
       };
     },
 

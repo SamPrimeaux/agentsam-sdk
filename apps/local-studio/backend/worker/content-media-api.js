@@ -305,6 +305,9 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
       cursor: url.searchParams.get("cursor") || undefined,
       perPage: pageSize,
       prefix: url.searchParams.get("r2_prefix") || undefined,
+      // This legacy media gallery is recursive by default; the shared object
+      // browser opts into delimiter='/' for folder navigation.
+      delimiter: url.searchParams.has("r2_delimiter") ? url.searchParams.get("r2_delimiter") : "",
     });
     let assets = objects.objects.map((obj) => normalizeImageAsset({
       id: `r2:${bucketName}:${obj.key}`,
@@ -329,6 +332,8 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
       source: "r2",
       r2Buckets: bucketsPage.buckets.map((b) => ({ name: b.name, bucket_name: b.name })),
       r2Bucket: bucketName,
+      r2Prefix: objects.prefix,
+      r2Prefixes: objects.prefixes,
     }), {
       pagination: {
         has_next: Boolean(objects.truncated),

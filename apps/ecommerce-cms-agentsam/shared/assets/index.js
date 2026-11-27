@@ -1,5 +1,5 @@
 export { ASSET_STORAGE, COMMERCE_R2, publicUrlsForKey, deliveryUrlForKey, mediaPathForKey } from "./config.js";
-export { listR2Objects, downloadObjectToFile, putObjectFromFile, deleteR2Object } from "./r2-client.js";
+export { listR2Objects, listR2ObjectsPage, downloadObjectToFile, putObjectFromFile, deleteR2Object } from "./r2-client.js";
 export { buildAssetTags, inferProductContextFromKey } from "./tags.js";
 export {
   classifyMediaAsset,

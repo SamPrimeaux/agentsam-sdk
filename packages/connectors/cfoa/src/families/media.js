@@ -122,7 +122,7 @@ export async function listCloudflareR2Buckets(client, opts = {}) {
  * List objects in one R2 bucket (cursor page). Does not recurse every bucket.
  * @param {import('../api-client.js').CloudflareApiClient} client
  * @param {string} bucketName
- * @param {{ cursor?: string, perPage?: number, prefix?: string }} [opts]
+ * @param {{ cursor?: string, perPage?: number, prefix?: string, delimiter?: string, jurisdiction?: string }} [opts]
  */
 export async function listCloudflareR2Objects(client, bucketName, opts = {}) {
   const name = String(bucketName || '').trim();
@@ -133,19 +133,34 @@ export async function listCloudflareR2Objects(client, bucketName, opts = {}) {
   }
   client.requireAccount('cloudflare.r2.objects.list');
   const params = new URLSearchParams();
-  const perPage = Math.min(Math.max(Number(opts.perPage) || 100, 1), 1000);
+  const perPage = Math.min(Math.max(Math.floor(Number(opts.perPage) || 100), 1), 1000);
+  const delimiter = opts.delimiter === '' ? '' : String(opts.delimiter ?? '/');
+  if (delimiter && delimiter !== '/') {
+    const err = new Error('r2_delimiter_invalid');
+    err.code = 'r2_delimiter_invalid';
+    throw err;
+  }
   params.set('per_page', String(perPage));
   if (opts.cursor) params.set('cursor', String(opts.cursor));
   if (opts.prefix) params.set('prefix', String(opts.prefix));
+  if (delimiter) params.set('delimiter', delimiter);
   const res = await client.request(
     'GET',
     client.accountPath(`/r2/buckets/${encodeURIComponent(name)}/objects?${params}`),
-    { operation: 'cloudflare.r2.objects.list', capabilityId: 'cloudflare.r2' },
+    {
+      operation: 'cloudflare.r2.objects.list',
+      capabilityId: 'cloudflare.r2',
+      headers: opts.jurisdiction && opts.jurisdiction !== 'default'
+        ? { 'cf-r2-jurisdiction': String(opts.jurisdiction) }
+        : undefined,
+    },
   );
   const objects = Array.isArray(res?.result) ? res.result : [];
   const info = res?.result_info || {};
   return {
     bucket: name,
+    prefix: String(opts.prefix || ''),
+    delimiter,
     objects: objects.map((row) => ({
       key: String(row.key || row.name || ''),
       size: Number(row.size || 0) || 0,
@@ -154,6 +169,11 @@ export async function listCloudflareR2Objects(client, bucketName, opts = {}) {
       uploaded: row.uploaded || row.last_modified || null,
       storage_class: row.storage_class || null,
     })).filter((o) => o.key),
+    prefixes: Array.isArray(info.delimited)
+      ? info.delimited.map((value) => String(value || '')).filter(Boolean)
+      : Array.isArray(info.delimitedPrefixes)
+        ? info.delimitedPrefixes.map((value) => String(value || '')).filter(Boolean)
+        : [],
     cursor: info.cursor || info.cursors?.after || null,
     truncated: Boolean(
       info.truncated
