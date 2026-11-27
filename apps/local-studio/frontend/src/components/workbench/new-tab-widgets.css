@@ -11,3 +11,6 @@
 
 /* Drag affordance works for mouse, touch and pen without taking over the cards. */
 .as-new-tab-drag-handle { touch-action: none; user-select:none; }
+
+.as-new-tab-widget--large {min-width:0;}
+.as-new-tab-widgets .agentsam-widget-tile > .agentsam-widget > .agentsam-widget__header:has(.agentsam-widget__title:empty){display:none;}

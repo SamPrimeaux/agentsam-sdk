@@ -23,12 +23,8 @@ import { SelectionFormattingToolbar } from './components/SelectionFormattingTool
 import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
 import './design-canvas.css';
-import slidesCover from '../public/workspace-covers/slides.svg?url';
-import brandGuidelinesCover from '../public/workspace-covers/brand-guidelines.svg?url';
-import designCover from '../public/workspace-covers/design.svg?url';
-import codeCover from '../public/workspace-covers/design-in-code.svg?url';
-import systemCover from '../public/workspace-covers/design-system.svg?url';
-import whiteboardCover from '../public/workspace-covers/whiteboard.svg?url';
+import { CREATIVE_WIDGET_COVERS } from '@inneranimalmedia/agentsam-workbench/widgets';
+const slidesCover=CREATIVE_WIDGET_COVERS.slides,brandGuidelinesCover=CREATIVE_WIDGET_COVERS['brand-guidelines'],designCover=CREATIVE_WIDGET_COVERS.design,codeCover=CREATIVE_WIDGET_COVERS['design-in-code'],systemCover=CREATIVE_WIDGET_COVERS['design-system'],whiteboardCover=CREATIVE_WIDGET_COVERS.whiteboard;
 
 type AskContext = DesignCanvasAgentContext;
 type EditorChromeProps = {
@@ -1075,7 +1071,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     const selected = initialActiveId ? loaded.find((item) => item.id === initialActiveId) : undefined;
     if (selected) return { artifacts: loaded, activeId: selected.id, route: 'editor' as const };
     if (initialWorkspace) {
-      const artifact = makeArtifact(initialWorkspace, initialName || (
+      const artifact = initialWorkspace === 'slides' && initialName === 'Brand Guidelines' ? makeArtifact('slides','Brand Guidelines',brandGuidelinesSlides()) : makeArtifact(initialWorkspace, initialName || (
         initialWorkspace === 'slides' ? 'Untitled presentation' :
         initialWorkspace === 'system' ? 'Untitled design system' :
         initialWorkspace === 'code' ? 'Create in Code' :

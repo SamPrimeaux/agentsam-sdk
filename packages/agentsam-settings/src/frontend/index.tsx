@@ -7,9 +7,8 @@ import { BrandPluginWorkspace } from "./brand-workspace";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
-import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 import { CatalogRegistryView, type CatalogRegistryKind } from "./catalog-registry";
-import { BuiltinWidget } from "@inneranimalmedia/agentsam-workbench/widgets";
+import { BuiltinWidget, creativeWidgetCover } from "@inneranimalmedia/agentsam-workbench/widgets";
 export { SettingsThemeGallery } from "./themes";
 import {
   AlertTriangle,
@@ -1447,9 +1446,8 @@ function WidgetCustomizeView({
   const [activeCategory, setActiveCategory] = useState("all");
   const [mutating, setMutating] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
-  const selected = widgets.find((widget) => widget.id === selectedId) ?? null;
+  const selected = widgets.find((widget) => widget.id === selectedId && widget.availability !== "demo") ?? null;
   const ready = widgets.filter((widget) => widget.availability !== "demo").length;
-  const previewCount = widgets.length - ready;
   const categories = [
     { id: "all", label: "All widgets" },
     { id: "utility", label: "Utilities" },
@@ -1461,6 +1459,7 @@ function WidgetCustomizeView({
     { id: "inbox", label: "Storefront" },
   ];
   const filtered = useMemo(() => widgets.filter((widget) => {
+    if (widget.availability === "demo") return false;
     if (activeCategory !== "all" && widget.category !== activeCategory) return false;
     const query = searchTerm.trim().toLowerCase();
     if (!query) return true;
@@ -1502,14 +1501,12 @@ function WidgetCustomizeView({
               </div>
               <h2 className="text-[24px] font-semibold tracking-[-0.045em] sm:text-[28px]">Your widget library</h2>
               <p className="mt-2 max-w-lg text-[12px] leading-[1.7] text-muted-foreground">
-                Explore the original widget concepts, inspect their designs and enable widgets as they become real, portable capabilities.
+                Choose working widgets for your workspace.
               </p>
             </div>
             <div className="flex items-center gap-2 self-start rounded-full border border-border/80 bg-background/65 px-3 py-2 text-[10px] text-muted-foreground">
               <span className="size-1.5 rounded-full bg-emerald-400" />
               <span><strong className="font-semibold text-foreground">{ready}</strong> ready</span>
-              <span className="mx-0.5 text-foreground/15">/</span>
-              <span><strong className="font-semibold text-foreground">{previewCount}</strong> concepts</span>
             </div>
           </div>
         </div>
@@ -1527,10 +1524,10 @@ function WidgetCustomizeView({
                 className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/70 focus:ring-2 focus:ring-primary/10"
               />
             </label>
-            <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} of {ready} widgets</span>
           </div>
           <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter widgets by category">
-            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.category === category.id)).map((category) => (
+            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.availability !== "demo" && widget.category === category.id)).map((category) => (
               <button
                 key={category.id}
                 type="button"
@@ -1550,7 +1547,7 @@ function WidgetCustomizeView({
         </div>
 
         {filtered.length ? (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filtered.map((widget) => {
               const demo = widget.availability === "demo";
               return (
@@ -1563,7 +1560,7 @@ function WidgetCustomizeView({
                 >
                   <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-primary/[0.075] px-5 py-4">
                     <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/[0.07] blur-2xl" />
-                    <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
+                    <div className="relative h-full grid place-items-center">{creativeWidgetCover(widget.id) ? <img src={creativeWidgetCover(widget.id)} alt="" className="h-full w-full object-cover rounded-xl"/> : <span className="text-sm font-medium text-foreground/80 text-center">{widget.name}</span>}</div>
                   </div>
                   <div className="space-y-2 p-4">
                     <div className="flex min-w-0 items-center justify-between gap-2">
@@ -1597,9 +1594,6 @@ function WidgetCustomizeView({
             <button type="button" className="mt-2 text-[11px] text-muted-foreground underline underline-offset-4" onClick={() => {setSearchTerm("");setActiveCategory("all");}}>Clear filters</button>
           </div>
         )}
-        <p className="text-[10px] leading-relaxed text-muted-foreground">
-          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
-        </p>
       </section>
 
       <SettingsSheet
@@ -1617,7 +1611,7 @@ function WidgetCustomizeView({
                   {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
                 </span>
               </div>
-              <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
+              <div className="mx-auto min-h-40 max-w-sm"><div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} configuration={selected.configuration} /></div></div>
             </div>
             <div className="rounded-lg border border-border/70 px-3">
               <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not installable" : selected.installed ? "Installed on your New Tab" : selected.installable ? "Ready to install" : "Installation service unavailable"} />

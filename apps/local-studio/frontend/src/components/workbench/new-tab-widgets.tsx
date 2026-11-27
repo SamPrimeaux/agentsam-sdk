@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BuiltinWidget, WidgetFrame } from '@inneranimalmedia/agentsam-workbench/widgets';
+import { BuiltinWidget, WidgetFrame, creativeWidgetEntry, type CreativeWidgetHost } from '@inneranimalmedia/agentsam-workbench/widgets';
 import '@inneranimalmedia/agentsam-workbench/widgets/widgets.css';
 import { ArrowDown, ArrowUp, GripVertical, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ import {
 } from '@/lib/widgets/account-widgets';
 import { cn } from '@/lib/utils';
 import './new-tab-widgets.css';
+import type {WorkArtifact} from '@inneranimalmedia/agentsam-work/contracts';
+import { useWorkStore } from '@/lib/work/store';
+import { startArtifactCreation } from '@/lib/work/artifact-launcher';
 
 /**
  * Widgets inside the existing New tab. The catalog and user state come from D1;
@@ -27,6 +30,8 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [arranging,setArranging] = useState(false);
+  const [artifactState,setArtifactState] = useState<{owner:string|undefined;status:'loading'|'ready'|'unavailable';items:WorkArtifact[]}>({owner:undefined,status:'loading',items:[]});
   const [detailsKey, setDetailsKey] = useState<string | null>(null);
   const accountGeneration = useRef(0);
   const draggingRef = useRef<string | null>(null);
@@ -85,7 +90,26 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
     .sort((a,b) => Number(b.pinned) - Number(a.pinned) || a.orderIndex - b.orderIndex || a.title.localeCompare(b.title)), [catalog]);
   const ready = catalog.filter(widget => widget.available && !widget.installed);
   const hidden = catalog.filter(widget => widget.installed && widget.hidden);
-  const concepts = catalog.filter(widget => !widget.available);
+  const showArtifacts = installed.some(widget=>widget.key==='artifact-preview');
+  useEffect(()=>{
+    if(!showArtifacts)return;
+    let cancelled=false;let sequence=0;
+    const refreshArtifacts=()=>{const generation=++sequence;setArtifactState({owner:user?.id,status:'loading',items:[]});
+      void import('@/components/work/LocalStudioWorkPage').then(({sharedLiveWorkHost})=>sharedLiveWorkHost().snapshot({surface:'artifacts'})).then(snapshot=>{
+        if(!cancelled&&generation===sequence)setArtifactState({owner:user?.id,status:'ready',items:snapshot.artifacts.filter(item=>!item.deleted).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,30)});
+      }).catch(()=>{if(!cancelled&&generation===sequence)setArtifactState({owner:user?.id,status:'unavailable',items:[]});});};
+    refreshArtifacts();window.addEventListener('agentsam:work-refresh',refreshArtifacts);
+    return()=>{cancelled=true;window.removeEventListener('agentsam:work-refresh',refreshArtifacts);};
+  },[showArtifacts,user?.id]);
+  const artifactItems=artifactState.owner===user?.id?artifactState.items:[];
+  const safeThumbnail=(value:unknown)=>{if(typeof value!=='string')return undefined;try{const u=new URL(value,window.location.href);return (u.protocol==='https:'||u.origin===window.location.origin&&u.protocol==='http:')&&!u.username&&!u.password?u.href:undefined;}catch{return undefined;}};
+  const creativeHost:CreativeWidgetHost={artifactStatus:artifactState.owner===user?.id?artifactState.status:'loading',artifacts:artifactItems.map(a=>({id:a.id,title:a.name,kind:a.kind,thumbnail:safeThumbnail(a.preview||(a.kind==='image'?a.open:undefined))})),openEntry(key){
+    const work=useWorkStore.getState();
+    if(key==='artifact-preview'){const id=work.openSideTab('artifacts',{title:'Artifacts',ephemeral:false});work.setActiveSideTab(id);work.setSideOpen(true);return;}
+    if(key==='design-entry'||key==='slides-entry'||key==='whiteboard-entry'){startArtifactCreation(key==='design-entry'?'design':key==='slides-entry'?'slides':'whiteboard');return;}
+    if(key==='code-entry'){work.setWorkSurface('code');return;}
+    if(key==='design-system-entry'||key==='brand-guidelines-entry'){const id=work.openSideTab('design',{title:key==='design-system-entry'?'Design System':'Brand Guidelines',ephemeral:false,url:key==='design-system-entry'?'/canvas?host=system':'/canvas?host=slides&template=brand-guidelines'});work.setActiveSideTab(id);work.setSideOpen(true);}
+  },openArtifact(id){const a=artifactItems.find(item=>item.id===id);if(!a)return;const work=useWorkStore.getState();if(a.artifactType==='design-canvas'&&a.providerId){work.openSideTab('design',{title:a.name,ephemeral:false,url:'/canvas?canvas='+encodeURIComponent(a.providerId)});return;}if(a.source==='local'){void import('@/components/work/LocalStudioWorkPage').then(({sharedLiveWorkHost})=>sharedLiveWorkHost().openArtifact?.(a));return;}const url=safeThumbnail(a.open||a.preview);if(url)work.openSideTab('browser',{title:a.name,url,history:[url],historyIndex:0,ephemeral:false});else work.openSideTab('artifacts',{title:'Artifacts',ephemeral:false});}};
   const reorder = (sourceKey: string, targetKey: string) => {
     if(sourceKey === targetKey || busyKey) return;
     const from = installed.findIndex(item => item.key === sourceKey);
@@ -118,9 +142,10 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
       <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your widgets</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Add, pin and arrange real widgets on this New tab.</p>
+
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant={arranging?'secondary':'ghost'} size="sm" aria-pressed={arranging} onClick={()=>{setArranging(v=>!v);setDetailsKey(null);}}>{arranging?'Done':'Arrange'}</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="outline" disabled={loading || (Boolean(error) && !catalog.length)}>
@@ -151,15 +176,6 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                 </>
               ) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>Concepts · previews only</DropdownMenuLabel>
-              {concepts.map(widget => (
-                <DropdownMenuItem key={widget.key} disabled>
-                  <LayoutGrid className="size-3.5" />
-                  <span className="min-w-0 flex-1 truncate">{widget.title}</span>
-                  <span className="text-[10px] text-muted-foreground">Concept</span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onOpenGallery}>
                 <SlidersHorizontal className="size-3.5" /> Explore widget gallery
               </DropdownMenuItem>
@@ -185,15 +201,19 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
               <>No widgets installed on this New tab yet. Use <strong className="font-medium text-foreground">Add widget</strong> to install Countdown, Clock, Calculator or Queue Depth.</>}
           </div>
         ) : (
-          <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] items-start gap-3">
+          <ul className="agentsam-widget-grid">
             {installed.map((widget, index) => (
-              <li key={widget.installationId ?? widget.key} data-widget-key={widget.key}
-                className={cn('min-w-0 rounded-xl transition-[outline-color,opacity]',
+              <li key={widget.installationId ?? widget.key} data-widget-key={widget.key} data-size={widget.sizeClass}
+                className={cn('agentsam-widget-tile min-w-0 rounded-xl transition-[outline-color,opacity]',
                   widget.sizeClass === 'large' && 'as-new-tab-widget--large',
                   draggingKey === widget.key && 'opacity-55',
                   dropTargetKey === widget.key && dropTargetKey !== draggingKey && 'outline outline-2 outline-primary')}>
-                <WidgetFrame title={widget.title} size={widget.sizeClass as 'small' | 'medium' | 'large'}
-                  actions={<div className="flex w-full flex-wrap items-center justify-between gap-2">
+                {creativeWidgetEntry(widget.key)&&widget.key!=='artifact-preview'||widget.key==='pull-request-summary'||widget.key==='release-readiness'?
+                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>:
+                  <WidgetFrame title={widget.key==='artifact-preview'?'':widget.title} size={widget.sizeClass as 'small' | 'medium' | 'large'}>
+                    <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>
+                  </WidgetFrame>}
+                {arranging?<div className="flex w-full flex-wrap items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1">
                       <IconAction type="button" variant="ghost" className="as-new-tab-drag-handle cursor-grab active:cursor-grabbing"
                         label={'Drag ' + widget.title + ' to arrange'}
@@ -248,9 +268,8 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                         <Trash2 className="size-4"/>
                       </IconAction>
                     </div>
-                  </div>}>
-                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} />
-                  {detailsKey === widget.key ? (
+                  </div>:null}
+                  {arranging && detailsKey === widget.key ? (
                     <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-3 text-xs">
                       <label className="flex items-center justify-between gap-3">
                         <span>Size</span>
@@ -261,6 +280,7 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                           {widget.sizes.map(size => <option key={size} value={size}>{size}</option>)}
                         </select>
                       </label>
+                      {widget.key === 'artifact-preview' && <label className="flex items-center justify-between gap-3"><span>Preview</span><select aria-label="Artifact preview mode" value={String(widget.configuration.previewMode??'preview')} onChange={event=>void act(widget.key,()=>updateAccountWidget(widget.key,{configuration:{previewMode:event.target.value}}))}><option value="preview">Preview</option><option value="list">List</option><option value="cover">Cover only</option></select></label>}
                       {widget.key === 'countdown' && <label className="flex items-center justify-between gap-3">
                         <span>Duration</span>
                         <select className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
@@ -281,13 +301,12 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                       </label>}
                     </div>
                   ) : null}
-                </WidgetFrame>
               </li>
             ))}
           </ul>
         )}
       {!loading && (!error || catalog.length > 0) && <p className="mt-2 text-[11px] text-muted-foreground">
-        {installed.length} visible · {hidden.length} hidden · {ready.length} available · {concepts.length} concepts. Widget placement and settings are saved to your account.
+        {arranging ? 'Drag to arrange. Changes are saved to your account.' : null}
       </p>}
     </section>
   );

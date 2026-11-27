@@ -68,6 +68,13 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench',
     data: {source: 'widget.configuration.snapshot', refresh: 'manual'},
   } satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'artifact-preview', kind: 'artifact-preview', componentKey: 'ArtifactPreviewWidget', title: 'Artifacts', description: 'Browse and preview saved artifacts.', icon: 'folder', category: 'content', tags: ['creative','artifacts'], sizes: ["medium","large"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'design-entry', kind: 'design-entry', componentKey: 'CreativeEntryWidget', title: 'Design', description: 'Create a design in the existing Creative Workspace.', icon: 'palette', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'design-system-entry', kind: 'design-system-entry', componentKey: 'CreativeEntryWidget', title: 'Design Systems', description: 'Create an editable design system.', icon: 'swatch-book', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'slides-entry', kind: 'slides-entry', componentKey: 'CreativeEntryWidget', title: 'Slides', description: 'Create an editable presentation.', icon: 'presentation', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'whiteboard-entry', kind: 'whiteboard-entry', componentKey: 'CreativeEntryWidget', title: 'Whiteboard', description: 'Open an editable whiteboard.', icon: 'sticky-note', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'brand-guidelines-entry', kind: 'brand-guidelines-entry', componentKey: 'CreativeEntryWidget', title: 'Brand Guidelines', description: 'Start with the existing Brand Guidelines presentation template.', icon: 'file-text', category: 'navigation', tags: ['creative','artifacts'], sizes: ["medium","large"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id: 'code-entry', kind: 'code-entry', componentKey: 'CreativeEntryWidget', title: 'Create in Code', description: 'Open the existing Code work surface.', icon: 'code', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
 ] satisfies readonly AgentSamWidgetDefinition[]);
 
 /** Curated metadata from the preserved 22-widget donor gallery.
@@ -204,18 +211,6 @@ export const WIDGET_GALLERY_DEFINITIONS = Object.freeze([
     icon: 'radio',
     category: 'content',
     tags: ['content', 'media', 'radar', 'ambience'],
-    sizes: ['medium', 'large'] as const,
-    availability: 'demo',
-    ownerPackage: '@inneranimalmedia/agentsam-content',
-  } satisfies AgentSamWidgetDefinition),
-  Object.freeze({
-    id: 'artifact-preview',
-    kind: 'artifact-preview',
-    title: 'Artifact Preview',
-    description: 'Code and schema inspector for active widget contracts and dashboard configs',
-    icon: 'file-code',
-    category: 'content',
-    tags: ['content', 'code', 'contracts', 'artifacts'],
     sizes: ['medium', 'large'] as const,
     availability: 'demo',
     ownerPackage: '@inneranimalmedia/agentsam-content',

@@ -56,6 +56,10 @@ function validatedConfiguration(key, value) {
     catch { throw Error('widget_configuration_invalid'); }
     return {timeZone:value.timeZone};
   }
+  if (key === 'artifact-preview') {
+    if (keys.length !== 1 || !['cover','preview','list'].includes(value.previewMode)) throw Error('widget_configuration_invalid');
+    return {previewMode:value.previewMode};
+  }
   if (key === 'pull-request-summary' || key === 'release-readiness') {
     if (!validReleaseWidgetConfiguration(key,value)) throw Error('widget_configuration_invalid');
     return value;

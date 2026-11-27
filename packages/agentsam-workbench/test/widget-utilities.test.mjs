@@ -41,10 +41,10 @@ test('calculator supports safe arithmetic and rejects code, invalid expressions 
 });
 
 test('both graduated donor utilities are built-in and package render real, safe controls', () => {
-  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(item=>item.id),['queues','countdown','clock','calculator','pull-request-summary','release-readiness']);
-  assert.equal(WIDGET_GALLERY_DEFINITIONS.length,24);
+  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(item=>item.id),['queues','countdown','clock','calculator','pull-request-summary','release-readiness','artifact-preview','design-entry','design-system-entry','slides-entry','whiteboard-entry','brand-guidelines-entry','code-entry']);
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.length,30);
   assert.deepEqual(WIDGET_GALLERY_DEFINITIONS.filter(item=>item.availability==='ready').map(item=>item.id),
-    ['queues','countdown','clock','calculator','pull-request-summary','release-readiness']);
+    ['queues','countdown','clock','calculator','pull-request-summary','release-readiness','artifact-preview','design-entry','design-system-entry','slides-entry','whiteboard-entry','brand-guidelines-entry','code-entry']);
   const clock = renderToStaticMarkup(createElement(ClockWidget));
   assert.match(clock,/Clock timezone/);
   assert.match(clock,/Reading device clock/);

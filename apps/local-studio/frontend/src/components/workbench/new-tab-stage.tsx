@@ -244,6 +244,8 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
           </div>
         </header>
 
+        <NewTabWidgets onOpenGallery={() => openSettings("customize", "widgets")} />
+
         <section aria-label="Tools">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Tools</h3>
           {!registry.loaded ? (
@@ -329,8 +331,6 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
             </DropdownMenu>
           </div>
         </section>
-
-        <NewTabWidgets onOpenGallery={() => openSettings("customize", "widgets")} />
 
         <section aria-label="Suggested">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Suggested</h3>
