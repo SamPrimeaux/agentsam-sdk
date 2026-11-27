@@ -1,14 +1,14 @@
 import { createRoot } from 'react-dom/client';
 import { AdminAppsDialog, type AdminAppsDirectoryProps } from './AdminAppsDialog.js';
 import { createElement, useEffect } from 'react';
-import { Home, ShoppingBag, Package, Users, TrendingUp, Tag, FileText, ChartNoAxesCombined, Store, Mail, Folder, Library, Ticket, Bot, Box, Clapperboard, Settings, Database, Terminal, Globe, Puzzle, Search, Palette, Link, LifeBuoy, LogOut, LayoutDashboard, Bell, Code, Image, CreditCard } from 'lucide-react';
+import { Home, ShoppingBag, Package, Users, TrendingUp, Tag, FileText, ChartNoAxesCombined, Store, Mail, Folder, Library, Ticket, Bot, Box, Clapperboard, Settings, Database, Terminal, Globe, Puzzle, Search, Palette, Link, LifeBuoy, LogOut, LayoutDashboard, Bell, Code, Image, CreditCard, User, Check } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { createNavState } from './state.js';
 export { createNavState } from './state.js';
 
 /** Hosts pass semantic icon names, never serialized SVG/HTML. */
 export function navIcon(name: string) {
-  const icons: Record<string, typeof Home> = { home: Home, orders: ShoppingBag, products: Package, customers: Users, growth: TrendingUp, discounts: Tag, content: FileText, analytics: ChartNoAxesCombined, store: Store, 'online-store': Store, audience: Mail, mail: Mail, projects: Folder, library: Library, tickets: Ticket, agentsam: Bot, chat: Bot, cad: Box, 'cad-creator': Box, moviemode: Clapperboard, settings: Settings, database: Database, terminal: Terminal, cli: Terminal, browser: Globe, browse: Globe, apps: Puzzle, integrations: Link, search: Search, appearance: Palette, help: LifeBuoy, logout: LogOut, dashboard: LayoutDashboard, notifications: Bell, files: Code, media: Image, billing: CreditCard };
+  const icons: Record<string, typeof Home> = { home: Home, orders: ShoppingBag, products: Package, customers: Users, growth: TrendingUp, discounts: Tag, content: FileText, analytics: ChartNoAxesCombined, store: Store, 'online-store': Store, audience: Mail, mail: Mail, projects: Folder, library: Library, tickets: Ticket, agentsam: Bot, chat: Bot, cad: Box, 'cad-creator': Box, moviemode: Clapperboard, settings: Settings, database: Database, terminal: Terminal, cli: Terminal, browser: Globe, browse: Globe, apps: Puzzle, integrations: Link, search: Search, appearance: Palette, help: LifeBuoy, logout: LogOut, dashboard: LayoutDashboard, notifications: Bell, files: Code, media: Image, billing: CreditCard, user: User, check: Check };
   return createElement(icons[name] ?? Puzzle, { 'aria-hidden': true });
 }
 import { createPortal } from 'react-dom';
