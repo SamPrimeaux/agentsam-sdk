@@ -152,7 +152,11 @@
     "./site-scrape/storage": "./packages/agentsam-site-scrape/runtime/node-storage.mjs",
     "./site-scrape/client": "./packages/agentsam-site-scrape/runtime/client.mjs",
     "./registry/universal-reconcile": "./src/registry/universal-reconcile.js",
-    "./registry/universal-catalog": "./protocol/registry/universal-catalog.v1.json"
+    "./registry/universal-catalog": "./protocol/registry/universal-catalog.v1.json",
+    "./sam/background": {
+      "types": "./src/sam/operation-packs/generated-v2/background.d.ts",
+      "import": "./src/sam/operation-packs/generated-v2/background.js"
+    }
   },
   "bin": {
     "agentsam": "bin/agentsam",

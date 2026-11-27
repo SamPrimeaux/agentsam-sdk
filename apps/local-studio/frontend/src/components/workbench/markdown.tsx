@@ -10,6 +10,8 @@ import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { useWorkStore } from "@/lib/work/store";
 import { Button } from "@/components/ui/button";
 import { InlineSvgPreview } from "@inneranimalmedia/agentsam-workbench/agent";
+import { ImageLightbox } from "@/components/workbench/image-lightbox";
+import { Composer } from "@/components/workbench/composer";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -173,6 +175,21 @@ export function MessageMarkdown({
                 {children}
                 <Globe className="ml-1 inline size-3 opacity-70" />
               </button>
+            );
+          },
+          img: ({ src, alt }) => {
+            if (!src) return null;
+            const label = alt || "Image";
+            return (
+              <ImageLightbox
+                src={src}
+                alt={label}
+                chatId={chatId}
+                assistant={chatId ? <Composer targetId={chatId} targetKind="chat" placeholder="Ask about this file" contextLabel={"Image: " + label} contextual /> : undefined}
+                triggerClassName="as-message-image-trigger"
+              >
+                <img src={src} alt={label} loading="lazy" className="max-h-[440px] max-w-full rounded-xl object-contain" />
+              </ImageLightbox>
             );
           },
           pre: ({ children }) => <div className="not-prose">{children as ReactNode}</div>,

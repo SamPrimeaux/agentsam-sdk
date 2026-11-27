@@ -672,3 +672,108 @@ test('R2 upload creates collision-resistant object keys without changing existin
   assert.ok(keys.every((path) => path.endsWith('/design.png')));
   assert.ok(data.assets.every((asset) => asset.r2_bucket === 'my-media' && asset.source === 'r2'));
 });
+
+
+function testPng() {
+  const png = new Uint8Array(33);
+  png.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  const view = new DataView(png.buffer);
+  view.setUint32(16, 1);
+  view.setUint32(20, 1);
+  png[25] = 6;
+  return png;
+}
+
+test('image editor exposes canonical image-edit models only when the signed-in account has an OpenAI credential', async () => {
+  const calls = [];
+  const env = {
+    DB: { prepare(sql) {
+      calls.push(sql);
+      return { async all() { return { results: [{ id: 'gpt-image-1', name: 'GPT Image 1' }] }; } };
+    } },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/image-models'), env, principal, new URL(origin + '/api/admin/media/image-models'), null,
+    { resolveCredential: async (providerId) => providerId === 'openai' ? 'account-vault-key' : null },
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.configured, true);
+  assert.deepEqual(data.models, [{ id: 'gpt-image-1', name: 'GPT Image 1' }]);
+  assert.match(calls[0], /api_platform = 'openai_images'/);
+});
+
+test('image editor does not treat a platform environment key as the signed-in account connection', async () => {
+  const env = {
+    OPENAI_API_KEY: 'platform-env-key-must-not-be-used',
+    DB: { prepare() { return { async all() { return { results: [{ id: 'gpt-image-1', name: 'GPT Image 1' }] }; } }; } },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/image-models'), env, principal, new URL(origin + '/api/admin/media/image-models'), null,
+    { resolveCredential: async () => null },
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.configured, false);
+  assert.deepEqual(data.models, []);
+});
+
+test('image editor uses the signed-in account vault key for masked edits', async () => {
+  const png = testPng();
+  const encoded = Buffer.from(png).toString('base64');
+  let providerRequest;
+  const env = {
+    DB: { prepare() { return { async all() { return { results: [{ id: 'gpt-image-1' }] }; } }; } },
+  };
+  const form = new FormData();
+  form.append('image', new File([png], 'source.png', { type: 'image/png' }));
+  form.append('mask', new File([png], 'mask.png', { type: 'image/png' }));
+  form.append('prompt', 'Remove the selected object and reconstruct the background.');
+  form.append('model_id', 'gpt-image-1');
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/image/edit', { method: 'POST', body: form }), env, principal,
+    new URL(origin + '/api/admin/media/image/edit'), null,
+    {
+      resolveCredential: async (providerId) => providerId === 'openai' ? 'account-vault-key' : null,
+      fetchImpl: async (url, options) => {
+        providerRequest = { url: String(url), authorization: options.headers.authorization, body: options.body };
+        return jsonResponse({ data: [{ b64_json: encoded }] });
+      },
+    },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/png');
+  assert.equal(providerRequest.url, 'https://api.openai.com/v1/images/edits');
+  assert.equal(providerRequest.authorization, 'Bearer account-vault-key');
+  assert.ok(providerRequest.body instanceof FormData);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), png);
+});
+
+test('image editor refuses masked edits when the signed-in account has no OpenAI image credential', async () => {
+  const form = new FormData();
+  form.append('image', new File([testPng()], 'source.png', { type: 'image/png' }));
+  form.append('mask', new File([testPng()], 'mask.png', { type: 'image/png' }));
+  form.append('prompt', 'Remove the selected object.');
+  form.append('model_id', 'gpt-image-1');
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/image/edit', { method: 'POST', body: form }),
+    { OPENAI_API_KEY: 'platform-env-key', DB: { prepare() { return { async all() { return { results: [{ id: 'gpt-image-1' }] }; } }; } } },
+    principal, new URL(origin + '/api/admin/media/image/edit'), null,
+    { resolveCredential: async () => null },
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 503);
+  assert.equal(data.error, 'image_edit_unavailable');
+});
+
+test('automatic background removal refuses to call Cloudflare Images as an image transformation provider', async () => {
+  const env = { IMAGES: { input() { throw new Error('must not be called'); } } };
+  const form = new FormData();
+  form.append('file', new File([testPng()], 'source.png', { type: 'image/png' }));
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/image/background-remove', { method: 'POST', body: form }), env, principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 501);
+  assert.equal(data.error, 'subject_segmentation_provider_required');
+});

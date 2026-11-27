@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { removeConnectedBackgroundPixels } from '../background.js';
+import { removeConnectedBackgroundPixels as publicRemoveConnectedBackgroundPixels } from '@inneranimalmedia/agentsam-sdk/sam/background';
 
 test('flat-connected removes edge background while preserving non-background island and original', () => {
   const width=7,height=7,pixels=new Uint8ClampedArray(width*height*4);
@@ -16,4 +17,8 @@ test('flat-connected removes edge background while preserving non-background isl
 test('dimensions and RGBA buffers are validated',()=>{
   assert.throws(()=>removeConnectedBackgroundPixels(new Uint8Array(4),2,2),/expected_rgba/);
   assert.throws(()=>removeConnectedBackgroundPixels(new Uint8Array(4),100_000,100_000),/oversized/);
+});
+
+test('browser-safe package subpath exposes the same pure helper', () => {
+  assert.equal(publicRemoveConnectedBackgroundPixels, removeConnectedBackgroundPixels);
 });

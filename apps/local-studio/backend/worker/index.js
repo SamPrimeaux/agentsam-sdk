@@ -1266,7 +1266,16 @@ export default {
             resolvePlatformMediaReference: (asset) => resolveCloudflareProductMediaReference(env, principal.id, asset),
           }
         : commerceEnv;
-      const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
+      let imageProviderCredentials;
+      const resolveImageProviderCredential = async (providerId) => {
+        imageProviderCredentials ||= loadVaultCredentialsForAccount(env, principal.id);
+        const credentials = await imageProviderCredentials;
+        return credentials.find((credential) => credential.provider === String(providerId || "").trim().toLowerCase())?.value || null;
+      };
+      const providerMediaResponse = await handleStudioContentMediaApi(
+        request, env, studioUser, url, context,
+        { resolveCredential: resolveImageProviderCredential },
+      );
       if (providerMediaResponse) return providerMediaResponse;
       if (url.pathname === "/api/admin/agentsam/chat" && request.method === "POST") {
         if (request.headers.get("origin") && request.headers.get("origin") !== url.origin) {

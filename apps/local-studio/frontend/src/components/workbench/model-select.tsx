@@ -140,7 +140,7 @@ export function ModelSelect({ compact = false, workStyle = false }: { compact?: 
           aria-label={`Select model: ${triggerLabel}`}
           title={`Model: ${triggerLabel}. Click to choose.`}
         >
-          {compact ? <Cpu className="size-4" aria-hidden="true" /> : <><span className="max-w-40 truncate">{triggerLabel}</span><ChevronDown className="size-3 opacity-70" /></>}
+          {compact ? <Cpu className="size-4" aria-hidden="true" /> : <><Cpu className="size-3.5 shrink-0 opacity-75" aria-hidden="true"/><span className="max-w-40 truncate">{triggerLabel}</span><ChevronDown className="size-3 opacity-70" /></>}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={workStyle ? 'end' : 'start'} className={cn("max-h-[420px] w-80 overflow-y-auto p-1.5", workStyle && "w-72 rounded-xl border-border/70 bg-popover/95 shadow-xl backdrop-blur-xl")}>

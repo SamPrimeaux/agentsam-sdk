@@ -1534,13 +1534,138 @@ export async function resolveCloudflareProductMediaReference(env, ownerId, input
   return { ok: true, asset: row };
 }
 
-export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url), ctx = null) {
+const STUDIO_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const STUDIO_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const STUDIO_IMAGE_MAX_OUTPUT_BYTES = 24 * 1024 * 1024;
+const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+
+function inspectPng(bytes) {
+  if (!bytes || bytes.byteLength < 33) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (!PNG_SIGNATURE.every((value, index) => bytes[index] === value)) return null;
+  const width = view.getUint32(16);
+  const height = view.getUint32(20);
+  const colorType = bytes[25];
+  if (!width || !height || width > 8192 || height > 8192 || width * height > 20_000_000) return null;
+  return { width, height, colorType };
+}
+
+async function studioImageModels(env, resolveCredential) {
+  if (!env.DB?.prepare || typeof resolveCredential !== "function") {
+    return json({ ok: true, configured: false, models: [] });
+  }
+  let apiKey = null;
+  try { apiKey = await resolveCredential("openai"); } catch { apiKey = null; }
+  if (!apiKey) return json({ ok: true, configured: false, models: [] });
+  const { results } = await env.DB.prepare(
+    "SELECT c.model_key AS id, c.display_name AS name " +
+    "FROM agentsam_model_catalog c " +
+    "WHERE c.provider = 'openai' AND c.api_platform = 'openai_images' " +
+    "AND c.is_active = 1 AND c.show_in_picker = 1 " +
+    "ORDER BY c.display_name",
+  ).all();
+  return json({ ok: true, configured: true, models: results || [] });
+}
+
+async function editStudioImageWithMask(request, env, principal, { resolveCredential, fetchImpl = fetch } = {}) {
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  let apiKey = null;
+  try { apiKey = typeof resolveCredential === "function" ? await resolveCredential("openai") : null; } catch { apiKey = null; }
+  if (!apiKey || !env.DB?.prepare) {
+    return json({ ok: false, error: "image_edit_unavailable", message: "Connect an OpenAI image provider in your account settings to use AI erase." }, 503);
+  }
+
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  if (!env.DB?.prepare) {
+    return json({ ok: false, error: "image_edit_unavailable", message: "Image editing is not configured for this Studio installation." }, 503);
+  }
+  let form;
+  try { form = await request.formData(); }
+  catch { return json({ ok: false, error: "image_and_mask_required" }, 400); }
+  const image = form.get("image");
+  const mask = form.get("mask");
+  const prompt = String(form.get("prompt") || "").trim();
+  const modelId = String(form.get("model_id") || "").trim();
+  if (!isFile(image) || !isFile(mask)) return json({ ok: false, error: "image_and_mask_required" }, 400);
+  const imageMime = String(image.type || "").toLowerCase().split(";")[0];
+  if (!STUDIO_IMAGE_MIME_TYPES.has(imageMime) || mask.type !== "image/png") {
+    return json({ ok: false, error: "unsupported_image_or_mask_type" }, 415);
+  }
+  if (!image.size || image.size > STUDIO_IMAGE_MAX_BYTES || !mask.size || mask.size > STUDIO_IMAGE_MAX_BYTES) {
+    return json({ ok: false, error: "image_input_too_large" }, 413);
+  }
+  if (!prompt || prompt.length > 1000) return json({ ok: false, error: "image_edit_prompt_required" }, 400);
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,120}$/.test(modelId)) return json({ ok: false, error: "image_edit_model_required" }, 400);
+  const { results } = await env.DB.prepare(
+    `SELECT c.model_key AS id FROM agentsam_model_catalog c
+     WHERE c.provider = 'openai' AND c.api_platform = 'openai_images'
+       AND c.is_active = 1 AND c.show_in_picker = 1`,
+  ).all();
+  if (!(results || []).some((item) => item.id === modelId)) {
+    return json({ ok: false, error: "image_edit_model_not_registered" }, 400);
+  }
+  const upstream = new FormData();
+  upstream.append("model", modelId);
+  upstream.append("prompt", prompt);
+  upstream.append("image", new Blob([await image.arrayBuffer()], { type: imageMime }), image.name || "image.png");
+  upstream.append("mask", new Blob([await mask.arrayBuffer()], { type: "image/png" }), mask.name || "mask.png");
+  let response;
+  try {
+    response = await fetchImpl("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { authorization: "Bearer " + apiKey },
+      body: upstream,
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch (error) {
+    return json({ ok: false, error: "image_edit_provider_unavailable", message: String(error?.message || "Image editing provider unavailable.").slice(0, 200) }, 502);
+  }
+  if (!response.ok) return json({ ok: false, error: "image_edit_provider_failed", provider_status: response.status }, 502);
+  const payload = await response.json().catch(() => null);
+  const encoded = String(payload?.data?.[0]?.b64_json || "");
+  if (!encoded || encoded.length > STUDIO_IMAGE_MAX_OUTPUT_BYTES * 2 || !/^[a-z0-9+/]+={0,2}$/i.test(encoded)) {
+    return json({ ok: false, error: "image_edit_provider_payload_invalid" }, 502);
+  }
+  let output;
+  try {
+    const decoded = atob(encoded);
+    output = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+  } catch {
+    return json({ ok: false, error: "image_edit_provider_payload_invalid" }, 502);
+  }
+  if (!inspectPng(output) || output.byteLength > STUDIO_IMAGE_MAX_OUTPUT_BYTES) {
+    return json({ ok: false, error: "image_edit_result_unusable" }, 502);
+  }
+  return new Response(output, {
+    status: 200,
+    headers: {
+      "content-type": "image/png",
+      "cache-control": "no-store",
+      "x-agentsam-image-operation": "masked-edit",
+      "x-agentsam-original-preserved": "true",
+    },
+  });
+}
+
+export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url), ctx = null, services = {}) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (!path.startsWith("/api/admin/media")) return null;
   if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
 
   try {
-    if (path === "/api/admin/media/image-models") return null;
+    if (path === "/api/admin/media/image-models" && request.method === "GET") {
+      return await studioImageModels(env, services.resolveCredential);
+    }
+    if (path === "/api/admin/media/image/background-remove" && request.method === "POST") {
+      return json({
+        ok: false,
+        error: "subject_segmentation_provider_required",
+        message: "Connect a real subject-segmentation provider before using automatic background removal. Cloudflare Images is not an image transformation provider.",
+      }, 501);
+    }
+    if (path === "/api/admin/media/image/edit" && request.method === "POST") {
+      return await editStudioImageWithMask(request, env, principal, services);
+    }
 
     if (path === "/api/admin/media" && request.method === "GET") {
       return await listMedia(env, request, url, principal);
