@@ -56,6 +56,13 @@ function validatedConfiguration(key, value) {
     catch { throw Error('widget_configuration_invalid'); }
     return {timeZone:value.timeZone};
   }
+  if (key === 'media') {
+    if(keys.some(k=>!['mode','url','title'].includes(k))||!['photo','video','ambient','audio'].includes(value.mode)||typeof value.title!=='string'||value.title.length>240||typeof value.url!=='string'||value.url.length>1600||/[\x00-\x20\\"'<>]/.test(value.url))throw Error('widget_configuration_invalid');
+    let valid=/^\/(?!\/)(?:media|api\/media|assets|brand)\//.test(value.url)&&!value.url.includes('..');
+    if(!valid){try{const u=new URL(value.url);valid=u.protocol==='https:'&&!u.username&&!u.password;}catch{}}
+    if(!valid)throw Error('widget_configuration_invalid');
+    return {mode:value.mode,url:value.url,title:value.title};
+  }
   if (key === 'artifact-preview') {
     if (keys.length !== 1 || !['cover','preview','list'].includes(value.previewMode)) throw Error('widget_configuration_invalid');
     return {previewMode:value.previewMode};

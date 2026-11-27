@@ -13,3 +13,5 @@ export * from './ReleaseWidgets';
 export * from './release-snapshots';
 export * from './creative-covers';
 export * from './CreativeWidgets';
+
+export * from './MediaWidget';

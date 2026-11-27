@@ -1,3 +1,4 @@
+import { MediaWidget } from './MediaWidget';
 import { CountdownWidget } from './CountdownWidget';
 import { QueueDepthWidget } from './QueueDepthWidget';
 import { ClockWidget } from './ClockWidget';
@@ -21,6 +22,7 @@ export function BuiltinWidget({
   creativeHost,
   configuration = {},
 }: BuiltinWidgetProps) {
+  if (widgetId === 'media') return <MediaWidget configuration={configuration} />;
   if (widgetId === 'artifact-preview') return <ArtifactPreviewWidget host={creativeHost} configuration={configuration} />;
   if (creativeWidgetEntry(widgetId)) return <CreativeEntryWidget widgetId={widgetId} host={creativeHost} />;
   if (widgetId === 'pull-request-summary') return <PullRequestSummaryWidget configuration={configuration} />;

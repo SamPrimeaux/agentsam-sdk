@@ -75,6 +75,7 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
   Object.freeze({id: 'whiteboard-entry', kind: 'whiteboard-entry', componentKey: 'CreativeEntryWidget', title: 'Whiteboard', description: 'Open an editable whiteboard.', icon: 'sticky-note', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
   Object.freeze({id: 'brand-guidelines-entry', kind: 'brand-guidelines-entry', componentKey: 'CreativeEntryWidget', title: 'Brand Guidelines', description: 'Start with the existing Brand Guidelines presentation template.', icon: 'file-text', category: 'navigation', tags: ['creative','artifacts'], sizes: ["medium","large"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
   Object.freeze({id: 'code-entry', kind: 'code-entry', componentKey: 'CreativeEntryWidget', title: 'Create in Code', description: 'Open the existing Code work surface.', icon: 'code', category: 'navigation', tags: ['creative','artifacts'], sizes: ["small","medium"] as const, availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
+  Object.freeze({id:'media',kind:'media',componentKey:'MediaWidget',title:'Media',description:'Photos, playable video, ambient loops and audio from selected media.',icon:'image',category:'content',tags:['media','photos','audio','video'],sizes:['small','medium','large'] as const,availability:'ready',ownerPackage:'@inneranimalmedia/agentsam-workbench'} satisfies AgentSamWidgetDefinition),
 ] satisfies readonly AgentSamWidgetDefinition[]);
 
 /** Curated metadata from the preserved 22-widget donor gallery.
@@ -199,18 +200,6 @@ export const WIDGET_GALLERY_DEFINITIONS = Object.freeze([
     icon: 'list-checks',
     category: 'content',
     tags: ['content', 'tasks', 'checklist', 'todos'],
-    sizes: ['medium', 'large'] as const,
-    availability: 'demo',
-    ownerPackage: '@inneranimalmedia/agentsam-content',
-  } satisfies AgentSamWidgetDefinition),
-  Object.freeze({
-    id: 'media',
-    kind: 'media',
-    title: 'Atmospheric Media',
-    description: 'Live radar feed simulation and ambient acoustic atmospheric soundscapes',
-    icon: 'radio',
-    category: 'content',
-    tags: ['content', 'media', 'radar', 'ambience'],
     sizes: ['medium', 'large'] as const,
     availability: 'demo',
     ownerPackage: '@inneranimalmedia/agentsam-content',
