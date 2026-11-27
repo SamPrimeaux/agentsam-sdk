@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/agentsam.run-receipt.v1.schema.json",
+  "title": "AgentRunReceiptV1",
+  "type": "object",
+  "required": [
+    "schema",
+    "runId",
+    "status",
+    "terminal",
+    "parentRunId",
+    "planId",
+    "todoId",
+    "usage",
+    "timing",
+    "error",
+    "suspension",
+    "eventCount",
+    "childRunCount",
+    "lastEvent"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.run-receipt.v1"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+                "waiting_external",
+        "waiting_child",
+        "awaiting_input",
+        "awaiting_approval",
+        "sleeping",
+        "retry_scheduled",
+        "partial",
+        "completed",
+        "cancelled",
+        "failed",
+        "timed_out"
+      ]
+    },
+    "terminal": {
+      "type": "boolean"
+    },
+    "parentRunId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "planId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "todoId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "usage": {
+      "type": "object",
+      "required": [
+        "modelCalls",
+        "toolCalls",
+        "inputTokens",
+        "cachedInputTokens",
+        "outputTokens",
+        "reasoningTokens",
+        "costUsd"
+      ],
+      "properties": {
+        "modelCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cachedInputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reasoningTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "costUsd": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "timing": {
+      "type": "object",
+      "required": [
+        "createdAt",
+        "startedAt",
+        "completedAt",
+        "latencyMs"
+      ],
+      "properties": {
+        "createdAt": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "startedAt": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "completedAt": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "latencyMs": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "suspension": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/suspension"
+        }
+      ]
+    },
+    "eventCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "childRunCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lastEvent": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/event"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "suspension": {
+      "type": "object",
+      "required": [
+        "runId",
+        "state",
+        "reason"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "waiting_external",
+            "waiting_child",
+            "awaiting_input",
+            "awaiting_approval",
+            "sleeping",
+            "retry_scheduled"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "external",
+            "child_run",
+            "approval",
+            "input",
+            "retry",
+            "scheduled",
+            "rate_limit"
+          ]
+        },
+        "wakeAt": {
+          "type": "number"
+        },
+        "wakeEvent": {
+          "type": "string"
+        },
+        "dependencyRunIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resumeStepId": {
+          "type": "string"
+        },
+        "checkpointRef": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "number"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "runId",
+        "seq",
+        "eventType",
+        "label",
+        "detail",
+        "progress",
+        "source",
+        "evidence",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parentRunId": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "eventType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+                        "waiting_external",
+            "waiting_child",
+            "awaiting_input",
+            "awaiting_approval",
+            "sleeping",
+            "retry_scheduled",
+            "partial",
+            "completed",
+            "cancelled",
+            "failed",
+            "timed_out"
+          ]
+        },
+        "phase": {
+          "enum": [
+            "boot",
+            "observe",
+            "context",
+            "plan",
+            "execute",
+            "verify",
+            "compact",
+            "waiting",
+            "recover",
+            "complete"
+          ]
+        },
+        "stepId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "current",
+                "total"
+              ],
+              "properties": {
+                "current": {
+                  "type": "number"
+                },
+                "total": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": true
+            }
+          ]
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -3,14 +3,49 @@
   "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/sam.activity.v1.schema.json",
   "title": "AgentSamActivityEvent",
   "type": "object",
-  "required": ["schema", "run_id", "seq", "timestamp", "phase", "event", "label"],
+  "required": [
+    "schema",
+    "run_id",
+    "seq",
+    "timestamp",
+    "phase",
+    "event",
+    "step_id",
+    "parent_id",
+    "label",
+    "detail",
+    "progress",
+    "source",
+    "evidence"
+  ],
   "properties": {
-    "schema": { "const": "agentsam.activity.v1" },
-    "run_id": { "type": "string" },
-    "seq": { "type": "integer", "minimum": 0 },
-    "timestamp": { "type": "string" },
+    "schema": {
+      "const": "agentsam.activity.v1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp": {
+      "type": "string"
+    },
     "phase": {
-      "enum": ["boot", "observe", "context", "plan", "execute", "verify", "compact", "waiting", "recover", "complete"]
+      "enum": [
+        "boot",
+        "observe",
+        "context",
+        "plan",
+        "execute",
+        "verify",
+        "compact",
+        "waiting",
+        "recover",
+        "complete"
+      ]
     },
     "event": {
       "enum": [
@@ -31,18 +66,77 @@
         "run.completed"
       ]
     },
-    "step_id": { "type": ["string", "null"] },
-    "parent_id": { "type": ["string", "null"] },
-    "label": { "type": "string" },
-    "detail": { "type": ["string", "null"] },
-    "progress": {
-      "type": ["object", "null"],
-      "properties": {
-        "current": { "type": "number" },
-        "total": { "type": "number" }
-      }
+    "step_id": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
-    "source": { "type": "object" },
-    "evidence": { "type": ["object", "null"] }
-  }
+    "parent_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "label": {
+      "type": "string"
+    },
+    "detail": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "progress": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "current",
+            "total"
+          ],
+          "properties": {
+            "current": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
 }

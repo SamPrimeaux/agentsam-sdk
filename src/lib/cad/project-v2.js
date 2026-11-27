@@ -4,6 +4,11 @@
  * identity, asset store, queue or GOAP machinery.
  */
 import { requireValidProject } from './project-contract.js';
+import {
+  isAgentSourceFormatReference as isSourceFormatReference,
+  isAgentSourceKindReference as isSourceKindReference,
+  isAgentSourceIdentificationResult as isSourceIdentificationResult,
+} from '@inneranimalmedia/agentsam-contracts/source-types/registry';
 
 export const CAD_PROJECT_V2 = 'cad.project.v2';
 export const CAD_DOMAINS = Object.freeze([
@@ -16,29 +21,6 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 const isId = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(value);
 const isSha = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const validUri = value => typeof value === 'string' && value.length > 0 && !/^javascript:/i.test(value);
-const SOURCE_TYPES_CATALOG = 'agentsam.source-types.v2';
-const sourceIdentificationStatuses = new Set(['declared','identified','ambiguous','unknown','mismatch']);
-const sourceIdentificationConfidence = new Set(['high','medium','low','none']);
-const sourceIdentificationEvidence = new Set(['extension','media-type','signature','container','content','application-context','user-selection','provider-metadata']);
-const isSourceFormatReference = value => isRecord(value)
-  && value.catalog === SOURCE_TYPES_CATALOG
-  && typeof value.id === 'string' && /^[a-z][a-z0-9.-]{1,127}$/.test(value.id)
-  && (value.extension == null || (typeof value.extension === 'string' && /^\.[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(value.extension)))
-  && (value.mediaType == null || (typeof value.mediaType === 'string' && value.mediaType.length >= 3))
-  && (value.variant == null || (typeof value.variant === 'string' && value.variant.length > 0))
-  && (value.parameters == null || (isRecord(value.parameters) && Object.values(value.parameters).every(v => ['string','number','boolean'].includes(typeof v))))
-  && Object.keys(value).every(k => ['catalog','id','extension','mediaType','variant','parameters'].includes(k));
-const isSourceKindReference = value => isRecord(value)
-  && value.catalog === SOURCE_TYPES_CATALOG
-  && typeof value.id === 'string' && /^[a-z][a-z0-9.-]{1,63}$/.test(value.id)
-  && Object.keys(value).every(k => ['catalog','id'].includes(k));
-const isSourceIdentificationResult = value => isRecord(value)
-  && sourceIdentificationStatuses.has(value.status)
-  && sourceIdentificationConfidence.has(value.confidence)
-  && Array.isArray(value.evidence) && value.evidence.every(x => sourceIdentificationEvidence.has(x))
-  && (value.candidates == null || (Array.isArray(value.candidates) && value.candidates.every(isSourceFormatReference)))
-  && (value.notes == null || (Array.isArray(value.notes) && value.notes.every(x => typeof x === 'string')))
-  && Object.keys(value).every(k => ['status','confidence','evidence','candidates','notes'].includes(k));
 const groupsV1 = ['walls', 'rooms', 'doors', 'windows', 'furniture', 'annotations'];
 const states = new Set(['planned', 'queued', 'running', 'generated', 'validated', 'approved', 'stale', 'failed', 'blocked']);
 const profiles = Object.freeze({

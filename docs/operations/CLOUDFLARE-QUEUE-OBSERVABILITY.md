@@ -61,4 +61,4 @@ Cloudflare per-queue metrics: https://developers.cloudflare.com/api/resources/qu
 Consumer API: https://developers.cloudflare.com/api/resources/queues/subresources/consumers/methods/list/
 History fields: https://developers.cloudflare.com/queues/observability/metrics/
 
-**Not yet included:** AgentSam logical job status correlation (which needs `agentsam_queue_job` migration/reconciliation), cross-account BYOK management, privileged message operations.
+**Not yet included:** AgentSam logical job status reconciliation with Cloudflare Queue delivery metrics. The canonical D1 `agentsam_queue_job` ledger now exists; the runtime consumer still needs to claim/ack jobs and reconcile job IDs with provider delivery metrics. Also cross-account BYOK management and privileged message operations.

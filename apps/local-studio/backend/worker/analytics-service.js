@@ -240,7 +240,7 @@ export function toAnalyticsStreamRecord(fact) {
 }
 
 const INSERT_SQL = `
-INSERT INTO agentsam_analytics (
+INSERT OR IGNORE INTO agentsam_analytics (
   id, schema_name,
   account_id, tenant_id, workspace_id, repository_id, git_sha, run_id, receipt_id,
   event_kind, domain, operation, outcome,
@@ -324,9 +324,23 @@ export async function emitAnalyticsFact(env, accountId, input) {
   // named account_id or tenant_id are deliberately overwritten.
   const fact = validateAnalyticsFact({ ...input, account_id: accountId, tenant_id: accountId });
 
-  await env.DB.prepare(INSERT_SQL)
+  const write = await env.DB.prepare(INSERT_SQL)
     .bind(...analyticsBindings(fact))
     .run();
+  const changes = Number(write?.meta?.changes ?? write?.changes);
+  if (Number.isFinite(changes) && changes === 0) {
+    const existing = await env.DB.prepare(
+      'SELECT id, created_at_unix FROM agentsam_analytics WHERE dedup_key = ? OR id = ? LIMIT 1'
+    ).bind(fact.dedup_key, fact.id).first();
+    if (!existing) throw new Error('analytics_fact_insert_ignored');
+    return {
+      id: existing.id,
+      schema: fact.schema_name,
+      created_at_unix: existing.created_at_unix,
+      deduplicated: true,
+      basin: { ok: false, skipped: 'duplicate_fact' },
+    };
+  }
 
   const streamRecord = toAnalyticsStreamRecord(fact);
   let basin = { ok: false, skipped: "binding_unavailable" };

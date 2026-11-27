@@ -1,23 +1,23 @@
-import type { AgentRunStatus } from './agent';
+import type { AgentRun, AgentRunStatus } from './agent';
 
-export type AgentRunSuspensionReason =
-  | 'external'
-  | 'child_run'
-  | 'approval'
-  | 'input'
-  | 'retry'
-  | 'scheduled'
-  | 'rate_limit';
+/** Exact persisted status vocabulary accepted by the canonical D1 agentsam_agent_run table. */
+export const AGENT_RUN_STORAGE_STATUSES = [
+  'queued', 'running', 'completed', 'failed', 'partial', 'cancelled',
+] as const;
+export type AgentRunStorageStatus = typeof AGENT_RUN_STORAGE_STATUSES[number];
+
+export const AGENT_RUN_SUSPENSION_STATES = [
+  'waiting_external', 'waiting_child', 'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
+] as const;
+export const AGENT_RUN_SUSPENSION_REASONS = [
+  'external', 'child_run', 'approval', 'input', 'retry', 'scheduled', 'rate_limit',
+] as const;
+export type AgentRunSuspensionReason = typeof AGENT_RUN_SUSPENSION_REASONS[number];
+export type AgentRunSuspensionState = typeof AGENT_RUN_SUSPENSION_STATES[number];
 
 export interface AgentRunSuspension {
   runId: string;
-  state:
-    | 'waiting_external'
-    | 'waiting_child'
-    | 'awaiting_input'
-    | 'awaiting_approval'
-    | 'sleeping'
-    | 'retry_scheduled';
+  state: AgentRunSuspensionState;
   reason: AgentRunSuspensionReason;
   wakeAt?: number;
   wakeEvent?: string;
@@ -27,6 +27,36 @@ export interface AgentRunSuspension {
   checkpointRef?: string;
   expiresAt?: number;
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Public ACP projection. status is the lifecycle view; storageStatus is the
+ * narrower status persisted by the runtime. A timeout is recorded as a
+ * run.timed_out event while storage remains failed.
+ */
+export interface AgentRunV1 extends AgentRun {
+  schema: 'agentsam.run.v1';
+  status: AgentRunStatus;
+  storageStatus: AgentRunStorageStatus;
+  cancelRequested: boolean;
+  modelCallCount: number;
+  toolCallCount: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  costUsd: number;
+  suspension: AgentRunSuspension | null;
+}
+
+/** Control-plane acknowledgement; scheduling is not model execution. */
+export interface AgentRunStartV1 {
+  schema: 'agentsam.run-start.v1';
+  run_id: string;
+  status: 'queued';
+  queue: string | null;
+  queue_job: Record<string, unknown>;
+  published: boolean;
 }
 
 export type AgentRunWakeKind = 'event' | 'dependency' | 'scheduled' | 'manual';
@@ -244,6 +274,53 @@ export interface AgentRunEvent {
   source?: { kind?: string; name?: string | null } | null;
   evidence?: Record<string, unknown> | null;
   createdAt: number;
+}
+
+export interface AgentRunEventReceiptV1 {
+  id: string;
+  runId: string;
+  parentRunId?: string;
+  seq: number;
+  eventType: string;
+  status?: AgentRunStatus;
+  phase?: AgentActivityPhase;
+  stepId?: string;
+  label: string;
+  detail: string | null;
+  progress: { current: number; total: number } | null;
+  source: { kind?: string; name?: string | null } | null;
+  evidence: Record<string, unknown> | null;
+  createdAt: number;
+}
+
+export interface AgentRunReceiptV1 {
+  schema: 'agentsam.run-receipt.v1';
+  runId: string;
+  status: AgentRunStatus;
+  terminal: boolean;
+  parentRunId: string | null;
+  planId: string | null;
+  todoId: string | null;
+  usage: {
+    modelCalls: number;
+    toolCalls: number;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    costUsd: number;
+  };
+  timing: {
+    createdAt: number | null;
+    startedAt: number | null;
+    completedAt: number | null;
+    latencyMs: number | null;
+  };
+  error: { code: string | null; message: string | null } | null;
+  suspension: AgentRunSuspension | null;
+  eventCount: number;
+  childRunCount: number;
+  lastEvent: AgentRunEventReceiptV1 | null;
 }
 
 export interface AgentActivityEventV1 {

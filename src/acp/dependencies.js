@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { AGENT_RUN_STORAGE_STATUSES } from '@inneranimalmedia/agentsam-contracts/run';
 import {
   QueueControl,
   SqliteQueueAdapter,
@@ -9,25 +10,54 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
-export function createLocalQueueControl(database) {
+export function createDatabaseQueueControl(database, {
+  environment = 'local',
+  leaseOwner = 'agentsam-acp-local',
+  provider = 'sqlite',
+} = {}) {
   return new QueueControl({
-    adapter: new SqliteQueueAdapter({
-      database,
-      leaseOwner: 'agentsam-acp-local',
-    }),
+    adapter: new SqliteQueueAdapter({ database, leaseOwner, provider }),
     topology: buildQueueTopology({
       namespace: 'agentsam',
-      environment: 'local',
+      environment,
       mode: 'compact',
     }),
   });
 }
 
+export function createLocalQueueControl(database) {
+  return createDatabaseQueueControl(database, {
+    environment: 'local',
+    leaseOwner: 'agentsam-acp-local',
+    provider: 'sqlite',
+  });
+}
+
+export function createD1QueueControl(database, options = {}) {
+  const environment = clean(options.environment) || 'production';
+  return createDatabaseQueueControl(database, {
+    environment,
+    leaseOwner: clean(options.leaseOwner) || `agentsam-acp-d1-${environment}`,
+    provider: 'cloudflare-d1',
+  });
+}
+
 async function nextEventSeq(database, runId) {
-  const row = await database.prepare(
-    'SELECT COALESCE(MAX(seq), -1) + 1 AS next_seq FROM agentsam_agent_run_event WHERE run_id = ?'
-  ).bind(runId).first();
-  return Number(row?.next_seq || 0);
+  const row = await database.prepare(`
+    UPDATE agentsam_agent_run
+    SET event_seq = MAX(
+      event_seq,
+      COALESCE((
+        SELECT MAX(seq)
+        FROM agentsam_agent_run_event
+        WHERE run_id = ?
+      ), -1)
+    ) + 1
+    WHERE id = ?
+    RETURNING event_seq
+  `).bind(runId, runId).first();
+  if (!row) throw new Error(`agent_run_not_found:${runId}`);
+  return Number(row.event_seq);
 }
 
 export async function appendAgentRunEvent(database, {
@@ -48,6 +78,14 @@ export async function appendAgentRunEvent(database, {
   const type = clean(eventType);
   if (!id) throw new TypeError('runId is required');
   if (!type) throw new TypeError('eventType is required');
+
+  const normalizedDedupeKey = clean(dedupeKey) || null;
+  if (normalizedDedupeKey) {
+    const existing = await database.prepare(
+      'SELECT event_id, run_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+    ).bind(id, normalizedDedupeKey).first();
+    if (existing) return { ...existing, inserted: false };
+  }
 
   const eventId = `evt_${randomUUID()}`;
   const seq = await nextEventSeq(database, id);
@@ -70,16 +108,111 @@ export async function appendAgentRunEvent(database, {
     clean(sourceKind) || 'sam',
     clean(sourceName) || null,
     JSON.stringify(evidence && typeof evidence === 'object' ? evidence : {}),
-    clean(dedupeKey) || null,
+    normalizedDedupeKey,
     createdAt,
   ).run();
+
+  if (normalizedDedupeKey) {
+    const persisted = await database.prepare(
+      'SELECT event_id, run_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+    ).bind(id, normalizedDedupeKey).first();
+    if (persisted) return { ...persisted, inserted: persisted.event_id === eventId };
+  }
 
   return {
     event_id: eventId,
     run_id: id,
     seq,
     event_type: type,
-    dedupe_key: clean(dedupeKey) || null,
+    dedupe_key: normalizedDedupeKey,
+    inserted: true,
+  };
+}
+
+/**
+ * Persist a timeout without widening the runtime table's storage-status CHECK.
+ * The storage row becomes failed; the append-only event preserves timed_out as
+ * the public lifecycle outcome. Repeated calls are idempotent by dedupe key.
+ */
+export async function recordAgentRunTimeout(database, {
+  runId,
+  accountId = null,
+  errorCode = 'run_timeout',
+  errorMessage = 'Agent run timed out',
+  createdAt = Math.floor(Date.now() / 1000),
+} = {}) {
+  const id = clean(runId);
+  if (!id) throw new TypeError('runId is required');
+  const owner = clean(accountId);
+  const runQuery = database.prepare(
+    'SELECT id, parent_run_id, status FROM agentsam_agent_run WHERE id = ?'
+      + (owner ? ' AND account_id = ?' : '')
+      + ' LIMIT 1'
+  );
+  const run = owner
+    ? await runQuery.bind(id, owner).first()
+    : await runQuery.bind(id).first();
+  if (!run) {
+    const error = new Error(`agent_run_not_found:${id}`);
+    error.code = 'agent_run_not_found';
+    throw error;
+  }
+  if (run.status === 'completed' || run.status === 'cancelled') {
+    return { recorded: false, reason: 'run_already_terminal', runId: id, status: run.status, storageStatus: run.status };
+  }
+  if (!AGENT_RUN_STORAGE_STATUSES.includes(run.status)) {
+    throw new Error(`agent_run_storage_status_invalid:${run.status}`);
+  }
+
+  const code = clean(errorCode) || 'run_timeout';
+  const message = clean(errorMessage) || 'Agent run timed out';
+  const timestamp = Number.isFinite(Number(createdAt)) ? Math.trunc(Number(createdAt)) : Math.floor(Date.now() / 1000);
+  const dedupeKey = `run:${id}:timed_out`;
+  const existing = await database.prepare(
+    'SELECT event_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+  ).bind(id, dedupeKey).first();
+
+  const updateSql = `
+    UPDATE agentsam_agent_run
+    SET status = 'failed', error_code = ?, error_message = ?,
+        completed_at_unix = COALESCE(completed_at_unix, ?), updated_at_unix = ?
+    WHERE id = ? AND status IN ('queued','running','failed','partial')
+  ` + (owner ? ' AND account_id = ?' : '');
+  const update = database.prepare(updateSql);
+  if (owner) await update.bind(code, message, timestamp, timestamp, id, owner).run();
+  else await update.bind(code, message, timestamp, timestamp, id).run();
+  await database.prepare(
+    'DELETE FROM agentsam_agent_run_suspension WHERE run_id = ?'
+  ).bind(id).run();
+
+  let event = existing;
+  let recorded = false;
+  if (!existing) {
+    const appended = await appendAgentRunEvent(database, {
+      runId: id,
+      parentRunId: run.parent_run_id ?? null,
+      eventType: 'run.timed_out',
+      phase: 'complete',
+      label: 'Run timed out',
+      detail: message,
+      evidence: { error_code: code, storage_status: 'failed' },
+      dedupeKey,
+      createdAt: timestamp,
+    });
+    event = await database.prepare(
+      'SELECT event_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+    ).bind(id, dedupeKey).first() || appended;
+    recorded = Boolean(appended.inserted);
+  }
+
+  return {
+    recorded,
+    runId: id,
+    status: 'timed_out',
+    storageStatus: 'failed',
+    event,
+    errorCode: code,
+    createdAt: timestamp,
   };
 }
 
@@ -107,13 +240,20 @@ export async function spawnChildRun(database, {
   runtimeRequirements = {},
   metadata = {},
   priority = 'normal',
+  queueControl = null,
 } = {}) {
   const parentId = clean(parentRunId);
   if (!parentId) throw new TypeError('parentRunId is required');
 
-  const parent = await database.prepare(
-    'SELECT * FROM agentsam_agent_run WHERE id = ? LIMIT 1'
-  ).bind(parentId).first();
+  const owner = clean(accountId);
+  const parentQuery = database.prepare(
+    'SELECT * FROM agentsam_agent_run WHERE id = ?'
+      + (owner ? ' AND account_id = ?' : '')
+      + ' LIMIT 1'
+  );
+  const parent = owner
+    ? await parentQuery.bind(parentId, owner).first()
+    : await parentQuery.bind(parentId).first();
   if (!parent) {
     const error = new Error(`parent_run_not_found:${parentId}`);
     error.code = 'parent_run_not_found';
@@ -143,7 +283,7 @@ export async function spawnChildRun(database, {
       id, account_id, conversation_id, parent_run_id, source_client, surface,
       mode, model_key, reasoning_effort, requested_service_tier, selected_by,
       status, created_at_unix, updated_at_unix
-    ) VALUES (?, ?, ?, ?, ?, ?, 'agent', ?, ?, ?, 'automatic', 'queued', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, 'agent', ?, ?, ?, 'fallback', 'queued', ?, ?)
   `).bind(
     childId,
     resolvedAccount,
@@ -176,7 +316,7 @@ export async function spawnChildRun(database, {
   const pending = await pendingChildIds(database, parentId);
   await database.prepare(`
     UPDATE agentsam_agent_run
-    SET status = 'paused', updated_at_unix = ?
+    SET status = 'running', updated_at_unix = ?
     WHERE id = ?
   `).bind(now, parentId).run();
 
@@ -246,8 +386,8 @@ export async function spawnChildRun(database, {
     createdAt: now,
   });
 
-  const queueControl = createLocalQueueControl(database);
-  const queued = await queueControl.enqueue(
+  const queue = queueControl || createLocalQueueControl(database);
+  const queued = await queue.enqueue(
     {
       kind: 'agent.run',
       account_id: resolvedAccount,

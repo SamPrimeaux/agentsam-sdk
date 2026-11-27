@@ -8,6 +8,17 @@ function object(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function timeoutDetails(error) {
+  const code = clean(error?.code || error?.cause?.code);
+  const name = clean(error?.name);
+  const message = clean(error?.message) || 'Agent run timed out';
+  const normalizedCode = code.toLowerCase();
+  const isTimeout = name.toLowerCase() === 'timeouterror'
+    || ['run_timeout', 'etimedout', 'etimeout', 'deadline_exceeded'].includes(normalizedCode)
+    || /\b(timed out|timeout|deadline exceeded)\b/i.test(message);
+  return { isTimeout, errorCode: code || 'run_timeout', errorMessage: message };
+}
+
 /**
  * Build the provider-neutral Queue Control handler for an `agent.run` job.
  *
@@ -21,6 +32,7 @@ export function createAgentRunJobHandler({
   cwd = process.cwd(),
   source = 'agentsam-acp',
   runtimeSelector = null,
+  agentControlClient = null,
 } = {}) {
   if (typeof execute !== 'function') throw new TypeError('agent_run_execute_required');
 
@@ -89,9 +101,33 @@ export function createAgentRunJobHandler({
       invocation,
     }, context);
 
+    const executeWithTimeoutRecording = async () => {
+      try {
+        return await executeRun();
+      } catch (error) {
+        const details = timeoutDetails(error);
+        const control = context.agentControlClient || agentControlClient;
+        if (details.isTimeout && typeof control?.timeout === 'function') {
+          try {
+            await control.timeout(runId, {
+              error_code: details.errorCode,
+              error_message: details.errorMessage,
+            });
+          } catch (persistenceError) {
+            try {
+              error.timeoutPersistenceError = String(
+                persistenceError?.message || persistenceError,
+              ).slice(0, 240);
+            } catch { /* Preserve the original execution failure. */ }
+          }
+        }
+        throw error;
+      }
+    };
+
     // Only child AgentSam runs are subagents. Root agent.run jobs retain the
     // normal session/model/tool hook lifecycle owned by the execution host.
-    if (!parentRunId) return executeRun();
+    if (!parentRunId) return executeWithTimeoutRecording();
 
     return runWithSubagentHooks({
       hookRuntime: context.hookRuntime || hookRuntime,
@@ -100,7 +136,7 @@ export function createAgentRunJobHandler({
       context: executionContext,
       invocation,
       cwd: context.cwd || cwd,
-      run: executeRun,
+      run: executeWithTimeoutRecording,
     });
   };
 }

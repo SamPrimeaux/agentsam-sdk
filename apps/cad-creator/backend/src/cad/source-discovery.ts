@@ -3,16 +3,19 @@ import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {identifyCadFileFormat,isCadAutoDiscoveryCandidate,cadFormatCandidates} from '@inneranimalmedia/agentsam-contracts/source-types/cad';
+import {createAgentSourceKindReference} from '@inneranimalmedia/agentsam-contracts/source-types/registry';
+import type {AgentSourceFormatReference,AgentSourceKindReference} from '@inneranimalmedia/agentsam-contracts/source-types';
 
 export type CadSource = {
   id:string; project:string; revision:string; relativePath:string;
   format:string; role:'native-bim'|'parametric'|'presentation'|'exchange'|'verification';
   status:'source-only'|'review-only'|'verification-only';
   bytes:number; sha256:string;
-  /** Filename-based identity only; import/export requires a separate verified adapter. */
-  formatRef?:{catalog:'agentsam.source-types.v2';id:string;extension:string};
+  /** Filesystem provenance and filename-based format identity; neither implies an importer. */
+  sourceKindRef?:AgentSourceKindReference;
+  formatRef?:AgentSourceFormatReference;
   /** Other canonical candidates when extension alone cannot resolve identity. */
-  formatCandidates?:Array<{catalog:'agentsam.source-types.v2';id:string;extension?:string}>;
+  formatCandidates?:AgentSourceFormatReference[];
 };
 const RECEIPT=/((model-exchange|exchange-receipt|glb-review-receipt|geometry-verification|bim-assembly-receipt|render-manifest)\.json)$/i;
 // Avoid blocking the local CAD server on every library refresh for unchanged GLBs/Blend files.
@@ -90,6 +93,7 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
           id:createHash('sha256').update(configured.project+'\n'+relativePath).digest('hex').slice(0,20),
           project:configured.project,revision:revisionFrom(relativePath),
           relativePath,format:receipt?'JSON':detected.extension.replace(/^\./,'').replace(/\.json$/,'').toUpperCase(),
+          sourceKindRef:createAgentSourceKindReference('filesystem.file'),
           formatRef:{catalog:'agentsam.source-types.v2',id:detected.id,extension:detected.extension},
           ...(cadFormatCandidates(entry.name).length>1 ? {formatCandidates:cadFormatCandidates(entry.name)} : {}),
           role,status,bytes:stat.size,sha256,

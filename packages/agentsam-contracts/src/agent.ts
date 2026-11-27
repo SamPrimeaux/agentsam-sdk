@@ -22,25 +22,17 @@ export interface AgentInput {
   capabilityIds?: string[];
 }
 
-export type AgentRunMode = 'ask' | 'plan' | 'agent' | 'debug' | 'multitask';
+export const AGENT_RUN_MODES = ['ask', 'plan', 'agent', 'debug', 'multitask'] as const;
+export const AGENT_RUN_SELECTED_BY = ['manual', 'thompson', 'fallback'] as const;
+export const AGENT_RUN_STATUSES = [
+  'queued', 'running', 'waiting_external', 'waiting_child',
+  'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
+  'partial', 'completed', 'cancelled', 'failed', 'timed_out',
+] as const;
 
-export type AgentRunSelectedBy = 'manual' | 'automatic' | 'fallback';
-
-export type AgentRunStatus =
-  | 'queued'
-  | 'running'
-  | 'paused'
-  | 'waiting_external'
-  | 'waiting_child'
-  | 'awaiting_input'
-  | 'awaiting_approval'
-  | 'sleeping'
-  | 'retry_scheduled'
-  | 'partial'
-  | 'completed'
-  | 'cancelled'
-  | 'failed'
-  | 'timed_out';
+export type AgentRunMode = typeof AGENT_RUN_MODES[number];
+export type AgentRunSelectedBy = typeof AGENT_RUN_SELECTED_BY[number];
+export type AgentRunStatus = typeof AGENT_RUN_STATUSES[number];
 
 export type AgentRunTerminalStatus = 'completed' | 'cancelled' | 'failed' | 'timed_out';
 

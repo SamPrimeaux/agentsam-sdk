@@ -15,6 +15,7 @@ function object(value) {
  * This is a control-plane operation only. It does not call a model. A runtime
  * consumer later claims the queued job and performs execution.
  */
+/** @returns {Promise<import('@inneranimalmedia/agentsam-contracts').AgentRunStartV1>} */
 export async function createRootRun(database, {
   runId = null,
   accountId = null,
@@ -30,6 +31,7 @@ export async function createRootRun(database, {
   priority = 'normal',
   sourceClient = 'agentsam-acp',
   surface = 'control-plane',
+  queueControl = null,
 } = {}) {
   if (!database || typeof database.prepare !== 'function') {
     throw new TypeError('database with prepare() is required');
@@ -49,7 +51,7 @@ export async function createRootRun(database, {
       id, account_id, conversation_id, source_client, surface, mode, model_key,
       reasoning_effort, requested_service_tier, selected_by, status,
       created_at_unix, updated_at_unix
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'automatic', 'queued', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'fallback', 'queued', ?, ?)
   `).bind(
     id,
     account,
@@ -88,8 +90,8 @@ export async function createRootRun(database, {
     createdAt: now,
   });
 
-  const queueControl = createLocalQueueControl(database);
-  const queued = await queueControl.enqueue(
+  const queue = queueControl || createLocalQueueControl(database);
+  const queued = await queue.enqueue(
     {
       kind: 'agent.run',
       account_id: account,
