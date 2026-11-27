@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { AdminAppMark, type AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
-import { ChevronDown, FolderGit2, FolderOpen, Globe, LayoutGrid, Paintbrush, Pin, PinOff, Plug, X } from "lucide-react";
+import { Check, Image, Plus, Settings2, ChevronDown, FolderGit2, FolderOpen, Globe, LayoutGrid, Paintbrush, Pin, PinOff, Plug, X } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -22,18 +22,12 @@ import type { LocalStudioPluginRecord } from "@/lib/connections/client";
 import { reloadSideStageRegistry, useSideStageRegistry, type SideStageAction } from "../../../agentsam/side-stage-actions";
 import { settingsPaneLabel } from "@/components/settings/settingsPaneLabel";
 import { PluginLogo, StageIcon, pluginLogoUrl, themeIsDarkNow } from "./stage-icons";
+import { WorkspaceMediaPicker } from "./workspace-media-picker";
 import { NewTabWidgets } from "./new-tab-widgets";
 import { DEFAULT_NEW_TAB_APPEARANCE, loadNewTabAppearance, saveNewTabAppearance,
-  type NewTabAppearance, type NewTabWallpaper } from "@/lib/widgets/new-tab-appearance";
+  type NewTabAppearance } from "@/lib/widgets/new-tab-appearance";
 import "./new-tab-appearance.css";
 
-const WALLPAPER_CHOICES: {id:NewTabWallpaper; title:string}[] = [
-  {id:'default',title:'System'},
-  {id:'aurora',title:'Aurora'},
-  {id:'dusk',title:'Dusk'},
-  {id:'forest',title:'Forest'},
-  {id:'graphite',title:'Graphite'},
-];
 
 
 const START_CHIPS = [
@@ -104,14 +98,17 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
   const [history, setHistory] = useState<BrowserHistoryEntry[] | null>(null);
   const [appearance,setAppearance] = useState<NewTabAppearance>(DEFAULT_NEW_TAB_APPEARANCE);
   const [appearanceOpen,setAppearanceOpen] = useState(false);
+  const [arranging,setArranging]=useState(false);
+  const [addRequest,setAddRequest]=useState(0);
+  const [wallpaperPreview,setWallpaperPreview]=useState<string|null>(null);
   const [appearanceSaving,setAppearanceSaving] = useState(false);
   const [appearanceError,setAppearanceError] = useState<string | null>(null);
-  const [imageUrlInput,setImageUrlInput] = useState("");
+
   useEffect(() => {
     let cancelled=false;
     setAppearance(DEFAULT_NEW_TAB_APPEARANCE);
     void loadNewTabAppearance().then(value=>{
-      if(!cancelled){setAppearance(value);setImageUrlInput(value.imageUrl??"");}
+      if(!cancelled){setAppearance(value);}
     }).catch(()=>{if(!cancelled)setAppearanceError("Wallpaper preferences unavailable.");});
     return ()=>{cancelled=true;};
   },[user?.id]);
@@ -120,7 +117,7 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
     setAppearanceSaving(true);
     setAppearanceError(null);
     try {setAppearance(await saveNewTabAppearance(value));}
-    catch(error){setAppearanceError(error instanceof Error ? error.message.replaceAll("_"," ") : "Could not save wallpaper.");}
+    catch(error){setAppearanceError(error instanceof Error ? error.message.replaceAll("_"," ") : "Could not save wallpaper.");throw error;}
     finally{setAppearanceSaving(false);}
   };
 
@@ -195,8 +192,8 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
 
   return (
     <div className="as-new-tab-stage scrollbar-thin h-full overflow-y-auto" data-testid="new-tab-stage"
-      data-wallpaper={appearance.wallpaper}
-      style={{'--new-tab-photo': 'url(' + JSON.stringify(appearance.imageUrl || '') + ')'} as CSSProperties}>
+      data-wallpaper={wallpaperPreview?"photo":appearance.wallpaper}
+      style={{'--new-tab-photo': 'url(' + JSON.stringify(wallpaperPreview || appearance.imageUrl || '') + ')'} as CSSProperties}>
       <div className="relative mx-auto flex max-w-3xl flex-col gap-7 px-4 py-6">
         <header>
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -204,38 +201,19 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
               <h2 className="text-lg font-semibold">{greeting}</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">Start something, open a tool, or pick up where you left off.</p>
             </div>
-            <Button type="button" size="sm" variant="outline" aria-expanded={appearanceOpen}
-              onClick={()=>setAppearanceOpen(value=>!value)}>
-              <Paintbrush className="size-3.5" /> Customize
-            </Button>
+            <div className="as-workspace-edit-actions">
+              <DropdownMenu><DropdownMenuTrigger asChild><button type="button" className="as-workspace-round" aria-label="Customize workspace"><Paintbrush size={20}/></button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="as-workspace-glass-menu">
+                  <DropdownMenuItem onSelect={()=>{setArranging(true);setAddRequest(v=>v+1)}}><Plus size={20}/> Add Widget</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={()=>setArranging(true)}><Settings2 size={20}/> Customize</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={()=>setAppearanceOpen(true)}><Image size={20}/> Edit Wallpaper</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={()=>{void changeAppearance(DEFAULT_NEW_TAB_APPEARANCE).catch(()=>{})}}>Reset wallpaper</DropdownMenuItem>
+                </DropdownMenuContent></DropdownMenu>
+              {arranging&&<button type="button" className="as-workspace-round" aria-label="Done arranging" onClick={()=>setArranging(false)}><Check size={20}/></button>}
+            </div>
           </div>
-          {appearanceOpen && <section aria-label="Customize New Tab" className="mt-3 rounded-2xl border border-border bg-card/95 p-3 shadow-sm">
-            <div className="mb-2 text-xs font-medium">Wallpaper</div>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,6.5rem),1fr))] gap-2">
-              {WALLPAPER_CHOICES.map(choice=><button key={choice.id} type="button"
-                aria-pressed={appearance.wallpaper===choice.id} disabled={appearanceSaving}
-                onClick={()=>void changeAppearance({wallpaper:choice.id,imageUrl:null})}
-                className={cn("flex min-w-0 flex-col gap-1 rounded-xl border p-1.5 text-left text-xs transition-colors hover:border-primary/60",
-                  appearance.wallpaper===choice.id ? "border-primary ring-1 ring-primary" : "border-border")}>
-                <span aria-hidden="true" className={cn("as-wallpaper-swatch block h-12 w-full rounded-lg","as-wallpaper-"+choice.id)} />
-                <span className="px-1 pb-1">{choice.title}</span>
-              </button>)}
-            </div>
-            <label htmlFor="new-tab-image-url" className="mt-3 block text-xs font-medium">Your image</label>
-            <p className="mt-1 text-[11px] text-muted-foreground">Use an existing media-library image URL. No extra file storage is created.</p>
-            <div className="mt-2 flex min-w-0 flex-wrap gap-2">
-              <input id="new-tab-image-url" type="text" autoComplete="off" value={imageUrlInput}
-                onChange={event=>setImageUrlInput(event.target.value)}
-                placeholder="https://… or /media/…" maxLength={1600}
-                className="h-9 min-w-0 flex-[1_1_10rem] rounded-lg border border-border bg-background px-3 text-xs text-foreground" />
-              <Button type="button" size="sm" variant="secondary"
-                disabled={appearanceSaving || !imageUrlInput.trim()}
-                onClick={()=>void changeAppearance({wallpaper:'photo',imageUrl:imageUrlInput.trim()})}>
-                Use image
-              </Button>
-            </div>
-            {appearanceError && <p role="alert" className="mt-2 text-xs text-destructive">{appearanceError}</p>}
-          </section>}
+          {appearanceOpen&&<WorkspaceMediaPicker wallpaper onPreview={setWallpaperPreview} onClose={()=>{setAppearanceOpen(false);setWallpaperPreview(null)}} onChoose={async choice=>{await changeAppearance({wallpaper:'photo',imageUrl:choice.url});setAppearanceOpen(false);setWallpaperPreview(null)}}/>}
+          {appearanceError&&<p role="alert" className="text-xs text-destructive">{appearanceError}</p>}
           <p aria-live="polite" className="sr-only">{appearanceSaving ? "Saving wallpaper" : ""}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {START_CHIPS.map((chip) => (
@@ -244,7 +222,7 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
           </div>
         </header>
 
-        <NewTabWidgets onOpenGallery={() => openSettings("customize", "widgets")} />
+        <NewTabWidgets arranging={arranging} onArrangingChange={setArranging} addRequest={addRequest} onOpenGallery={() => openSettings("customize", "widgets")} />
 
         <section aria-label="Tools">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Tools</h3>

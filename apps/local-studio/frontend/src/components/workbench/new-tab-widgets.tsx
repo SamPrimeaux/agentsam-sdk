@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BuiltinWidget, WidgetFrame, creativeWidgetEntry, type CreativeWidgetHost } from '@inneranimalmedia/agentsam-workbench/widgets';
 import '@inneranimalmedia/agentsam-workbench/widgets/widgets.css';
-import { ArrowDown, ArrowUp, GripVertical, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Minus, ArrowDown, ArrowUp, GripVertical, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/lib/widgets/account-widgets';
 import { cn } from '@/lib/utils';
 import './new-tab-widgets.css';
+import {WorkspaceMediaPicker} from './workspace-media-picker';
 import type {WorkArtifact} from '@inneranimalmedia/agentsam-work/contracts';
 import { useWorkStore } from '@/lib/work/store';
 import { startArtifactCreation } from '@/lib/work/artifact-launcher';
@@ -24,13 +25,21 @@ import { startArtifactCreation } from '@/lib/work/artifact-launcher';
  * actual code is resolved only through the compiled Workbench BuiltinWidget.
  * Concept/catalog-only entries are discoverable but can never be installed here.
  */
-export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) {
+export function NewTabWidgets({ onOpenGallery, arranging, onArrangingChange:setArranging, addRequest }: { onOpenGallery: () => void; arranging:boolean; onArrangingChange:(value:boolean)=>void; addRequest:number }) {
   const user = useCurrentUser();
   const [catalog, setCatalog] = useState<AccountWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [arranging,setArranging] = useState(false);
+  const [addOpen,setAddOpen]=useState(false);
+  const [mediaKey,setMediaKey]=useState<string|null>(null);
+  const hold=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const held=useRef(false);
+  const holdOrigin=useRef({x:0,y:0});
+  const clearHold=()=>{if(hold.current!==null)clearTimeout(hold.current);hold.current=null;};
+  useEffect(()=>()=>{if(hold.current!==null)clearTimeout(hold.current)},[]);
+  useEffect(()=>{if(addRequest>0)setAddOpen(true)},[addRequest]);
+  useEffect(()=>{if(!arranging){setDetailsKey(null);setMediaKey(null);}},[arranging]);
   const [artifactState,setArtifactState] = useState<{owner:string|undefined;status:'loading'|'ready'|'unavailable';items:WorkArtifact[]}>({owner:undefined,status:'loading',items:[]});
   const [detailsKey, setDetailsKey] = useState<string | null>(null);
   const accountGeneration = useRef(0);
@@ -145,14 +154,14 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
 
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant={arranging?'secondary':'ghost'} size="sm" aria-pressed={arranging} onClick={()=>{setArranging(v=>!v);setDetailsKey(null);}}>{arranging?'Done':'Arrange'}</Button>
-          <DropdownMenu>
+          <Button type="button" variant={arranging?'secondary':'ghost'} size="sm" aria-pressed={arranging} onClick={()=>{setArranging(!arranging);setDetailsKey(null);}}>{arranging?'Done':'Arrange'}</Button>
+          <DropdownMenu open={addOpen} onOpenChange={setAddOpen}>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="outline" disabled={loading || (Boolean(error) && !catalog.length)}>
                 <Plus className="size-3.5" /> Add widget
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[min(28rem,70vh)] w-[min(22rem,90vw)] overflow-y-auto">
+            <DropdownMenuContent align="end" className="as-workspace-glass-menu max-h-[min(28rem,70vh)] overflow-y-auto">
               <DropdownMenuLabel>Available widgets</DropdownMenuLabel>
               {ready.map(widget => (
                 <DropdownMenuItem key={widget.key} disabled={Boolean(busyKey)}
@@ -201,18 +210,26 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
               <>No widgets installed on this New tab yet. Use <strong className="font-medium text-foreground">Add widget</strong> to install Countdown, Clock, Calculator or Queue Depth.</>}
           </div>
         ) : (
-          <ul className="agentsam-widget-grid">
+          <ul className="agentsam-widget-grid" data-arranging={arranging}>
             {installed.map((widget, index) => (
               <li key={widget.installationId ?? widget.key} data-widget-key={widget.key} data-size={widget.sizeClass}
+                onPointerDown={e=>{if(arranging||e.button!==0||e.pointerType==='mouse')return;clearHold();held.current=false;holdOrigin.current={x:e.clientX,y:e.clientY};hold.current=setTimeout(()=>{held.current=true;setArranging(true);if(typeof navigator.vibrate==='function')navigator.vibrate(12);},480);}}
+                onPointerMove={e=>{if(Math.hypot(e.clientX-holdOrigin.current.x,e.clientY-holdOrigin.current.y)>9)clearHold();}}
+                onPointerUp={clearHold} onPointerCancel={clearHold} onPointerLeave={clearHold}
+                onContextMenu={e=>{e.preventDefault();clearHold();setArranging(true);}}
+                onClickCapture={e=>{if(held.current){e.preventDefault();e.stopPropagation();held.current=false;}}}
                 className={cn('agentsam-widget-tile min-w-0 rounded-xl transition-[outline-color,opacity]',
                   widget.sizeClass === 'large' && 'as-new-tab-widget--large',
                   draggingKey === widget.key && 'opacity-55',
                   dropTargetKey === widget.key && dropTargetKey !== draggingKey && 'outline outline-2 outline-primary')}>
-                {creativeWidgetEntry(widget.key)&&widget.key!=='artifact-preview'||widget.key==='pull-request-summary'||widget.key==='release-readiness'?
+                {arranging&&<button type="button" className="as-widget-remove" disabled={Boolean(busyKey)} aria-label={'Remove '+widget.title} onClick={()=>void act(widget.key,()=>uninstallAccountWidget(widget.key))}><Minus size={16}/></button>}
+                <div className="as-widget-content" aria-hidden={arranging||undefined} ref={node=>{if(node)node.inert=arranging}}>
+                {widget.key==='media'||creativeWidgetEntry(widget.key)&&widget.key!=='artifact-preview'||widget.key==='pull-request-summary'||widget.key==='release-readiness'?
                   <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>:
                   <WidgetFrame title={widget.key==='artifact-preview'?'':widget.title} size={widget.sizeClass as 'small' | 'medium' | 'large'}>
                     <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>
                   </WidgetFrame>}
+                </div>
                 {arranging?<div className="flex w-full flex-wrap items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1">
                       <IconAction type="button" variant="ghost" className="as-new-tab-drag-handle cursor-grab active:cursor-grabbing"
@@ -262,11 +279,7 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                         onClick={() => setDetailsKey(detailsKey === widget.key ? null : widget.key)}>
                         <SlidersHorizontal className="size-4"/>
                       </IconAction>
-                      <IconAction type="button" variant="ghost" label={'Remove ' + widget.title}
-                        disabled={Boolean(busyKey)}
-                        onClick={() => void act(widget.key, () => uninstallAccountWidget(widget.key))}>
-                        <Trash2 className="size-4"/>
-                      </IconAction>
+
                     </div>
                   </div>:null}
                   {arranging && detailsKey === widget.key ? (
@@ -280,6 +293,7 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                           {widget.sizes.map(size => <option key={size} value={size}>{size}</option>)}
                         </select>
                       </label>
+                      {widget.key === 'media' && <Button type="button" size="sm" onClick={()=>setMediaKey(widget.key)}>Choose media</Button>}
                       {widget.key === 'artifact-preview' && <label className="flex items-center justify-between gap-3"><span>Preview</span><select aria-label="Artifact preview mode" value={String(widget.configuration.previewMode??'preview')} onChange={event=>void act(widget.key,()=>updateAccountWidget(widget.key,{configuration:{previewMode:event.target.value}}))}><option value="preview">Preview</option><option value="list">List</option><option value="cover">Cover only</option></select></label>}
                       {widget.key === 'countdown' && <label className="flex items-center justify-between gap-3">
                         <span>Duration</span>
@@ -305,6 +319,7 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
             ))}
           </ul>
         )}
+      {mediaKey&&<WorkspaceMediaPicker onClose={()=>setMediaKey(null)} onChoose={async choice=>{await updateAccountWidget(mediaKey,{configuration:choice});await refresh();setMediaKey(null)}}/>}
       {!loading && (!error || catalog.length > 0) && <p className="mt-2 text-[11px] text-muted-foreground">
         {arranging ? 'Drag to arrange. Changes are saved to your account.' : null}
       </p>}

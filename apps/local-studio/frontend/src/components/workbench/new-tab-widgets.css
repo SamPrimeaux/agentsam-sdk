@@ -14,3 +14,13 @@
 
 .as-new-tab-widget--large {min-width:0;}
 .as-new-tab-widgets .agentsam-widget-tile > .agentsam-widget > .agentsam-widget__header:has(.agentsam-widget__title:empty){display:none;}
+
+.as-widget-content{min-width:0;position:relative}
+.as-new-tab-widgets .as-widget-content>.agentsam-widget{border-radius:24px;padding:14px;min-width:0;overflow:hidden}
+.as-new-tab-widgets [data-size=small] .as-widget-content>.agentsam-widget{aspect-ratio:1;min-height:140px;display:flex;flex-direction:column;justify-content:space-between}
+.as-new-tab-widgets [data-widget-key=calculator] .as-widget-content>.agentsam-widget{aspect-ratio:auto}
+.as-widget-remove{position:absolute;z-index:3;top:-7px;left:-7px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--card);color:var(--foreground);border:1px solid var(--border);box-shadow:0 2px 6px #0004;touch-action:manipulation}
+.as-new-tab-widgets [data-arranging=true] .as-widget-content{animation:as-widget-jiggle .24s alternate infinite ease-in-out;transform-origin:50% 50%;pointer-events:none}
+.as-new-tab-widgets [data-arranging=true] li:nth-child(even) .as-widget-content{animation-delay:-.12s}
+@keyframes as-widget-jiggle{from{transform:rotate(-.65deg)}to{transform:rotate(.65deg)}}
+@media(prefers-reduced-motion:reduce){.as-new-tab-widgets [data-arranging=true] .as-widget-content{animation:none}}
