@@ -115,7 +115,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         icon: stage.icon,
         pluginId: undefined,
         stageId: undefined,
-        url: kind === "design" ? "/canvas?library=sources" : "",
+        url: kind === "design" ? "/admin/design-canvas/" : "",
         ephemeral: false,
       });
     }

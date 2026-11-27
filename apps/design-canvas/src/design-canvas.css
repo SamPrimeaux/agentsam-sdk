@@ -595,6 +595,18 @@ button{cursor:pointer}
 .dcx-create-tile:hover img{transform:translateY(-2px);filter:brightness(1.08)}
 .dcx-create-tile span{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:500}
 .dcx-create-tile i{padding:2px 4px;border-radius:5px;background:#292c31;color:#c7cbd1;font-size:8px;font-style:normal;font-weight:500}
+.dcx-studio-templates{margin:0 0 30px;padding:14px;border:1px solid var(--dcx-library-border,#30353c);border-radius:12px;background:var(--dcx-library-card,#1a1d21)}
+.dcx-studio-templates>.dcx-section-label{display:flex;gap:8px;align-items:baseline;margin:0 0 10px;color:var(--dcx-library-fg,#f1f2f3);font-size:11px;font-weight:600}
+.dcx-studio-templates>.dcx-section-label span{color:var(--dcx-library-muted,#a4abb5);font-size:10px;font-weight:400}
+.dcx-studio-templates>p{margin:8px 0;color:var(--dcx-library-muted,#a4abb5);font-size:11px}
+.dcx-studio-template-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px}
+.dcx-studio-template{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:12px;padding:11px;border:1px solid var(--dcx-library-border,#30353c);border-radius:9px;background:var(--dcx-library-control,#191c20)}
+.dcx-studio-template>div{min-width:0}
+.dcx-studio-template strong{display:block;overflow:hidden;color:var(--dcx-library-fg,#f1f2f3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.dcx-studio-template small{display:block;margin-top:3px;color:var(--dcx-library-muted,#a4abb5);font-size:9px}
+.dcx-studio-template p{margin:6px 0 0;color:var(--dcx-library-muted,#a4abb5);font-size:10px;line-height:1.4}
+.dcx-studio-template button{flex:0 0 auto;padding:7px 9px;border:1px solid var(--dcx-library-border,#30353c);border-radius:7px;background:var(--dcx-library-hover,#24282d);color:var(--dcx-library-fg,#f1f2f3);font-size:10px;cursor:pointer}
+.dcx-studio-template button:disabled{opacity:.6;cursor:wait}
 .dcx-artifacts-section{min-height:160px}
 .dcx-artifact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:21px}
 .dcx-root.is-gallery .dcx-artifact-card{position:relative;height:190px;min-width:0;border:1px solid var(--dcx-library-border,#30353c);border-radius:11px;background:var(--dcx-library-card,#1a1d21);overflow:hidden}

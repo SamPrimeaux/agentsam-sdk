@@ -162,6 +162,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
   const [initialActiveId, setInitialActiveId] = useState<string | undefined>();
   const [initialRoute, setInitialRoute] = useState<"gallery" | "references">("gallery");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [documentActionMessage, setDocumentActionMessage] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const records = useRef(new Map<string, CanvasRecord>());
   const pending = useRef<CreativeArtifact[] | null>(null);
@@ -377,6 +378,47 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
     };
   }, []);
 
+  const shareWorkspaceLink = async (artifact: CreativeArtifact) => {
+    const url = window.location.origin + "/canvas?workspace=creative&canvas=" + encodeURIComponent(artifact.id);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: artifact.name, text: "AgentSam Creative Workspace document", url });
+        setDocumentActionMessage("Workspace link shared. Recipients need access to this AgentSam workspace.");
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setDocumentActionMessage("Workspace link copied. Recipients need access to this AgentSam workspace.");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(url);
+        setDocumentActionMessage("Workspace link copied. Recipients need access to this AgentSam workspace.");
+      } catch {
+        setDocumentActionMessage("Could not copy the workspace link. Open the document and copy its address.");
+      }
+    }
+  };
+  const saveArtifactToLibrary = async (artifact: CreativeArtifact) => {
+    setDocumentActionMessage("");
+    await flushRef.current();
+    if (failed.current) {
+      setDocumentActionMessage("Save the document before adding it to Library.");
+      return;
+    }
+    try {
+      const response = await fetch("/api/work/library/artifacts/" + encodeURIComponent(artifact.id), {
+        method: "PATCH", credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ starred: true }),
+      });
+      await readJson<{ ok?: boolean }>(response);
+      setDocumentActionMessage("Added to Library.");
+    } catch (error) {
+      setDocumentActionMessage(error instanceof Error && error.message.includes("404")
+        ? "This document is not available in Library yet. Save it and try again."
+        : "Could not add this document to Library.");
+    }
+  };
   const retrySave = () => {
     failed.current = false;
     void flushRef.current();
@@ -421,6 +463,8 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       initialActiveId={initialActiveId}
       initialRoute={initialRoute}
       onActiveArtifactChange={onActiveArtifactChange}
+      onShareArtifact={(artifact) => { void shareWorkspaceLink(artifact); }}
+      onSaveToLibrary={(artifact) => { void saveArtifactToLibrary(artifact); }}
       onAskAgentSam={(context) => {
         const store = useWorkStore.getState();
         const chatId = tab.parentChatId || store.activeChatId;
@@ -443,7 +487,28 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
           store.setSideOpen(false);
         }
       }}
-      onOpenCode={() => useWorkStore.getState().setWorkSurface("code")}
+      onOpenCode={(context) => {
+        const store = useWorkStore.getState();
+        const project = store.projects.find((item) => item.id === store.activeProjectId && item.kind === "filesystem");
+        const chatId = tab.parentChatId || store.activeChatId;
+        if (chatId && store.chats.some((chat) => chat.id === chatId)) {
+          store.setActiveChat(chatId);
+          const workspace = project
+            ? "Use the selected AgentSam Work repository \"" + project.name + "\" at " + (project.workspaceRoot || "its connected filesystem root") + " as the working context."
+            : "No filesystem-backed repository is selected. Ask the user to open an existing repository before making code changes.";
+          const annotation = {
+            id: crypto.randomUUID(),
+            label: context?.title || "Design artifact",
+            page: "Design Canvas",
+            tag: "design-code-handoff",
+            text: [workspace, context?.artifactId ? "Artifact " + context.artifactId + " (" + context.artifactType + ")" : "", context?.title || ""].filter(Boolean).join(" · "),
+          };
+          store.setPendingAnnotations(chatId, items => [...items.filter(item => item.tag !== "design-code-handoff"), annotation].slice(-8));
+        }
+        // Keep the existing Work repository and lead composer as the work context.
+        // The embedded Design Canvas never opens a second code editor.
+        store.setWorkSurface("chat");
+      }}
       outputsOpen={outputsOpen}
       onToggleOutputs={() => {
         const store = useWorkStore.getState();
@@ -452,6 +517,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         else store.setWorkSurface("files");
       }}
     /></div>
+    {documentActionMessage ? <div role="status" className="shrink-0 border-t border-border/70 bg-background px-3 py-2 text-xs text-muted-foreground">{documentActionMessage}</div> : null}
     <div role="status" className="flex shrink-0 items-center justify-end gap-1 border-t border-border/70 bg-background px-3 py-1 text-[10px] text-muted-foreground">
       {localFallback ? <>Local draft · not synced</> :
        saveState === "saving" ? <><LoaderCircle size={11} className="animate-spin"/> Saving</> :

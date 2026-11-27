@@ -77,6 +77,10 @@
       "bucket_name": "cad"
     },
     {
+      "binding": "STUDIO_TEMPLATE_ASSETS",
+      "bucket_name": "inneranimalmedia-assets"
+    },
+    {
       "binding": "AUTORAG_BUCKET",
       "bucket_name": "inneranimalmedia-autorag"
     },
