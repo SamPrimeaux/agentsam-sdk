@@ -17,6 +17,8 @@ import { createLocalScriptRuntime, isLocalBashAvailable } from './adapters/local
 import { findOpenCvPython, createOpenCvVideoOperations } from './adapters/opencv-video.js';
 import { createWorkspaceMediaImportOperation, projectInstallationId } from './adapters/workspace-media.js';
 
+import { createCloudflareR2InventoryHandler, R2_INVENTORY_OPERATION } from './adapters/cloudflare-r2-inventory.js';
+
 const LOCAL_SCRIPT_OPERATIONS = Object.freeze(['sam.script.save', 'sam.script.get', 'sam.superbash']);
 
 const LOCAL_MEDIA_OPERATIONS = Object.freeze([
@@ -59,7 +61,7 @@ export async function resolveShellSamIdentity({ state, authorityLoader = resolve
   } catch { return null; }
 }
 
-export function createShellSamAdapter({ state, authorize, trustedIdentity = null, mediaBindings = null, procedureOperationIds = [] } = {}) {
+export function createShellSamAdapter({ state, authorize, trustedIdentity = null, mediaBindings = null, procedureOperationIds = [], r2InventoryHandler = null } = {}) {
   if (!state?.cwd || typeof authorize !== 'function') return null;
   const readTrustedIdentity = () => {
     const session = readAccountSession({home:state.home});
@@ -92,11 +94,12 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   const permit = async ({operation,policy,input,identity}) => {
     if (!readTrustedIdentity()) return false;
     return (await authorize({capability_id:operation,input,descriptor:{
-      side_effects: policy?.effect === 'script_artifact_read' ? 'none' : policy?.effect || 'local_write',
+      side_effects: ['read','platform_read','script_artifact_read'].includes(policy?.effect) ? 'none' : policy?.effect || 'local_write',
     }})) === true;
   };
   const samOS = createSamOS({core:true,generated:{
     assetStore, scriptStore, processRuntime, scriptExecutionLanes: ['local'],
+    handlers: { [R2_INVENTORY_OPERATION]: r2InventoryHandler || createCloudflareR2InventoryHandler({home:state.home,root}) },
     resolveTrustedContext: async () => {
       const principal = readTrustedIdentity();
       if (!principal) throw new Error('sam_authenticated_session_required');
@@ -125,7 +128,7 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
     // procedure and independently installed as harmless read-only operations.
     // An unbound procedure never creates a synthetic executor or permission.
     expose:[...new Set([
-      ...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS,
+      ...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS, R2_INVENTORY_OPERATION,
       ...procedureOperationIds.filter(id => {
         const op = samOS.get(id);
         return op?.risk === 'read_only' && op?.execution?.sideEffects === 'none';
