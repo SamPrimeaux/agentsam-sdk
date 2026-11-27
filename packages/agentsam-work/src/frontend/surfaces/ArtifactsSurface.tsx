@@ -17,11 +17,11 @@ const sourceLabels: Record<WorkArtifact["source"], string> = {
 };
 
 const createOptions = [
-  { id: "docs", label: "Docs", description: "Documents and writing", icon: FileText },
+  { id: "docs", label: "Docs", description: "Documents and writing", icon: FileText, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/docs.avif" },
   { id: "slides", label: "Slides", description: "Presentations and stories", icon: Presentation },
-  { id: "sheets", label: "Sheets", description: "Tables and calculations", icon: Table2 },
+  { id: "sheets", label: "Sheets", description: "Tables and calculations", icon: Table2, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/sheets.avif" },
   { id: "design", label: "Design", description: "Layouts and visual systems", icon: Palette },
-  { id: "data", label: "Data", description: "Dashboards and analysis", icon: BarChart3 },
+  { id: "data", label: "Data", description: "Dashboards and analysis", icon: BarChart3, cover: "https://cdn.inneranimalmedia.com/previews/platform/artifacts/creation-tiles/v1/data.avif" },
   { id: "whiteboard", label: "Whiteboard", description: "Ideas and collaborative maps", icon: Shapes },
 ] as const;
 
@@ -505,6 +505,17 @@ export function ArtifactsSurface({
                       >
                         <span className="agentsam-artifact-hub__create-art">
                           <Icon size={31} strokeWidth={1.55} aria-hidden="true" />
+                          {option.cover ? (
+                            <img
+                              src={option.cover}
+                              alt=""
+                              aria-hidden="true"
+                              loading="eager"
+                              decoding="async"
+                              draggable={false}
+                              onError={(event) => { event.currentTarget.style.display = "none"; }}
+                            />
+                          ) : null}
                         </span>
                         <span className="agentsam-artifact-hub__create-label">{option.label}</span>
                       </button>
