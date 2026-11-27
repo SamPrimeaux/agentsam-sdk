@@ -33,6 +33,8 @@ export interface DesignWorkspaceFrameProps {
   documentActions?: ReactNode;
   explorer?: ReactNode;
   inspector?: ReactNode;
+  inspectorSheetOpen?: boolean;
+  onInspectorSheetDismiss?: () => void;
   assistant?: ReactNode;
   status?: ReactNode;
   assistantOpen?: boolean;
@@ -55,6 +57,8 @@ export function DesignWorkspaceFrame({
   documentActions,
   explorer,
   inspector,
+  inspectorSheetOpen = false,
+  onInspectorSheetDismiss,
   assistant,
   status,
   assistantOpen,
@@ -67,6 +71,10 @@ export function DesignWorkspaceFrame({
   const [internalAssistantOpen, setInternalAssistantOpen] = useState(true);
   const [internalAssistantDock, setInternalAssistantDock] = useState<AssistantDock>("left");
   const [mobilePane, setMobilePane] = useState<Pane>("stage");
+  useEffect(() => {
+    if (inspectorSheetOpen) setMobilePane("inspector");
+    else setMobilePane((pane) => pane === "inspector" ? "stage" : pane);
+  }, [inspectorSheetOpen]);
   const [explorerWidth, setExplorerWidth] = useState(228);
   const [inspectorWidth, setInspectorWidth] = useState(268);
   const [assistantWidth, setAssistantWidth] = useState(DEFAULT_ASSISTANT_WIDTH);
@@ -283,6 +291,7 @@ export function DesignWorkspaceFrame({
       data-design-app={snapshot.resource.appId}
       data-design-status={snapshot.status}
       data-mobile-pane={mobilePane}
+      data-contextual-inspector={inspectorSheetOpen ? "true" : undefined}
       data-assistant-expanded={assistantExpanded ? "true" : "false"}
       data-assistant-dragging={assistantDragging ? "true" : "false"}
       aria-label={stageLabel}
@@ -326,6 +335,7 @@ export function DesignWorkspaceFrame({
             aria-current={mobilePane === pane.id ? "page" : undefined}
             onClick={() => {
               if (pane.id === "assistant") toggleAssistant(true);
+              if (inspectorSheetOpen && pane.id !== "inspector") onInspectorSheetDismiss?.();
               setMobilePane(pane.id);
             }}
           >
@@ -340,7 +350,7 @@ export function DesignWorkspaceFrame({
             type="button"
             className="dw-mobile-scrim"
             aria-label="Close workspace panel"
-            onClick={() => setMobilePane("stage")}
+            onClick={() => { if (inspectorSheetOpen) onInspectorSheetDismiss?.(); setMobilePane("stage"); }}
           />
         ) : null}
 

@@ -9,3 +9,9 @@ export * from './calculator';
 export * from './CalculatorWidget';
 export * from './registry';
 export * from './BuiltinWidget';
+export * from './ReleaseWidgets';
+export * from './release-snapshots';
+export * from './creative-covers';
+export * from './CreativeWidgets';
+
+export * from './MediaWidget';

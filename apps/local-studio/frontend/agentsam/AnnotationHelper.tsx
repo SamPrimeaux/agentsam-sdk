@@ -8,6 +8,7 @@ import { stageChatImage, stageChatFile } from '@/lib/content/chat-images';
 import { ComposerLibraryPicker } from '@/components/workbench/composer-library-picker';
 import { IconAction } from '@/components/ui/icon-action';
 import { PluginPicker } from './PluginPicker';
+import { ModelSelect } from "@/components/workbench/model-select";
 
 export const DESIGN_WORKSPACE_PROMPT_EVENT = 'agentsam:design-workspace-prompt' as const;
 export type DesignWorkspacePromptRequest = {
@@ -138,9 +139,10 @@ export function AnnotationHelper() {
     onChange={onChange}
     onSend={onSend}
     disabled={busy}
-    placeholder="Ask about this…"
+    placeholder="Ask AgentSam"
     toolbarStart={trigger}
-    containerClassName="mini-agentsam-composer"
+    toolbarEnd={<ModelSelect compact />}
+    containerClassName={"mini-agentsam-composer" + (value.trim() ? " has-draft" : "")}
     inputClassName="mini-agentsam-input"
     toolbarClassName="mini-agentsam-toolbar"
     sendControl={<button className="mini-agentsam-send" data-composer-send="" type="button" aria-label="Add annotation to conversation" disabled={busy || !value.trim()} onClick={onSend}><ArrowUp aria-hidden="true" size={18} strokeWidth={2.2} /></button>}

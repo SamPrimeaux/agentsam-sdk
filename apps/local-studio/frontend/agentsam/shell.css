@@ -151,7 +151,7 @@
 .agentsam-conversation-dock { flex-shrink: 0; padding: 12px 24px 0; }
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock { padding-top: 0; }
 .agentsam-conversation [data-agent-conversation-composer] > * { margin-inline: auto; width: 100%; max-width: 1120px; }
-.agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
+.agentsam-conversation [data-agent-thread] { font-size: 16px; line-height: 1.65; }
 .agentsam-side-panel { display: flex; flex-direction: column; min-height: 0; width: min(var(--agentsam-panel-width, 780px), calc(100% - 320px)); min-width: 320px; max-width: calc(100% - 320px); border-left: 1px solid var(--nav-border); overflow: hidden; }
 .agentsam-workspace.is-work-focused .agentsam-side-panel { width:100%; max-width:100%; min-width:0; flex:1; }
 .agentsam-workspace > .studio-separator { flex-shrink: 0; background: transparent; cursor: col-resize; }
@@ -641,9 +641,12 @@
 }
 
 
-/* Reserve a real layout band for the mobile launch dock: never cover the composer or route content. */
+/* Reserve the dock band only while the dock is actually mounted. */
 @media (max-width: 767px) {
   .agentsam-shell .agentsam-main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .agentsam-shell .agentsam-main:has(.as-nav-launch-dock) {
     padding-bottom: calc(77px + env(safe-area-inset-bottom, 0px));
   }
   .agentsam-shell .agentsam-page-layout .agentsam-conversation-dock {
@@ -1090,4 +1093,155 @@
 }
 @media(prefers-reduced-motion:reduce) {
   .agentsam-mode-host,.agentsam-topbar-mode .as-nav-mode-switch,.agentsam-mobile-header-action-pill { animation:none; }
+}
+/* The existing composer becomes a compact Slides input when idle; focus
+   restores the full attachment, model and run controls. */
+@media(max-width:767px){
+  .agentsam-focused-lead-composer:has(.as-artifact-composer){padding:6px 16px;border-top:0}
+  .agentsam-page-layout .as-artifact-composer:not(.has-draft):not(:focus-within):not([aria-busy="true"]){display:flex;flex-direction:row;align-items:center;gap:4px;padding:4px 8px 4px 14px;border-radius:999px}
+  .agentsam-page-layout .as-artifact-composer:not(.has-draft):not(:focus-within):not([aria-busy="true"]) textarea{flex:1;min-width:0;min-height:44px;height:44px!important;padding:10px 0}
+  .agentsam-page-layout .as-artifact-composer:not(.has-draft):not(:focus-within):not([aria-busy="true"]) .agentsam-composer-actions{width:auto;flex:none;gap:6px;padding:0}
+  .agentsam-page-layout .as-artifact-composer:not(.has-draft):not(:focus-within):not([aria-busy="true"]) .agentsam-composer-actions>:not(.as-composer-dictate):not(.as-composer-send-wrap){display:none}
+  .agentsam-page-layout .as-artifact-composer .as-composer-send-wrap[data-mobile-voice-idle="true"] .as-composer-mobile-voice{display:none}
+  .agentsam-page-layout .as-artifact-composer .as-composer-send-wrap[data-mobile-voice-idle="true"] [data-composer-send]{display:inline-flex}
+}
+
+/* MiniAgentSam / shared picker glass presentation */
+.agentsam-plugin-menu {
+  background: color-mix(in srgb, var(--nav-popover) 92%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(125%);
+  backdrop-filter: blur(24px) saturate(125%);
+  border-radius: 22px;
+  padding: 8px;
+}
+@media(max-width:767px){
+  .agentsam-plugin-menu[data-section="root"] { inline-size:min(280px,100%); }
+  .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row--compact {min-height:48px;padding:8px 12px;gap:12px;border-radius:14px;}
+  .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row--compact > svg {width:20px;height:20px;flex-basis:20px;color:var(--nav-text);}
+  .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy strong {font-size:16px;font-weight:500;}
+  .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy small {display:none;}
+  .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row {min-height:48px;border-radius:14px;}
+  .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy strong {font-size:15px;}
+  .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-search {min-height:44px;border-radius:12px;font-size:16px;}
+  .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-icon {width:30px;height:30px;flex-basis:30px;background:transparent;}
+  .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-icon img {width:28px;height:28px;}
+}
+
+/* Approved streaming capsule: one primary action, same theme accent. */
+.agentsam-shell [data-agent-composer][aria-busy="true"] [data-composer-stop] {
+  background:var(--nav-accent); color:var(--nav-accent-ink,#fff);
+}
+@media(max-width:767px){
+  .agentsam-page-layout [data-agent-composer][aria-busy="true"] [data-composer-stop],
+  .agentsam-page-layout [data-agent-composer][aria-busy="true"] [data-composer-send] {width:44px;height:44px;flex-shrink:0}
+}
+
+/* Approved plus and mention popovers — shared picker, existing capability rows. */
+.agentsam-plugin-menu{background:linear-gradient(165deg,color-mix(in srgb,var(--nav-text) 9%,transparent),transparent 55%),color-mix(in srgb,var(--nav-popover) 76%,transparent);border-color:color-mix(in srgb,var(--nav-text) 18%,transparent);box-shadow:0 16px 48px #0004,inset 0 1px 1px #ffffff14;backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border-radius:24px;animation:agentsam-picker-in 180ms ease-out}
+@keyframes agentsam-picker-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row--compact>svg{box-sizing:content-box;padding:8px;background:color-mix(in srgb,var(--nav-text) 9%,transparent);border-radius:50%}
+.agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row>small:last-child{background:transparent;font-family:inherit;font-size:12px;color:var(--nav-muted)}
+@media(prefers-reduced-motion:reduce){.agentsam-plugin-menu{animation:none}}
+
+/* Side conversation: reuse the shared composer and reserve chrome for context. */
+.agentsam-aux-context{display:flex;align-items:center;gap:10px;padding:8px 16px;color:var(--nav-muted);font-size:12px;min-height:0}
+.agentsam-aux-context:empty{display:none}
+.agentsam-aux-empty{text-align:center;font-size:clamp(19px,3cqi,25px);font-weight:500;color:var(--nav-text);padding:24px}
+.agentsam-aux-composer-dock{padding:8px 8px 0}
+.agentsam-aux-chat .agentsam-composer-surface{background:linear-gradient(165deg,color-mix(in srgb,var(--nav-text) 9%,transparent),transparent 55%,color-mix(in srgb,var(--nav-text) 5%,transparent)),color-mix(in srgb,var(--nav-popover) 68%,transparent);border:1px solid color-mix(in srgb,var(--nav-text) 19%,transparent);box-shadow:inset 0 1px 1px #ffffff15,0 6px 20px #0002;backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%)}
+@media(max-width:900px){
+  .agentsam-shell [data-desktop-stage-tabs]{display:none}
+  .agentsam-shell:has([data-mobile-stage-focused="true"]) .as-nav-launch-dock{display:none}
+  .agentsam-shell .agentsam-main:has([data-mobile-stage-focused="true"]){padding-bottom:env(safe-area-inset-bottom,0px)}
+  .agentsam-aux-context{padding:6px 16px;justify-content:center}
+  .agentsam-aux-save{display:none!important}
+  .agentsam-aux-composer-dock{padding:0 8px}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface{width:100%;max-width:720px;min-height:56px;padding:5px 7px;gap:0;border-radius:28px}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within){display:grid;grid-template-columns:44px minmax(0,1fr) 44px 44px;align-items:center}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) textarea{grid-column:2;grid-row:1;width:100%;min-width:0;min-height:44px;font-size:17px;padding:10px 4px}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) .agentsam-composer-actions{display:contents}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) .agentsam-composer-actions > span[style*="flex"]{display:none}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) [aria-label^="Select model:"]{display:none}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) .agentsam-composer-actions > :first-child{grid-column:1;grid-row:1}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) .as-composer-dictate{grid-column:3;grid-row:1}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:not(.has-draft):not(:focus-within) :is(.as-composer-send-wrap,[data-composer-stop]){grid-column:4;grid-row:1}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:is(.has-draft,:focus-within){display:flex;flex-direction:column;align-items:stretch;border-radius:24px;padding:8px 10px}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:is(.has-draft,:focus-within) textarea{width:100%;flex:0 0 auto;font-size:17px}
+  .agentsam-shell .agentsam-aux-chat .agentsam-composer-surface:is(.has-draft,:focus-within) .agentsam-composer-actions{width:100%;flex:0 0 auto;display:flex}
+  .agentsam-shell .agentsam-aux-chat :is(.as-composer-dictate,.as-composer-mobile-voice,[data-composer-send],[data-composer-stop],[aria-label="Add tools and plugins"]){width:44px;height:44px;flex-shrink:0}
+  .agentsam-shell .agentsam-aux-chat :is(.as-composer-mobile-voice,[data-composer-send],[data-composer-stop]){background:var(--nav-accent);color:var(--nav-accent-ink,#fff)}
+}
+
+.agentsam-global-mobile-stage-actions{display:none}
+@media(max-width:900px){
+  .agentsam-global-mobile-stage-actions{display:inline-flex}
+  .agentsam-shell:has(.platform-console-assistant [data-side-stage-kind="chat"]) .as-nav-launch-dock{display:none}
+  .agentsam-shell .agentsam-main:has(.platform-console-assistant [data-side-stage-kind="chat"]){padding-bottom:env(safe-area-inset-bottom,0px)}
+  .agentsam-shell .agentsam-aux-chat .as-composer-send-wrap[data-mobile-voice-idle="true"] .as-composer-mobile-voice{display:grid;place-items:center}
+  .agentsam-shell .agentsam-aux-chat .as-composer-send-wrap[data-mobile-voice-idle="true"] [data-composer-send],.agentsam-shell .agentsam-aux-chat .as-composer-voice-quick{display:none!important}
+}
+@media(min-width:901px){.console-topbar:has(#agentsam-console-actions-slot > .agentsam-global-mobile-stage-actions) .console-topbar-actions{display:flex}}
+
+/* Shared composer material and contextual glass menus. */
+
+.agentsam-shell {
+ --as-glass-fill: linear-gradient(170deg,color-mix(in srgb,var(--nav-text) 10%,transparent),transparent 48%,color-mix(in srgb,var(--nav-text) 5%,transparent)),color-mix(in srgb,var(--nav-popover,var(--nav-surface)) 72%,transparent);
+ --as-glass-edge: color-mix(in srgb,var(--nav-text) 20%,transparent);
+ --as-glass-shadow: inset 0 1px 1px #ffffff18,0 6px 24px #0003;
+}
+.agentsam-shell :is(.agentsam-composer-surface,.as-sketch-mini-composer,.agentsam-glass-menu){
+ background:var(--as-glass-fill);border:1px solid var(--as-glass-edge);box-shadow:var(--as-glass-shadow);
+ backdrop-filter:blur(28px) saturate(145%);-webkit-backdrop-filter:blur(28px) saturate(145%);color:var(--nav-text)
+}
+.agentsam-shell .agentsam-composer-surface:focus-within{border-color:color-mix(in srgb,var(--nav-text) 32%,transparent);box-shadow:var(--as-glass-shadow)}
+.agentsam-shell .agentsam-glass-menu{border-radius:24px;padding:6px;max-width:calc(100vw - 24px);max-height:min(70dvh,var(--radix-dropdown-menu-content-available-height,70dvh));overflow:auto;overscroll-behavior:contain}
+.agentsam-shell .agentsam-plugin-menu{background:var(--as-glass-fill);border-color:var(--as-glass-edge);box-shadow:var(--as-glass-shadow)}
+.agentsam-shell .agentsam-plugin-menu[data-section="root"]{inline-size:min(280px,100%)}
+.agentsam-shell .agentsam-plugin-menu[data-section="mention"]{inline-size:100%}
+.agentsam-shell .agentsam-composer-surface :is([data-composer-send],[data-composer-stop],.as-composer-mobile-voice){background:var(--nav-accent);color:var(--nav-accent-ink,#fff);border-radius:50%}
+.agentsam-shell .as-sketch-mini-composer{display:flex;align-items:center;gap:4px;border-radius:999px;padding:5px 7px;min-height:54px}
+.agentsam-shell .as-sketch-mini-composer input{min-width:0;flex:1;background:transparent;color:var(--nav-text);font:inherit;border:0;outline:none;padding:8px 4px}
+.agentsam-shell .as-sketch-mini-composer input::placeholder{color:var(--nav-muted)}
+.agentsam-shell .as-sketch-mini-composer button{flex:none;width:40px;height:40px;border-radius:50%;color:var(--nav-text)}
+.agentsam-shell .as-sketch-mini-composer [data-composer-send]{background:var(--nav-accent);color:var(--nav-accent-ink,#fff)}
+.agentsam-shell .as-sketch-mini-composer [data-composer-send]:disabled{opacity:.45}
+@media(max-width:900px){
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)){
+ display:grid;grid-template-columns:44px minmax(0,1fr) 44px 44px;align-items:center;gap:0;min-height:56px;padding:5px 7px;border-radius:999px
+ }
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) textarea{grid-column:2;grid-row:1;width:100%;min-width:0;min-height:44px;font-size:16px;padding:10px 4px}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) .agentsam-composer-actions{display:contents}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) .agentsam-composer-actions>span[style*="flex"]{display:none}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) [aria-label^="Select model:"]{display:none}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) [aria-label="Add tools and plugins"]{display:inline-grid;grid-column:1;grid-row:1}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) .as-composer-dictate{grid-column:3;grid-row:1}
+ .agentsam-shell .agentsam-composer-surface:not(.has-draft):not(:focus-within):not(:has(.as-work-mode-indicator)):not(:has(.agentsam-composer-attachments)) :is(.as-composer-send-wrap,[data-composer-stop]){grid-column:4;grid-row:1}
+ .agentsam-shell .agentsam-composer-surface:is(.has-draft,:focus-within){display:flex;flex-direction:column;align-items:stretch;border-radius:24px}
+ .agentsam-shell .agentsam-composer-surface:is(.has-draft,:focus-within) textarea{width:100%;flex:0 0 auto;font-size:16px}
+ .agentsam-shell .agentsam-composer-surface:is(.has-draft,:focus-within) .agentsam-composer-actions{display:flex;width:100%;flex:0 0 auto;flex-wrap:wrap}
+ .agentsam-shell .agentsam-composer-surface :is([aria-label="Add tools and plugins"],.as-composer-dictate,[data-composer-send],[data-composer-stop],.as-composer-mobile-voice){width:44px;height:44px;flex-shrink:0}
+ .agentsam-shell .agentsam-glass-menu [role="menuitem"]{min-height:44px;font-size:16px}
+ .agentsam-shell .as-sketch-mini-composer input{font-size:16px}
+ .agentsam-shell .as-sketch-mini-composer button{width:44px;height:44px}
+}
+@media(prefers-reduced-transparency:reduce){
+ .agentsam-shell :is(.agentsam-composer-surface,.agentsam-plugin-menu,.agentsam-glass-menu,.as-sketch-mini-composer){background:var(--nav-popover);backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+/* Compact plus and typed mention picker refinement. */
+.agentsam-shell .agentsam-plugin-menu{border-radius:24px;padding:7px;scrollbar-gutter:auto}
+.agentsam-shell .agentsam-plugin-menu[data-typed-mention="true"] .agentsam-plugin-heading{display:none}
+.agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy small{display:none}
+.agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-meta{font-size:13px}
+.agentsam-shell .agentsam-plus-action-icon{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--nav-text) 10%,transparent);color:var(--nav-text)}
+.agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){
+ .agentsam-shell .agentsam-plugin-menu [data-desktop-only="true"]{display:none!important}
+ .agentsam-shell .agentsam-plugin-menu[data-section="root"]{inline-size:min(260px,100%);border-radius:28px}
+ .agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row{min-height:56px;gap:12px;padding:7px 10px}
+ .agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy small{display:none}
+ .agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy strong{font-size:17px;font-weight:500}
+ .agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row{min-height:50px;gap:12px;padding:7px 10px;border-radius:14px}
+ .agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy strong{font-size:17px;font-weight:500}
+ .agentsam-shell .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-meta{font-size:14px}
 }

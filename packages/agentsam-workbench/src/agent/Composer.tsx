@@ -7,6 +7,9 @@ export interface AgentComposerProps {
   onSend: () => void | Promise<void>;
   onCancel?: () => void | Promise<void>;
   streaming?: boolean;
+  /** Hosts with a real follow-up queue can replace Stop with Send while drafting. */
+  queueWhileStreaming?: boolean;
+  hasPendingContent?: boolean;
   disabled?: boolean;
   placeholder?: string;
   toolbarStart?: ReactNode;
@@ -37,6 +40,8 @@ export function AgentComposer({
   onSend,
   onCancel,
   streaming = false,
+  queueWhileStreaming = false,
+  hasPendingContent = false,
   disabled = false,
   placeholder = 'Work with AgentSam',
   toolbarStart,
@@ -108,8 +113,8 @@ export function AgentComposer({
         {toolbarEnd}
         {streaming ? (
           <>
-            {value.trim() ? (sendControl ?? defaultSend) : null}
-            {cancelControl ?? defaultStop}
+            {(value.trim() || hasPendingContent) ? (sendControl ?? defaultSend) : null}
+            {!queueWhileStreaming || !(value.trim() || hasPendingContent) ? (cancelControl ?? defaultStop) : null}
           </>
         ) : (sendControl ?? defaultSend)}
       </div>

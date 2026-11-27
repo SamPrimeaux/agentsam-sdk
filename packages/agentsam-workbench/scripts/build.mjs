@@ -40,7 +40,7 @@ await build({
   external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', '@inneranimalmedia/agentsam-contracts', '@inneranimalmedia/agentsam-loading-scene', '@inneranimalmedia/agentsam-loading-scene/*'],
 });
 mkdirSync(`${cwd}/dist/agent`, { recursive: true });
-for (const file of ['mini-agentsam.css', 'contextual-composer.css', 'tool-permission.css', 'selection-toolbar.css']) {
+for (const file of ['mini-agentsam.css', 'contextual-composer.css', 'tool-permission.css', 'selection-toolbar.css', 'thread.css']) {
   copyFileSync(`${cwd}/src/agent/${file}`, `${cwd}/dist/agent/${file}`);
 }
 copyFileSync(`${cwd}/src/project-control.css`, `${cwd}/dist/project-control.css`);

@@ -59,7 +59,7 @@
   display: flex;
   flex: 1 1 auto;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 5px;
   min-width: 0;
   overflow-x: auto;
@@ -328,4 +328,31 @@
   .dw-assistant,
   .dw-explorer,
   .dw-inspector { animation: none !important; }
+}
+
+@container (max-width: 690px) {
+  [data-contextual-inspector="true"][data-mobile-pane="inspector"] .dw-stage {
+    visibility: visible;
+    z-index: 1;
+    pointer-events: none;
+  }
+  [data-contextual-inspector="true"][data-mobile-pane="inspector"] .dw-inspector {
+    inset: auto 0 0;
+    height: auto;
+    max-height: min(60dvh, 520px);
+    min-height: min(220px, 45dvh);
+    border-radius: 24px 24px 0 0;
+    padding-top: 12px;
+  }
+  [data-contextual-inspector="true"] .dw-inspector::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 48px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--dw-border);
+  }
 }

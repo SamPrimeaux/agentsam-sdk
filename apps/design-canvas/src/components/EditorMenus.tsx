@@ -1,15 +1,17 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   BarChart3, Check, ChevronDown, Circle, Code2, Copy, Diamond, Download, FileJson,
   Grid3X3, Image, Library, Maximize2, MoreHorizontal, Pin, Play, Plus,
   Pencil, Presentation, Share2, Shapes, Square, Star, StickyNote, Table2, Trash2, Triangle, Type, ArrowRight, ChevronRight, MessageSquare, Folder, RefreshCw, HardDrive, Shield, X, FileText, Sparkles,
-  ZoomIn, ZoomOut
+  ZoomIn, ZoomOut, Eye, Magnet, Ruler, Hand, MousePointer2, Columns2, List,
 } from 'lucide-react';
 import type { ChartType, CreativeObject, CreativeType } from '../creative-model';
 
 export type ShapeKind = NonNullable<CreativeObject['shape']>;
 
 type Close = () => void;
+export type MenuAvoidRect = { left: number; top: number; right: number; bottom: number };
+export const MenuAvoidanceContext = createContext<MenuAvoidRect | null>(null);
 type MenuPopoverProps = {
   label: string;
   trigger: ReactNode;
@@ -18,11 +20,14 @@ type MenuPopoverProps = {
   side?: 'top' | 'bottom';
   className?: string;
   triggerClassName?: string;
+  avoidRect?: MenuAvoidRect;
 };
 
-export function MenuPopover({ label, trigger, children, align = 'start', side = 'bottom', className = '', triggerClassName = '' }: MenuPopoverProps) {
+export function MenuPopover({ label, trigger, children, align = 'start', side = 'bottom', className = '', triggerClassName = '', avoidRect }: MenuPopoverProps) {
+  const inheritedAvoidRect = useContext(MenuAvoidanceContext);
+  const effectiveAvoidRect = avoidRect || inheritedAvoidRect;
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState({ align, side });
+  const [placement, setPlacement] = useState<{ align: 'start' | 'end'; side: 'top' | 'bottom' | 'left' | 'right' }>({ align, side });
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -34,19 +39,38 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
       const triggerRect = triggerRef.current?.getBoundingClientRect();
       const menuRect = menuRef.current?.getBoundingClientRect();
       if (!triggerRect || !menuRect) return;
-      const fitsRight = triggerRect.left + menuRect.width <= window.innerWidth - 8;
-      const fitsLeft = triggerRect.right - menuRect.width >= 8;
-      const nextAlign = align === 'start' && !fitsRight && fitsLeft ? 'end' : align === 'end' && !fitsLeft && fitsRight ? 'start' : (fitsRight ? 'start' : 'end');
-      const below = window.innerHeight - triggerRect.bottom;
-      const above = triggerRect.top;
-      const nextSide = side === 'bottom' && below < menuRect.height + 8 && above > below ? 'top' : side === 'top' && above < menuRect.height + 8 && below > above ? 'bottom' : side;
-      setPlacement({ align: nextAlign, side: nextSide });
+      const otherAlign = align === 'start' ? 'end' : 'start';
+      const otherSide = side === 'bottom' ? 'top' : 'bottom';
+      const candidates: Array<{ align: 'start' | 'end'; side: 'top' | 'bottom' | 'left' | 'right' }> = [
+        { align, side },
+        { align, side: otherSide },
+        { align, side: 'right' },
+        { align, side: 'left' },
+        { align: otherAlign, side },
+        { align: otherAlign, side: otherSide },
+        { align: otherAlign, side: 'right' },
+        { align: otherAlign, side: 'left' },
+      ];
+      let best = candidates[0];
+      let bestScore = Number.POSITIVE_INFINITY;
+      candidates.forEach((candidate, index) => {
+        const left = candidate.side === 'left' ? triggerRect.left - menuRect.width - 7 : candidate.side === 'right' ? triggerRect.right + 7 : candidate.align === 'start' ? triggerRect.left : triggerRect.right - menuRect.width;
+        const top = candidate.side === 'bottom' ? triggerRect.bottom + 7 : candidate.side === 'top' ? triggerRect.top - menuRect.height - 7 : candidate.align === 'start' ? triggerRect.top : triggerRect.bottom - menuRect.height;
+        const overflow = Math.max(0, 8 - left) + Math.max(0, left + menuRect.width - (window.innerWidth - 8)) + Math.max(0, 8 - top) + Math.max(0, top + menuRect.height - (window.innerHeight - 8));
+        const avoid = effectiveAvoidRect;
+        const overlapWidth = avoid ? Math.max(0, Math.min(left + menuRect.width, avoid.right + 10) - Math.max(left, avoid.left - 10)) : 0;
+        const overlapHeight = avoid ? Math.max(0, Math.min(top + menuRect.height, avoid.bottom + 10) - Math.max(top, avoid.top - 10)) : 0;
+        const overlapArea = overlapWidth * overlapHeight;
+        const score = overflow * 10000 + overlapArea * 10 + index;
+        if (score < bestScore) { bestScore = score; best = candidate; }
+      });
+      setPlacement(best);
     };
     place();
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
-  }, [open, align, side]);
+  }, [open, align, side, effectiveAvoidRect?.left, effectiveAvoidRect?.top, effectiveAvoidRect?.right, effectiveAvoidRect?.bottom]);
 
   useEffect(() => {
     if (!open) return;
@@ -178,6 +202,82 @@ export function InsertMenu({ onText, onImage, onMedia, onShape, onChart, onTable
     {onTable ? <MenuAction label="Table" icon={<Table2 size={15}/>} onClick={onTable} close={close}/> : null}
   </>}</MenuPopover>;
 }
-export function ZoomControls({ zoom, onChange, onFit, grid, onToggleGrid }: { zoom: number; onChange: (zoom: number) => void; onFit: () => void; grid: boolean; onToggleGrid: () => void }) {
- return <><button className="dcx-command-icon" aria-label="Zoom out" onClick={() => onChange(Math.max(10,Math.round(zoom/1.2)))}><ZoomOut size={15}/></button><MenuPopover label="Zoom" trigger={<>{zoom}%<ChevronDown size={12}/></>} className="dcx-zoom-level" triggerClassName="dcx-command-button">{close => <><MenuAction label="Fit to view" detail="0" onClick={onFit} close={close}/>{[10,25,50,75,100,125,150,200,300,400].map(value => <MenuAction key={value} label={value+'%'} icon={zoom===value?<Check size={14}/>:undefined} onClick={() => onChange(value)} close={close}/>)}</>}</MenuPopover><button className="dcx-command-icon" aria-label="Zoom in" onClick={() => onChange(Math.min(400,Math.round(zoom*1.2)))}><ZoomIn size={15}/></button><button className="dcx-command-icon" aria-label="Toggle grid" aria-pressed={grid} onClick={onToggleGrid}><Grid3X3 size={15}/></button></>;
+export function ZoomControls({ zoom, onChange, onFit, grid, onToggleGrid, showGridToggle = true }: { zoom: number; onChange: (zoom: number) => void; onFit: () => void; grid: boolean; onToggleGrid: () => void; showGridToggle?: boolean }) {
+ return <><button className="dcx-command-icon" aria-label="Zoom out" onClick={() => onChange(Math.max(10,Math.round(zoom/1.2)))}><ZoomOut size={15}/></button><MenuPopover label="Zoom" trigger={<>{zoom}%<ChevronDown size={12}/></>} className="dcx-zoom-level" triggerClassName="dcx-command-button">{close => <><MenuAction label="Fit to view" detail="0" onClick={onFit} close={close}/>{[10,25,50,75,100,125,150,200,300,400].map(value => <MenuAction key={value} label={value+'%'} icon={zoom===value?<Check size={14}/>:undefined} onClick={() => onChange(value)} close={close}/>)}</>}</MenuPopover><button className="dcx-command-icon" aria-label="Zoom in" onClick={() => onChange(Math.min(400,Math.round(zoom*1.2)))}><ZoomIn size={15}/></button>{showGridToggle ? <button className="dcx-command-icon" aria-label="Toggle grid" aria-pressed={grid} onClick={onToggleGrid}><Grid3X3 size={15}/></button> : null}</>;
+}
+
+
+
+
+export function SlideLayoutMenu({ onAdd, label = 'Add slide' }: { onAdd: (kind: string) => void; label?: string }) {
+  const layouts: [string,string,ReactNode][] = [
+    ['Blank','Start with an empty slide',<Square size={15}/>],
+    ['Title','A strong opening title',<Type size={15}/>],
+    ['Section','Introduce a new section',<Presentation size={15}/>],
+    ['Title + body','Title with supporting copy',<FileText size={15}/>],
+    ['Bullets','A clear list of key points',<List size={15}/>],
+    ['Two columns','Compare two ideas side by side',<Columns2 size={15}/>],
+    ['Summary','Three concise takeaways',<Grid3X3 size={15}/>],
+  ];
+  return <MenuPopover label="Add slide layout" className="dcx-slide-layout-menu" trigger={<><Plus size={15}/><span>{label}</span><ChevronDown size={12}/></>} triggerClassName="dcx-command-button">
+    {(close) => <><div className="dcx-menu-section-label">Slide layouts</div>{layouts.map(([kind,detail,icon]) => <MenuAction key={kind} label={kind} detail={detail} icon={icon} onClick={() => onAdd(kind)} close={close}/>)}</>}
+  </MenuPopover>;
+}
+
+export function ViewMenu({ grid, snap, guides, bounds, onToggleGrid, onToggleSnap, onToggleGuides, onToggleBounds }: {
+  grid: boolean; snap: boolean; guides: boolean; bounds: boolean;
+  onToggleGrid: () => void; onToggleSnap: () => void; onToggleGuides: () => void; onToggleBounds: () => void;
+}) {
+  return <MenuPopover label="View options" trigger={<><Eye size={15}/><span>View</span><ChevronDown size={12}/></>} triggerClassName="dcx-command-button">
+    {(close) => <>
+      <MenuAction label={grid ? 'Hide grid' : 'Show grid'} icon={grid ? <Check size={14}/> : <Grid3X3 size={14}/>} onClick={onToggleGrid} close={close}/>
+      <MenuAction label={snap ? 'Disable snap to grid' : 'Snap to grid'} icon={snap ? <Check size={14}/> : <Magnet size={14}/>} onClick={onToggleSnap} close={close}/>
+      <MenuAction label={guides ? 'Hide alignment guides' : 'Show alignment guides'} icon={guides ? <Check size={14}/> : <Ruler size={14}/>} onClick={onToggleGuides} close={close}/>
+      <MenuAction label={bounds ? 'Hide safe area' : 'Show safe area'} icon={bounds ? <Check size={14}/> : <Square size={14}/>} onClick={onToggleBounds} close={close}/>
+    </>}
+  </MenuPopover>;
+}
+
+export function SlideInsertToolbar({ activeTool, onToolChange, onText, onImage, onNewSvg, onMedia, onTable, onShape, onChart, onComment, onAsk }: {
+  activeTool: 'select' | 'hand'; onToolChange: (tool: 'select' | 'hand') => void;
+  onText: () => void; onImage: () => void; onNewSvg: () => void; onMedia: () => void; onTable: () => void;
+  onShape: (kind: ShapeKind) => void; onChart: (type: ChartType) => void;
+  onComment: () => void; onAsk?: () => void;
+}) {
+  const shapes: {label: string; kind: ShapeKind; icon: ReactNode}[] = [
+    {label:'Rectangle',kind:'rect',icon:<Square size={15}/>},
+    {label:'Ellipse',kind:'circle',icon:<Circle size={15}/>},
+    {label:'Diamond',kind:'diamond',icon:<Diamond size={15}/>},
+    {label:'Triangle',kind:'triangle',icon:<Triangle size={15}/>},
+    {label:'Star',kind:'star',icon:<Star size={15}/>},
+    {label:'Arrow',kind:'arrow',icon:<ArrowRight size={15}/>},
+    {label:'Plus',kind:'plus',icon:<Plus size={15}/>},
+    {label:'Chevron',kind:'chevron',icon:<ChevronRight size={15}/>},
+    {label:'Callout',kind:'callout',icon:<MessageSquare size={15}/>},
+    {label:'Line',kind:'line',icon:<span className="dcx-menu-line-icon"/>},
+  ];
+  const charts: [ChartType,string][] = [
+    ['bar','Bar chart'],['line','Line chart'],['pie','Pie chart'],['area','Area chart'],
+    ['scatter','Scatter plot'],['histogram','Histogram'],['waterfall','Waterfall chart'],
+    ['funnel','Funnel chart'],['treemap','Treemap'],
+  ];
+  return <div className="dcx-slide-insert-toolbar" role="toolbar" aria-label="Slide insert tools">
+    <button type="button" className={'dcx-slide-insert-action' + (activeTool === 'select' ? ' active' : '')} aria-pressed={activeTool === 'select'} onClick={() => onToolChange('select')}><MousePointer2 size={16}/><span>Select</span></button>
+    <button type="button" className={'dcx-slide-insert-action' + (activeTool === 'hand' ? ' active' : '')} aria-pressed={activeTool === 'hand'} onClick={() => onToolChange('hand')}><Hand size={16}/><span>Hand</span></button>
+    <span className="dcx-slide-insert-divider" aria-hidden="true"/>
+    <button type="button" className="dcx-slide-insert-action" onClick={onText}><Type size={16}/><span>Text</span></button>
+    <button type="button" className="dcx-slide-insert-action" onClick={onImage}><Image size={16}/><span>Image</span></button>
+    <button type="button" className="dcx-slide-insert-action" onClick={onNewSvg}><Code2 size={16}/><span>SVG</span></button>
+    <button type="button" className="dcx-slide-insert-action" onClick={onMedia}><Play size={16}/><span>Media</span></button>
+    <button type="button" className="dcx-slide-insert-action" onClick={onTable}><Table2 size={16}/><span>Table</span></button>
+    <MenuPopover label="Insert shape" trigger={<><Shapes size={16}/><span>Shape</span><ChevronDown size={11}/></>} triggerClassName="dcx-slide-insert-action">
+      {(close) => <><div className="dcx-menu-section-label">Shapes</div><div className="dcx-shape-menu-grid">{shapes.map((item) => <button key={item.kind} type="button" role="menuitem" title={item.label} aria-label={item.label} onClick={() => { onShape(item.kind); close(); }}>{item.icon}<span>{item.label}</span></button>)}</div></>}
+    </MenuPopover>
+    <MenuPopover label="Insert chart" trigger={<><BarChart3 size={16}/><span>Chart</span><ChevronDown size={11}/></>} triggerClassName="dcx-slide-insert-action">
+      {(close) => <>{charts.map(([type,label]) => <MenuAction key={type} label={label} icon={<BarChart3 size={14}/>} onClick={() => onChart(type)} close={close}/>)}</>}
+    </MenuPopover>
+    <span className="dcx-slide-insert-divider" aria-hidden="true"/>
+    <button type="button" className="dcx-slide-insert-action" onClick={onComment}><MessageSquare size={16}/><span>Comment</span></button>
+    {onAsk ? <button type="button" className="dcx-slide-insert-action is-agent" onClick={onAsk}><Sparkles size={16}/><span>Ask AgentSam</span></button> : null}
+  </div>;
 }

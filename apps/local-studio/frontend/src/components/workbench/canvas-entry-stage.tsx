@@ -1,3 +1,4 @@
+import { WorkspaceOpeningField } from "@/components/runtime/LocalStudioRuntimeField";
 import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, MousePointer2, PanelLeft, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
@@ -375,7 +376,7 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
   try{sessionStorage.removeItem("agentsam.canvas.new."+tab.id);}catch{}
   setTabUrl(tab.id,"");setCanvas(null);setDocument(null);setRecovery(null);setBoot(n=>n+1);
  }
- if(loading)return <div className="cv-loading" role="status"><span className="cv-loading-mark"/><strong>Opening your Canvas</strong><span>A little room for your next idea.</span></div>;
+ if(loading)return <WorkspaceOpeningField label="Opening Canvas" />;
  if(!canvas||!document)return <div className="cv-loading"><strong>Canvas couldn't open</strong><p role="alert">{error}</p><button className="cv-primary" onClick={()=>setBoot(n=>n+1)}>Try again</button></div>;
  const selectedNode=locateNode(document,selection)?.node;
  const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:boardId?[{id:boardId,kind:"artboard"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};

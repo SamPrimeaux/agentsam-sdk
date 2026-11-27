@@ -4,30 +4,27 @@ import {
   FolderOpen, Grid3X3, Hand, Image, Layers, LayoutGrid, Library, Menu, MessageSquare,
   Maximize2, Minimize2, PanelRight, PanelRightClose, MoreHorizontal, MousePointer2, Palette, PenTool, Play, Plus, Presentation, List, Star,
   Redo2, Search, Share2, Shapes, SlidersHorizontal, Square, StickyNote, SwatchBook, Table2, Trash2, Type,
-  Undo2, Upload, X, ZoomIn, ZoomOut, Ruler, Component, FileUp, Settings2
+  Undo2, Upload, X, ZoomIn, ZoomOut, Ruler, Component, FileUp, Settings2, Sparkles
 } from 'lucide-react';
 import { DesignWorkspaceFrame } from '@inneranimalmedia/agentsam-workbench/design';
 import type { DesignWorkspaceSnapshot } from '@inneranimalmedia/agentsam-contracts';
 import type { DesignCanvasAgentContext } from './creative-model';
+import { sanitizeInlineSvg } from './svg';
 export type { DesignCanvasAgentContext } from './creative-model';
 import { SourceLibraryApp } from './SourceLibraryApp';
 import {
   Artboard, AssetToken, CodeDocument, ColorToken, CreativeArtifact, CreativeObject, CreativeType, CreativeComment, ChartType,
   DesignDocument, DesignSystemDocument, ScaleToken, ShadowToken, Slide, SlidesDocument,
-  TypeToken, artifactHasImages, brandGuidelinesSlides, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset,
+  TypeToken, artifactHasImages, brandGuidelinesSlides, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
   normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY
 } from './creative-model';
-import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
+import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, SlideInsertToolbar, SlideLayoutMenu, ViewMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
 import { SelectionFormattingToolbar } from './components/SelectionFormattingToolbar';
 import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
 import './design-canvas.css';
-import slidesCover from '../public/workspace-covers/slides.svg?url';
-import brandGuidelinesCover from '../public/workspace-covers/brand-guidelines.svg?url';
-import designCover from '../public/workspace-covers/design.svg?url';
-import codeCover from '../public/workspace-covers/design-in-code.svg?url';
-import systemCover from '../public/workspace-covers/design-system.svg?url';
-import whiteboardCover from '../public/workspace-covers/whiteboard.svg?url';
+import { CREATIVE_WIDGET_COVERS } from '@inneranimalmedia/agentsam-workbench/widgets';
+const slidesCover=CREATIVE_WIDGET_COVERS.slides,brandGuidelinesCover=CREATIVE_WIDGET_COVERS['brand-guidelines'],designCover=CREATIVE_WIDGET_COVERS.design,codeCover=CREATIVE_WIDGET_COVERS['design-in-code'],systemCover=CREATIVE_WIDGET_COVERS['design-system'],whiteboardCover=CREATIVE_WIDGET_COVERS.whiteboard;
 
 type AskContext = DesignCanvasAgentContext;
 type EditorChromeProps = {
@@ -152,6 +149,16 @@ function ChartPreview({ object }: { object: CreativeObject }) {
   }
   return <div className="dcx-chart-preview"><div className="dcx-chart-grid">{[0,1,2,3].map((n) => <i key={n}/>)}</div><div className="dcx-chart-bars">{data.map((item, i) => <div key={item.label}><i style={{ height: Math.max(8, item.value / max * 86) + '%', background: colors[i % colors.length] }}/><span>{item.label}</span></div>)}</div></div>;
 }
+function InlineSvg({ markup, title }: { markup: string; title: string }) {
+  const safeMarkup = useMemo(() => {
+    try { return sanitizeInlineSvg(markup); }
+    catch { return ''; }
+  }, [markup]);
+  return safeMarkup
+    ? <div className="dcx-object-svg-content" role="img" aria-label={title} dangerouslySetInnerHTML={{ __html: safeMarkup }}/>
+    : <div className="dcx-object-svg-invalid" role="img" aria-label={title + ' — invalid SVG'}>SVG source needs review</div>;
+}
+
 function EditableSurface({
   width, height, background, objects, selectedId, onSelect, onChange, onPlace, onDraw, className = '', snapToGrid = false, showBounds = false, showGuides = false, panEnabled = false
 }: {
@@ -225,6 +232,7 @@ function EditableSurface({
       return <div key={object.id} className={'dcx-object dcx-object-' + object.type + (selected ? ' is-selected' : '') + (showBounds ? ' has-bounds' : '')} style={{ ...style, border: object.borderStyle && object.borderStyle !== 'none' ? (object.borderWidth || 1) + 'px ' + object.borderStyle + ' ' + (object.borderColor || '#7b8794') : undefined }} onPointerDown={(event) => startDrag(event, object)} onDoubleClick={() => onSelect(object.id)}>
         {object.type === 'text' ? <div className="dcx-object-text" style={{ color: object.color || '#17191d', fontWeight: object.weight || 500, fontStyle: object.italic ? 'italic' : 'normal', textDecoration: object.underline ? 'underline' : 'none', textAlign: object.align || 'left', fontFamily: object.fontFamily || 'Inter', fontSize: 'calc(var(--object-font-size) * var(--object-font-scale))', display: 'flex', flexDirection: 'column', justifyContent: object.verticalAlign === 'middle' ? 'center' : object.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start' }}>{object.text}</div> : null}
         {object.type === 'shape' ? <><div className={'dcx-object-shape shape-' + (object.shape || 'rect')} style={{ background: object.fillType === 'gradient' ? 'linear-gradient(' + (object.gradientAngle ?? 135) + 'deg,' + (object.gradientFrom || '#397ff2') + ',' + (object.gradientTo || '#8a6cf0') + ')' : object.fillType === 'image' && object.fillImage ? 'url(' + object.fillImage + ') center / cover no-repeat' : object.fill || '#397ff2', borderColor: object.borderColor || 'transparent', borderWidth: object.borderWidth || 0, borderStyle: object.borderStyle || 'solid', borderRadius: object.shape === 'circle' ? '50%' : 'calc(var(--object-radius) * var(--object-font-scale))', clipPath: object.shape === 'triangle' ? 'polygon(50% 0, 0 100%, 100% 100%)' : object.shape === 'diamond' ? 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' : object.shape === 'star' ? 'polygon(50% 0, 62% 35%, 100% 38%, 72% 62%, 82% 100%, 50% 78%, 18% 100%, 28% 62%, 0 38%, 38% 35%)' : object.shape === 'arrow' ? 'polygon(0 28%, 62% 28%, 62% 0, 100% 50%, 62% 100%, 62% 72%, 0 72%)' : object.shape === 'plus' ? 'polygon(38% 0, 62% 0, 62% 38%, 100% 38%, 100% 62%, 62% 62%, 62% 100%, 38% 100%, 38% 62%, 0 62%, 0 38%, 38% 38%)' : object.shape === 'chevron' ? 'polygon(0 0, 54% 0, 100% 50%, 54% 100%, 0 100%, 46% 50%)' : object.shape === 'callout' ? 'polygon(0 0, 100% 0, 100% 78%, 64% 78%, 50% 100%, 42% 78%, 0 78%)' : undefined }}/>{object.text ? <span className="dcx-object-shape-text" style={{ color: object.color || '#ffffff', fontSize: object.fontSize ? 'calc(var(--object-font-size) * var(--object-font-scale))' : undefined, fontFamily: object.fontFamily || undefined, fontWeight: object.weight || 600, fontStyle: object.italic ? 'italic' : 'normal', textAlign: object.align || 'center' }}>{object.text}</span> : null}</> : null}
+        {object.type === 'svg' ? <InlineSvg markup={object.svgMarkup || ''} title={object.name}/> : null}
         {object.type === 'image' ? object.src ? <img src={object.src} alt={object.name} draggable={false} style={{ objectFit: object.imageFit || 'cover', objectPosition: object.imagePosition || 'center' }}/> : <div className="dcx-image-placeholder"><Image size={22}/><span>{object.label || 'Add image'}</span></div> : null}
         {object.type === 'media' ? object.src ? <video src={object.src} aria-label={object.name} controls playsInline preload="metadata"/> : <div className="dcx-image-placeholder"><Play size={22}/><span>{object.label || 'Add video'}</span></div> : null}
         {object.type === 'path' ? <svg className="dcx-object-path" viewBox={'0 0 ' + Math.max(1, object.w) + ' ' + Math.max(1, object.h)} preserveAspectRatio="none"><polyline points={(object.points || []).map((point) => point.x + ',' + point.y).join(' ')} fill="none" stroke={object.strokeColor || '#1f2937'} strokeWidth={object.strokeWidth || 3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/></svg> : null}
@@ -263,7 +271,7 @@ function AlignmentControls({ onAlign }: { onAlign: (alignment: AlignCommand) => 
 function EmptyState({ title, description, action, icon }: { title: string; description?: string; action?: ReactNode; icon?: ReactNode }) {
   return <div className="dcx-empty-state">{icon ? <div className="dcx-empty-icon">{icon}</div> : null}<strong>{title}</strong>{description ? <p>{description}</p> : null}{action ? <div className="dcx-empty-actions">{action}</div> : null}</div>;
 }
-type SelectionToolbarAnchor = { left: number; top: number; side: 'top' | 'bottom' } | null;
+type SelectionToolbarAnchor = { left: number; top: number; side: 'top' | 'bottom'; avoidRect: { left: number; top: number; right: number; bottom: number } } | null;
 function useSelectionToolbarAnchor(areaRef: { current: HTMLDivElement | null }, selectedId: string, revision: string): SelectionToolbarAnchor {
   const [anchor, setAnchor] = useState<SelectionToolbarAnchor>(null);
   useEffect(() => {
@@ -286,7 +294,8 @@ function useSelectionToolbarAnchor(areaRef: { current: HTMLDivElement | null }, 
       const left = maxLeft < minLeft ? area.scrollLeft + area.clientWidth / 2 : Math.max(minLeft, Math.min(maxLeft, center));
       const top = area.scrollTop + Math.max(8, Math.min(area.clientHeight - toolbarHeight - 8, placeAbove ? visibleTop - toolbarHeight - 8 : visibleBottom + 8));
       const side = placeAbove ? 'top' : 'bottom';
-      setAnchor(previous => previous?.left === left && previous?.top === top && previous?.side === side ? previous : { left, top, side });
+      const avoidRect = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      setAnchor(previous => previous?.left === left && previous?.top === top && previous?.side === side && previous.avoidRect?.left === avoidRect.left && previous.avoidRect?.top === avoidRect.top && previous.avoidRect?.right === avoidRect.right && previous.avoidRect?.bottom === avoidRect.bottom ? previous : { left, top, side, avoidRect });
     };
     update();
     const resize = new ResizeObserver(update);
@@ -310,21 +319,27 @@ function useSelectionToolbarAnchor(areaRef: { current: HTMLDivElement | null }, 
   return anchor;
 }
 
-function SlideInspector({ slide, selected, commentsOpen, onSlide, onObject, onAddComment, onToggleComments, onUploadImage, onUploadBackground, onGenerateBackground, onAlign }: {
+function SlideInspector({ slide, selected, commentsOpen, onSlide, onObject, onAddComment, onToggleComments, onUploadImage, onUploadSvg, onUploadBackground, onGenerateBackground, onAsk, onAlign }: {
   slide: Slide; selected?: CreativeObject; commentsOpen: boolean;
   onSlide: (patch: Partial<Slide>) => void; onObject: (patch: Partial<CreativeObject>) => void;
-  onAddComment: (text: string) => void; onToggleComments: () => void; onUploadImage: () => void; onUploadBackground: () => void;
-  onGenerateBackground?: () => void; onAlign: (alignment: AlignCommand) => void;
+  onAddComment: (text: string) => void; onToggleComments: () => void; onUploadImage: () => void; onUploadSvg: () => void; onUploadBackground: () => void;
+  onGenerateBackground?: () => void; onAsk?: () => void; onAlign: (alignment: AlignCommand) => void;
 }) {
   const [comment, setComment] = useState('');
   const [commentQuery, setCommentQuery] = useState('');
+  const [svgDraft, setSvgDraft] = useState(selected?.type === 'svg' ? selected.svgMarkup || '' : '');
+  const [svgError, setSvgError] = useState('');
+  useEffect(() => {
+    setSvgDraft(selected?.type === 'svg' ? selected.svgMarkup || '' : '');
+    setSvgError('');
+  }, [selected?.id, selected?.svgMarkup]);
   if (commentsOpen) {
     const visibleComments = slide.comments.filter((item) => !commentQuery || item.text.toLowerCase().includes(commentQuery.toLowerCase()));
     return <div className="dcx-inspector-content">
       <div className="dcx-inspector-heading"><strong>Comments</strong><button onClick={onToggleComments} aria-label="Close comments"><X size={15}/></button></div>
       <div className="dcx-comment-search"><Search size={14}/><input value={commentQuery} onChange={(event) => setCommentQuery(event.target.value)} placeholder="Search comments"/></div>
       {visibleComments.length ? <div className="dcx-comment-list">{visibleComments.map((item) => <div className="dcx-comment" key={item.id}><p>{item.text}</p><small>{item.targetId ? 'Attached to selected object' : 'Slide comment'} · {formatDate(item.createdAt)}</small></div>)}</div> : <EmptyState title={slide.comments.length ? 'No matching comments' : 'No comments yet'} description={slide.comments.length ? 'Try another search.' : 'Add a comment to start a conversation on this slide.'} icon={<MessageSquare size={18}/>} />}
-      <form className="dcx-comment-composer" onSubmit={(event) => { event.preventDefault(); if (comment.trim()) { onAddComment(comment.trim()); setComment(''); } }}><textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={selected ? 'Comment on selected object' : 'Add a slide comment'} rows={3}/><button className="dcx-primary-button" disabled={!comment.trim()}>Comment</button></form>
+      <form className="dcx-comment-entry" onSubmit={(event) => { event.preventDefault(); if (comment.trim()) { onAddComment(comment.trim()); setComment(''); } }}><div className="dcx-comment-target">{slide.name}{selected ? ' › ' + (selected.name || selected.type) : ''}</div><div className="dcx-comment-composer"><textarea aria-label="Add a comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a comment" rows={2}/><div className="dcx-comment-actions"><button className="dcx-comment-submit" type="submit" aria-label="Add comment" disabled={!comment.trim()}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div></div></form>
     </div>;
   }
   const tableRows = selected?.tableData || [];
@@ -334,7 +349,7 @@ function SlideInspector({ slide, selected, commentsOpen, onSlide, onObject, onAd
   const addTableColumn = () => onObject({ tableData: tableRows.map((row) => [...row, '']) });
   const opacity = Math.round((selected?.opacity ?? 1) * 100);
   return <div className="dcx-inspector-content">
-    <div className="dcx-inspector-heading"><strong>{selected ? selected.type === 'text' ? 'Text' : selected.type === 'shape' ? 'Shape' : selected.type === 'chart' ? 'Chart' : selected.type === 'table' ? 'Table' : 'Image' : 'Slide'}</strong><button onClick={onToggleComments} aria-label="Show comments"><MessageSquare size={15}/></button></div>
+    <div className="dcx-inspector-heading"><strong>{selected ? selected.type === 'text' ? 'Text' : selected.type === 'shape' ? 'Shape' : selected.type === 'svg' ? 'SVG / Illustration' : selected.type === 'chart' ? 'Chart' : selected.type === 'table' ? 'Table' : 'Image' : 'Slide'}</strong><button onClick={onToggleComments} aria-label="Show comments"><MessageSquare size={15}/></button></div>
     {selected ? <>
       <Field label="Name"><input value={selected.name} onChange={(event) => onObject({ name: event.target.value })}/></Field>
       <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Size & position</div>
@@ -363,6 +378,13 @@ function SlideInspector({ slide, selected, commentsOpen, onSlide, onObject, onAd
       </section> : null}
       {selected.type === 'chart' ? <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Data</div><Field label="Chart type"><select value={selected.chartType || 'bar'} onChange={(event) => onObject({ chartType: event.target.value as CreativeObject['chartType'] })}><option value="bar">Bar</option><option value="line">Line</option><option value="pie">Pie</option><option value="area">Area</option><option value="scatter">Scatter</option><option value="histogram">Histogram</option><option value="waterfall">Waterfall</option><option value="funnel">Funnel</option><option value="treemap">Treemap</option></select></Field><div className="dcx-data-editor"><div className="dcx-data-editor-head"><span>Label</span><span>Value</span><span/></div>{(selected.chartData || []).map((item, index) => <div className="dcx-chart-data-row" key={index}><input value={item.label} aria-label="Data label" onChange={(event) => onObject({ chartData: (selected.chartData || []).map((value, i) => i === index ? { ...value, label: event.target.value } : value) })}/><input type="number" value={item.value} aria-label="Data value" onChange={(event) => onObject({ chartData: (selected.chartData || []).map((value, i) => i === index ? { ...value, value: Number(event.target.value) } : value) })}/><button aria-label="Remove data point" onClick={() => onObject({ chartData: (selected.chartData || []).filter((_, i) => i !== index) })}><X size={12}/></button></div>)}<button className="dcx-inline-action" onClick={() => onObject({ chartData: [...(selected.chartData || []), { label: 'New', value: 20 }] })}><Plus size={13}/> Add data point</button></div></section> : null}
       {selected.type === 'table' ? <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Table content</div><div className="dcx-data-editor">{tableRows.map((row, rowIndex) => <div className="dcx-table-edit-row" key={rowIndex}>{row.map((cell, columnIndex) => <input key={columnIndex} value={cell} aria-label={'Row ' + (rowIndex + 1) + ', column ' + (columnIndex + 1)} onChange={(event) => updateTableCell(rowIndex, columnIndex, event.target.value)}/>)}<button aria-label="Remove row" onClick={() => removeTableRow(rowIndex)}><X size={12}/></button></div>)}<div className="dcx-data-actions"><button className="dcx-inline-action" onClick={addTableRow}><Plus size={13}/> Add row</button><button className="dcx-inline-action" onClick={addTableColumn}><Plus size={13}/> Add column</button></div></div></section> : null}
+      {selected.type === 'svg' ? <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Vector source</div>
+        <Field label="Inline SVG markup"><textarea rows={12} spellCheck={false} value={svgDraft} onChange={(event) => { setSvgDraft(event.target.value); setSvgError(''); }} placeholder="Paste SVG markup or ask AgentSam to create an illustration…"/></Field>
+        <p className="dcx-muted-copy">This stays editable vector source. Canvas transforms resize the artwork without flattening it.</p>
+        {svgError ? <p className="dcx-svg-error" role="alert">{svgError}</p> : null}
+        <div className="dcx-field-grid"><button className="dcx-secondary-button" onClick={() => { try { onObject({ svgMarkup: sanitizeInlineSvg(svgDraft) }); setSvgError(''); } catch (error) { setSvgError(error instanceof Error ? error.message : 'SVG source is invalid.'); } }}>Apply source</button><button className="dcx-secondary-button" onClick={onUploadSvg}><Upload size={14}/> Replace file</button></div>
+        {onAsk ? <button className="dcx-inline-action" onClick={onAsk}><Sparkles size={13}/> Ask AgentSam to refine this SVG</button> : null}
+      </section> : null}
       {selected.type === 'image' ? <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Image</div><button className="dcx-secondary-button" onClick={onUploadImage}><Upload size={14}/> Replace image</button><Field label="Crop / fit"><select value={selected.imageFit || 'cover'} onChange={(event) => onObject({ imageFit: event.target.value as CreativeObject['imageFit'] })}><option value="cover">Fill frame</option><option value="contain">Fit image</option><option value="fill">Stretch</option></select></Field><Field label="Crop position"><select value={selected.imagePosition || 'center'} onChange={(event) => onObject({ imagePosition: event.target.value as CreativeObject['imagePosition'] })}><option value="center">Center</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option></select></Field><Field label="Link URL"><input type="url" value={selected.link || ''} placeholder="https://…" onChange={(event) => onObject({ link: event.target.value || undefined })}/></Field><div className="dcx-field-grid"><Field label="Border color"><input type="color" value={selected.borderColor || '#ffffff'} onChange={(event) => onObject({ borderColor: event.target.value, borderWidth: selected.borderWidth || 1, borderStyle: 'solid' })}/></Field><Field label="Border width"><input type="number" min="0" max="24" value={selected.borderWidth || 0} onChange={(event) => onObject({ borderWidth: Number(event.target.value), borderStyle: Number(event.target.value) ? 'solid' : 'none' })}/></Field></div><AlignmentControls onAlign={onAlign}/></section> : null}
       <section className="dcx-inspector-section"><div className="dcx-inspector-section-heading">Appearance</div><Field label="Opacity"><input type="range" min="0" max="100" value={opacity} onChange={(event) => onObject({ opacity: Number(event.target.value) / 100 })}/></Field></section>
       <div className="dcx-inspector-actions"><button className="dcx-danger-button" onClick={() => onObject({ name: '__delete__' })}><Trash2 size={14}/> Delete object</button></div>
@@ -391,11 +413,12 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   const [tool, setTool] = useState<Tool>('select');
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [addSlideOpen, setAddSlideOpen] = useState(false);
+  const [overview, setOverview] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
   const [present, setPresent] = useState(false);
   const [presentIndex, setPresentIndex] = useState(0);
   const [presentNotes, setPresentNotes] = useState(false);
   const [explorerTab, setExplorerTab] = useState<'slides' | 'layers'>('slides');
+  const [draggedSlideId, setDraggedSlideId] = useState('');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(false);
@@ -404,6 +427,8 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   const [history, setHistory] = useState<SlidesDocument[]>([doc]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const imageInput = useRef<HTMLInputElement>(null);
+  const svgInput = useRef<HTMLInputElement>(null);
+  const [svgImportError, setSvgImportError] = useState('');
   const backgroundInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
   const slide = doc.slides.find((item) => item.id === slideId) || doc.slides[0];
@@ -466,6 +491,7 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
     updateSlide({ objects: [...slide.objects, object] }); setSelectedId(object.id);
   };
   const uploadImage = () => imageInput.current?.click();
+  const uploadSvg = () => svgInput.current?.click();
   const uploadVideo = () => videoInput.current?.click();
   const uploadBackground = () => backgroundInput.current?.click();
   const acceptBackground = (file?: File) => {
@@ -487,6 +513,39 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
     };
     reader.readAsDataURL(file);
   };
+  const createSvg = () => {
+    if (!slide) return;
+    const object: CreativeObject = {
+      id: makeId('object'),
+      type: 'svg',
+      name: 'New illustration',
+      x: 420,
+      y: 220,
+      w: 320,
+      h: 220,
+      svgMarkup: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220"></svg>',
+    };
+    updateSlide({ objects: [...slide.objects, object] });
+    setSelectedId(object.id);
+    setInspectorOpen(true);
+  };
+  const acceptSvg = async (file?: File) => {
+    if (!file || !slide || file.size > 256_000) return;
+    try {
+      const svgMarkup = sanitizeInlineSvg(await file.text());
+      const name = file.name.replace(/\.svg$/i, '') || 'SVG illustration';
+      if (selected?.type === 'svg') updateObject(selected.id, { svgMarkup, name });
+      else {
+        const object: CreativeObject = { id: makeId('object'), type: 'svg', name, x: 420, y: 220, w: 320, h: 220, svgMarkup };
+        updateSlide({ objects: [...slide.objects, object] });
+        setSelectedId(object.id);
+      }
+      setSvgImportError('');
+      setInspectorOpen(true);
+    } catch (error) {
+      setSvgImportError(error instanceof Error ? error.message : 'SVG could not be imported.');
+    }
+  };
   const acceptVideo = (file?: File) => {
     if (!file || !slide || file.size > 3_000_000) return;
     const reader = new FileReader();
@@ -503,7 +562,7 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
   const addSlide = (kind: string) => {
     const next = makeSlidePreset(kind);
     next.name = kind === 'Blank' ? 'Slide ' + (doc.slides.length + 1) : kind;
-    updateDoc({ slides: [...doc.slides, next] }); setSlideId(next.id); setSelectedId(''); setAddSlideOpen(false); setExplorerTab('slides');
+    updateDoc({ slides: [...doc.slides, next] }); setSlideId(next.id); setSelectedId(''); setExplorerTab('slides');
   };
   const addComment = (value: string) => updateSlide({ comments: [...slide.comments, { id: makeId('comment'), text: value, targetId: selectedId || undefined, createdAt: new Date().toISOString() }] });
   const alignSelected = (alignment: AlignCommand) => {
@@ -534,66 +593,113 @@ function SlideEditor({ artifact, onChange, onAsk, leading, documentActions, assi
     <div className="dcx-panel-title"><strong>Structure</strong><span>{explorerTab === 'slides' ? doc.slides.length + ' slides' : slide.objects.length + ' layers'}</span></div>
     <div className="dcx-explorer-tabs" role="tablist" aria-label="Document structure"><button role="tab" aria-selected={explorerTab === 'slides'} className={explorerTab === 'slides' ? 'active' : ''} onClick={() => setExplorerTab('slides')}>Slides</button><button role="tab" aria-selected={explorerTab === 'layers'} className={explorerTab === 'layers' ? 'active' : ''} onClick={() => setExplorerTab('layers')}>Layers</button></div>
     {explorerTab === 'slides' ? <>
-      <div className="dcx-slide-list">{doc.slides.map((item, index) => <button key={item.id} className={'dcx-slide-thumb' + (item.id === slide.id ? ' active' : '')} onClick={() => { setSlideId(item.id); setSelectedId(''); setCommentsOpen(false); }}><span className="dcx-thumb-number">{index + 1}</span><span className="dcx-thumb-preview" style={{ background: item.backgroundImage ? 'linear-gradient(135deg,#2b3038,#14161a)' : item.background }}><span>{item.objects.find((o) => o.type === 'text')?.text?.slice(0, 36) || item.name}</span></span><span className="dcx-thumb-label">{item.name}</span></button>)}</div>
-      <button className="dcx-add-slide" onClick={() => setAddSlideOpen(!addSlideOpen)}><Plus size={15}/> Add slide</button>
-      {addSlideOpen ? <div className="dcx-preset-menu">{['Blank','Brand Cover','Brand Foundations','Logo System','Color Palette','Typography','Imagery & Art Direction','Voice & Messaging','Applications & Governance'].map((kind) => <button key={kind} className="dcx-preset-option" onClick={() => addSlide(kind)}><span className={'dcx-preset-thumb ' + kind.toLowerCase().replaceAll(' ', '-')}>{kind === 'Blank' ? <span/> : kind.split(' ').map((word) => word[0]).join('')}</span><strong>{kind}</strong></button>)}</div> : null}
+      <div className="dcx-slide-list" aria-label="Slides">{doc.slides.map((item, index) => <button
+        key={item.id}
+        draggable
+        className={'dcx-slide-thumb' + (item.id === slide.id ? ' active' : '') + (draggedSlideId === item.id ? ' is-dragging' : '')}
+        aria-label={'Slide ' + (index + 1) + ': ' + item.name + '. Drag to reorder'}
+        onClick={() => { setSlideId(item.id); setSelectedId(''); setCommentsOpen(false); }}
+        onDragStart={(event) => { setDraggedSlideId(item.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', item.id); }}
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+        onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = draggedSlideId || event.dataTransfer.getData('text/plain'); const slides = reorderSlides(doc.slides, sourceId, item.id); if (slides !== doc.slides) updateDoc({ ...doc, slides }); setDraggedSlideId(''); }}
+        onDragEnd={() => setDraggedSlideId('')}
+      ><span className="dcx-thumb-number">{index + 1}</span><span className="dcx-thumb-preview" style={{ background: item.backgroundImage ? 'linear-gradient(135deg,#2b3038,#14161a)' : item.background }}><span>{item.objects.find((o) => o.type === 'text')?.text?.slice(0, 36) || item.name}</span></span><span className="dcx-thumb-label">{item.name}</span></button>)}</div>
+      <SlideLayoutMenu onAdd={addSlide} label="Add slide"/>
     </> : <>
-      {slide.objects.length ? <div className="dcx-layer-list">{[...slide.objects].reverse().map((object) => <div className={'dcx-layer-row' + (object.id === selectedId ? ' active' : '')} key={object.id}><button className="dcx-layer-select" onClick={() => setSelectedId(object.id)}><span className="dcx-layer-kind">{object.type === 'text' ? <Type size={13}/> : object.type === 'image' ? <Image size={13}/> : object.type === 'chart' ? <BarChart3 size={13}/> : object.type === 'table' ? <Table2 size={13}/> : <Square size={13}/>}</span><span>{object.name}</span></button><div className="dcx-layer-actions"><button title="Move up" aria-label={'Move ' + object.name + ' up'} onClick={() => moveLayer(object.id, 1)}>↑</button><button title="Move down" aria-label={'Move ' + object.name + ' down'} onClick={() => moveLayer(object.id, -1)}>↓</button><button title="Duplicate" aria-label={'Duplicate ' + object.name} onClick={() => duplicateLayer(object.id)}><Copy size={11}/></button><button title="Delete" aria-label={'Delete ' + object.name} onClick={() => updateObject(object.id, { name: '__delete__' })}><Trash2 size={11}/></button></div></div>)}</div> : <EmptyState title="No layers yet" description="Insert text, shapes, images, charts, or tables to build this slide."/>}
+      {slide.objects.length ? <div className="dcx-layer-list">{[...slide.objects].reverse().map((object) => <div className={'dcx-layer-row' + (object.id === selectedId ? ' active' : '')} key={object.id}><button className="dcx-layer-select" onClick={() => setSelectedId(object.id)}><span className="dcx-layer-kind">{object.type === 'text' ? <Type size={13}/> : object.type === 'image' ? <Image size={13}/> : object.type === 'svg' ? <Code2 size={13}/> : object.type === 'chart' ? <BarChart3 size={13}/> : object.type === 'table' ? <Table2 size={13}/> : <Square size={13}/>}</span><span>{object.name}</span></button><div className="dcx-layer-actions"><button title="Move up" aria-label={'Move ' + object.name + ' up'} onClick={() => moveLayer(object.id, 1)}>↑</button><button title="Move down" aria-label={'Move ' + object.name + ' down'} onClick={() => moveLayer(object.id, -1)}>↓</button><button title="Duplicate" aria-label={'Duplicate ' + object.name} onClick={() => duplicateLayer(object.id)}><Copy size={11}/></button><button title="Delete" aria-label={'Delete ' + object.name} onClick={() => updateObject(object.id, { name: '__delete__' })}><Trash2 size={11}/></button></div></div>)}</div> : <EmptyState title="No layers yet" description="Insert text, shapes, images, SVG illustrations, charts, or tables to build this slide."/>}
       <button className="dcx-add-slide" onClick={() => addObject('text')}><Plus size={15}/> Add text layer</button>
     </>}
   </div>;
   const inspector = inspectorOpen ? <div className="dcx-inspector-shell">
-    <SlideInspector slide={slide} selected={selected} commentsOpen={commentsOpen} onSlide={updateSlide} onObject={(patch) => selected && updateObject(selected.id, patch)} onAddComment={addComment} onToggleComments={() => setCommentsOpen(!commentsOpen)} onUploadImage={uploadImage} onUploadBackground={uploadBackground} onGenerateBackground={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: slide.id, kind: 'slide-background', label: 'Generate background image' } }) : undefined} onAlign={alignSelected}/>
+    <SlideInspector slide={slide} selected={selected} commentsOpen={commentsOpen} onSlide={updateSlide} onObject={(patch) => selected && updateObject(selected.id, patch)} onAddComment={addComment} onToggleComments={() => setCommentsOpen(!commentsOpen)} onUploadImage={uploadImage} onUploadSvg={uploadSvg} onUploadBackground={uploadBackground} onGenerateBackground={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: slide.id, kind: 'slide-background', label: 'Generate background image' } }) : undefined} onAsk={onAsk && selected ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: selected.id, kind: selected.type, label: selected.name, source: selected.type === 'svg' ? selected.svgMarkup?.slice(0, 12000) : undefined } }) : undefined} onAlign={alignSelected}/>
   </div> : undefined;
   const commands = <>
     <div className="dcx-command-group">
-      <button className="dcx-command-button" onClick={() => setAddSlideOpen(!addSlideOpen)}><Plus size={15}/> New slide <ChevronDown size={13}/></button>
-      <InsertMenu onText={() => addObject('text')} onImage={uploadImage} onMedia={uploadVideo} onShape={addShape} onChart={addChart} onTable={() => addObject('table')}/>
+      <SlideLayoutMenu onAdd={addSlide} label="New slide"/>
+      <ViewMenu grid={showGrid} snap={snapToGrid} guides={showGuides} bounds={showBounds} onToggleGrid={() => setShowGrid((value) => !value)} onToggleSnap={() => setSnapToGrid((value) => !value)} onToggleGuides={() => setShowGuides((value) => !value)} onToggleBounds={() => setShowBounds((value) => !value)}/>
       <button className={'dcx-command-button' + (notesOpen ? ' active' : '')} onClick={() => setNotesOpen(!notesOpen)}>Speaker notes</button>
-      <button className={'dcx-command-button' + (commentsOpen ? ' active' : '')} onClick={() => { setCommentsOpen(!commentsOpen); setInspectorOpen(true); }}><MessageSquare size={14}/> Comments</button>
       <button className={'dcx-command-icon' + (inspectorOpen ? ' active' : '')} title={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-label={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-pressed={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)}><Settings2 size={15}/></button>
       <button className="dcx-command-icon" title="Undo" aria-label="Undo" disabled={historyIndex === 0} onClick={undo}><Undo2 size={15}/></button>
       <button className="dcx-command-icon" title="Redo" aria-label="Redo" disabled={historyIndex >= history.length - 1} onClick={redo}><Redo2 size={15}/></button>
     </div>
     <div className="dcx-command-group">
-      {onAsk ? <button className="dcx-command-button" onClick={() => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name } : undefined })}>Ask AgentSam</button> : null}
-      <ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}/>
+      <ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)} showGridToggle={false}/>
+      <button className="dcx-command-button" onClick={() => setOverview(true)}>Overview</button>
       <PresentMenu onPresent={() => startPresent(false)} onPresentWithNotes={() => startPresent(true)}/>
       <button className="dcx-command-icon" title="Export presentation JSON" aria-label="Export presentation JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', artifact)}><Download size={15}/></button>
     </div>
   </>;
   return <>
-    <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : { id: slide?.id || '', kind: 'slide' })} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} stageLabel="Slides editor" className="dcx-shared-frame">
+    {overview ? <section className="dcx-slide-overview" aria-label="Presentation overview">
+      <header className="dcx-slide-overview-header">
+        <div className="dcx-slide-overview-leading">{leading}</div>
+        <div className="dcx-slide-overview-actions">
+          <button className="dcx-command-button" onClick={() => setOverview(false)}><Type size={15}/> Edit</button>
+          <PresentMenu onPresent={() => startPresent(false)} onPresentWithNotes={() => startPresent(true)}/>
+        </div>
+      </header>
+      <div className="dcx-slide-overview-list">
+        {doc.slides.map((item, index) => <div key={item.id} className={'dcx-slide-overview-card' + (item.id === slide?.id ? ' active' : '')}>
+          <div inert className="dcx-slide-overview-preview"><EditableSurface width={1200} height={675} background={item.backgroundImage ? 'url("' + item.backgroundImage + '") center / cover no-repeat' : item.background} objects={item.objects} selectedId="" onSelect={() => {}} onChange={() => {}}/></div>
+          <button className="dcx-slide-overview-select" aria-label={'Select slide ' + (index + 1) + ': ' + item.name} aria-pressed={item.id === slide?.id} onClick={() => { setSlideId(item.id); setSelectedId(''); }} />
+        </div>)}
+        {!doc.slides.length ? <EmptyState title="No slides yet" action={<button className="dcx-primary-button" onClick={() => { addSlide('Blank'); setOverview(false); }}>Add a slide</button>}/> : null}
+      </div>
+    </section> : <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : { id: slide?.id || '', kind: 'slide' })} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} inspectorSheetOpen={commentsOpen && inspectorOpen} onInspectorSheetDismiss={() => { setCommentsOpen(false); setInspectorOpen(false); }} stageLabel="Slides editor" className="dcx-shared-frame">
       {slide ? <div className="dcx-editor-stage dcx-slides-stage">
         <div ref={canvasAreaRef} tabIndex={0} aria-label="Slide canvas; scroll to zoom, middle-drag to pan" className={'dcx-slide-canvas-area dcx-zoom-viewport' + (showGrid ? ' is-grid' : '') + (tool === 'hand' ? ' is-hand' : '')}>
           <div className="dcx-zoom-world" style={viewport.worldStyle}><div className="dcx-canvas-zoom-wrap" style={viewport.artboardStyle}>
             <EditableSurface width={1200} height={675} background={slide.backgroundImage ? 'url("' + slide.backgroundImage + '") center / cover no-repeat' : slide.background} objects={slide.objects} selectedId={selectedId} onSelect={setSelectedId} onChange={updateObject} onPlace={tool === 'select' || tool === 'hand' ? undefined : (x, y) => addObjectAt(tool, x, y)} snapToGrid={snapToGrid} showBounds={showBounds} showGuides={showGuides} panEnabled={tool === 'hand'}/>
           </div></div>
-          {selected && selectionAnchor ? <SelectionFormattingToolbar object={selected} anchor={selectionAnchor} colors={documentColors} onChange={(patch) => updateObject(selected.id, patch)} onMore={() => setInspectorOpen(true)} onComment={() => { setCommentsOpen(true); setInspectorOpen(true); }} onAlign={alignSelected} onAsk={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: selected.id, kind: selected.type, label: selected.name } }) : undefined}/> : null}
+          {selected && selectionAnchor ? <SelectionFormattingToolbar object={selected} anchor={selectionAnchor} colors={documentColors} onChange={(patch) => updateObject(selected.id, patch)} onMore={() => setInspectorOpen(true)} onComment={() => { setCommentsOpen(true); setInspectorOpen(true); }} onAlign={alignSelected} onAsk={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: { id: selected.id, kind: selected.type, label: selected.name, source: selected.type === 'svg' ? selected.svgMarkup?.slice(0, 12000) : undefined } }) : undefined}/> : null}
         </div>
-        <ToolBar active={tool} onChange={setTool} includeChart includeTable includeMedia/>
+        <SlideInsertToolbar
+          activeTool={tool === 'hand' ? 'hand' : 'select'}
+          onToolChange={(value) => setTool(value)}
+          onText={() => addObject('text')}
+          onImage={uploadImage}
+          onNewSvg={createSvg}
+          onMedia={uploadVideo}
+          onTable={() => addObject('table')}
+          onShape={addShape}
+          onChart={addChart}
+          onComment={() => { setCommentsOpen(true); setInspectorOpen(true); }}
+          onAsk={onAsk ? () => onAsk({ artifactId: artifact.id, artifactType: 'slides', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name, source: selected.type === 'svg' ? selected.svgMarkup?.slice(0, 12000) : undefined } : undefined }) : undefined}
+        />
         {notesOpen ? <div className="dcx-speaker-notes"><textarea aria-label="Speaker notes" value={slide.notes} onChange={(event) => updateSlide({ notes: event.target.value })} placeholder="Add speaker notes for this slide"/></div> : null}
         <div className="dcx-stage-footer"><span>Slide {doc.slides.findIndex((item) => item.id === slide.id) + 1} of {doc.slides.length}</span><button onClick={() => setNotesOpen(!notesOpen)}>{notesOpen ? 'Hide speaker notes' : 'Speaker notes'}</button><span>16:9 · {zoom}%</span></div>
       </div> : <EmptyState title="No slides yet" action={<button className="dcx-primary-button" onClick={() => addSlide('Blank')}><Plus size={15}/> Add a slide</button>}/>}
-    </DesignWorkspaceFrame>
+    </DesignWorkspaceFrame>}
     <input ref={imageInput} hidden type="file" accept="image/*" onChange={(event) => { acceptImage(event.target.files?.[0]); event.currentTarget.value = ''; }}/>
+    <input ref={svgInput} hidden type="file" accept=".svg,image/svg+xml" onChange={(event) => { void acceptSvg(event.target.files?.[0]); event.currentTarget.value = ''; }}/>
+    {svgImportError ? <div className="dcx-svg-error" role="alert">{svgImportError}</div> : null}
     <input ref={backgroundInput} hidden type="file" accept="image/*" onChange={(event) => { acceptBackground(event.target.files?.[0]); event.currentTarget.value = ''; }}/>
     <input ref={videoInput} hidden type="file" accept="video/*" onChange={(event) => { acceptVideo(event.target.files?.[0]); event.currentTarget.value = ''; }}/>
     {present && presentSlide ? <div className="dcx-present-mode"><div className="dcx-present-topbar"><span>{artifact.name}</span><span>{presentIndex + 1} / {doc.slides.length}</span><button className="dcx-present-close" onClick={() => setPresent(false)}><X size={17}/> Exit</button></div><div className="dcx-present-slide"><EditableSurface width={1200} height={675} background={presentSlide.backgroundImage ? 'url("' + presentSlide.backgroundImage + '") center / cover no-repeat' : presentSlide.background} objects={presentSlide.objects} selectedId="" onSelect={() => {}} onChange={() => {}}/></div>{presentNotes && presentSlide.notes ? <div className="dcx-present-notes"><strong>Speaker notes</strong><p>{presentSlide.notes}</p></div> : null}<div className="dcx-present-controls"><button disabled={presentIndex === 0} onClick={() => setPresentIndex((index) => Math.max(0, index - 1))}>Previous</button><button disabled={presentIndex >= doc.slides.length - 1} onClick={() => setPresentIndex((index) => Math.min(doc.slides.length - 1, index + 1))}>Next</button></div></div> : null}
   </>;
 }
 
-function DesignCommentsPanel({ comments, selected, onAddComment, onResolve, onClose }: {
-  comments: CreativeComment[]; selected?: CreativeObject; onAddComment: (text: string) => void; onResolve: (id: string) => void; onClose: () => void;
+function DesignCommentsPanel({ comments, selected, targetLabel, onAddComment, onResolve, onClose, onAskComment }: {
+  comments: CreativeComment[]; selected?: CreativeObject; targetLabel: string; onAddComment: (text: string) => void; onResolve: (id: string) => void; onClose: () => void; onAskComment?: (text: string) => void;
 }) {
   const [comment, setComment] = useState('');
   const [query, setQuery] = useState('');
+  const [askAgent, setAskAgent] = useState(false);
   const visible = comments.filter((item) => !query || item.text.toLowerCase().includes(query.toLowerCase()));
   return <div className="dcx-inspector-content">
     <div className="dcx-inspector-heading"><strong>Comments <span className="dcx-comment-count">{comments.length}</span></strong><button onClick={onClose} aria-label="Close comments"><X size={15}/></button></div>
     <div className="dcx-comment-search"><Search size={14}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search comments"/></div>
     {visible.length ? <div className="dcx-comment-list">{visible.map((item) => <div className={'dcx-comment' + (item.resolved ? ' is-resolved' : '')} key={item.id}><p>{item.text}</p><small>{item.targetId ? 'Attached to selected object' : 'Canvas comment'} · {formatDate(item.createdAt)}</small><button className="dcx-inline-action" onClick={() => onResolve(item.id)}>{item.resolved ? 'Reopen' : 'Resolve'}</button></div>)}</div> : <EmptyState title={comments.length ? 'No matching comments' : 'No comments yet'} description={comments.length ? 'Try another search.' : 'Add a comment to start a conversation on this canvas.'} icon={<MessageSquare size={18}/>}/>}
-    <form className="dcx-comment-composer" onSubmit={(event) => { event.preventDefault(); if (comment.trim()) { onAddComment(comment.trim()); setComment(''); } }}><textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={selected ? 'Comment on selected object' : 'Add a canvas comment'} rows={3}/><button className="dcx-primary-button" disabled={!comment.trim()}>Comment</button></form>
+    <form className="dcx-comment-entry" onSubmit={(event) => { event.preventDefault(); const text = comment.trim(); if (text) { onAddComment(text); if (askAgent) onAskComment?.(text); setComment(''); setAskAgent(false); } }}>
+      <div className="dcx-comment-target">{targetLabel}{selected ? ' › ' + (selected.name || selected.type) : ''}</div>
+      <div className="dcx-comment-composer">
+        <textarea aria-label="Add a comment" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a comment" rows={2}/>
+        <div className="dcx-comment-actions">
+          {onAskComment ? <label className="dcx-comment-agent-toggle"><input type="checkbox" role="switch" checked={askAgent} onChange={(event) => setAskAgent(event.target.checked)}/> Add to AgentSam chat</label> : null}
+          <button type="submit" className="dcx-comment-submit" aria-label="Add comment" disabled={!comment.trim()}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+        </div>
+      </div>
+    </form>
   </div>;
 }
 
@@ -709,13 +815,13 @@ function DesignEditor({ artifact, onChange, onOpenReferences, onAsk, leading, do
     {board ? <><div className="dcx-panel-subheading">Layers</div>{board.objects.length ? <div className="dcx-layer-list">{[...board.objects].reverse().map((object) => <div className={'dcx-layer-row' + (object.id === selectedId ? ' active' : '')} key={object.id}><button className="dcx-layer-select" onClick={() => setSelectedId(object.id)}><Layers size={13}/><span>{object.name}</span></button><div className="dcx-layer-actions"><button title="Move up" aria-label={'Move ' + object.name + ' up'} onClick={() => moveLayer(object.id, 1)}>↑</button><button title="Move down" aria-label={'Move ' + object.name + ' down'} onClick={() => moveLayer(object.id, -1)}>↓</button><button title="Duplicate" aria-label={'Duplicate ' + object.name} onClick={() => duplicateLayer(object.id)}><Copy size={11}/></button><button title="Delete" aria-label={'Delete ' + object.name} onClick={() => updateObject(object.id, { name: '__delete__' })}><Trash2 size={11}/></button></div></div>)}</div> : <EmptyState title="No layers yet" description="Insert objects to build this artboard."/>}</> : null}
     <ArtboardMenu onAdd={addBoard}/>
   </div>;
-  const inspector = board && inspectorOpen ? <div className="dcx-inspector-shell">{commentsOpen ? <DesignCommentsPanel comments={board.comments || []} selected={selected} onAddComment={(value) => addComment(value)} onResolve={(id) => updateBoard({ comments: (board.comments || []).map((item) => item.id === id ? { ...item, resolved: !item.resolved } : item) })} onClose={() => setCommentsOpen(false)}/> : <DesignInspector board={board} selected={selected} onBoard={updateBoard} onObject={(patch) => selected && updateObject(selected.id, patch)} onDelete={() => selected && updateObject(selected.id, { name: '__delete__' })} onUploadImage={uploadImage} onAlign={alignSelected} onToggleComments={() => { setCommentsOpen(true); setInspectorOpen(true); }} commentsCount={(board.comments || []).length}/>}</div> : undefined;
+  const inspector = board && inspectorOpen ? <div className="dcx-inspector-shell">{commentsOpen ? <DesignCommentsPanel comments={board.comments || []} selected={selected} targetLabel={board.name} onAskComment={onAsk ? (text) => onAsk({ artifactId: artifact.id, artifactType: artifact.type, title: artifact.name, selection: { id: selected?.id || board.id, kind: selected?.type || 'artboard', label: selected?.name || board.name }, comment: text }) : undefined} onAddComment={(value) => addComment(value)} onResolve={(id) => updateBoard({ comments: (board.comments || []).map((item) => item.id === id ? { ...item, resolved: !item.resolved } : item) })} onClose={() => setCommentsOpen(false)}/> : <DesignInspector board={board} selected={selected} onBoard={updateBoard} onObject={(patch) => selected && updateObject(selected.id, patch)} onDelete={() => selected && updateObject(selected.id, { name: '__delete__' })} onUploadImage={uploadImage} onAlign={alignSelected} onToggleComments={() => { setCommentsOpen(true); setInspectorOpen(true); }} commentsCount={(board.comments || []).length}/>}</div> : undefined;
   const commands = <>
     <div className="dcx-command-group"><ArtboardMenu onAdd={addBoard}/><InsertMenu onText={() => addObject('text')} onImage={uploadImage} onShape={addShape}/><button className="dcx-command-button" onClick={onOpenReferences}><Library size={15}/> Source library</button><button className={'dcx-command-button' + (commentsOpen ? ' active' : '')} onClick={() => { setCommentsOpen((value) => !value); setInspectorOpen(true); }}><MessageSquare size={14}/> Comments</button><button className="dcx-command-icon" title="Undo" aria-label="Undo" disabled={historyIndex === 0} onClick={undo}><Undo2 size={15}/></button><button className="dcx-command-icon" title="Redo" aria-label="Redo" disabled={historyIndex >= history.length - 1} onClick={redo}><Redo2 size={15}/></button></div>
     <div className="dcx-command-group">{onAsk ? <button className="dcx-command-button" onClick={() => onAsk({ artifactId: artifact.id, artifactType: 'design', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name } : board ? { id: board.id, kind: 'artboard', label: board.name } : undefined })}>Ask AgentSam</button> : null}<ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}/><button className={'dcx-command-icon' + (inspectorOpen ? ' active' : '')} title={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-label={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-pressed={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)}><Settings2 size={15}/></button><button className="dcx-command-icon" title="Export design JSON" aria-label="Export design JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', artifact)}><Download size={15}/></button></div>
   </>;
   return <>
-    <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : board ? { id: board.id, kind: 'artboard' } : undefined)} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} stageLabel="Design editor" className="dcx-shared-frame">
+    <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : board ? { id: board.id, kind: 'artboard' } : undefined)} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} inspectorSheetOpen={commentsOpen && inspectorOpen} onInspectorSheetDismiss={() => { setCommentsOpen(false); setInspectorOpen(false); }} stageLabel="Design editor" className="dcx-shared-frame">
       {board ? <div className="dcx-editor-stage dcx-design-stage">
         <div ref={canvasAreaRef} tabIndex={0} aria-label="Design canvas; scroll to zoom, middle-drag to pan" className={'dcx-design-canvas-area dcx-zoom-viewport' + (showGrid ? ' is-grid' : '') + (tool === 'hand' ? ' is-hand' : '')}>
           <div className="dcx-zoom-world" style={viewport.worldStyle}><div className="dcx-canvas-zoom-wrap" style={viewport.artboardStyle}>
@@ -983,7 +1089,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     const selected = initialActiveId ? loaded.find((item) => item.id === initialActiveId) : undefined;
     if (selected) return { artifacts: loaded, activeId: selected.id, route: 'editor' as const };
     if (initialWorkspace) {
-      const artifact = makeArtifact(initialWorkspace, initialName || (
+      const artifact = initialWorkspace === 'slides' && initialName === 'Brand Guidelines' ? makeArtifact('slides','Brand Guidelines',brandGuidelinesSlides()) : makeArtifact(initialWorkspace, initialName || (
         initialWorkspace === 'slides' ? 'Untitled presentation' :
         initialWorkspace === 'system' ? 'Untitled design system' :
         initialWorkspace === 'code' ? 'Create in Code' :
@@ -1139,9 +1245,9 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       <button className="dcx-topbar-icon" type="button" title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} onClick={() => void toggleFullscreen()}>
         {fullscreen ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}
       </button>
-      <button className="dcx-topbar-icon" type="button" title={onShareArtifact ? 'Share document' : 'Document sharing is not connected yet'} aria-label="Share document" disabled={!onShareArtifact} onClick={() => onShareArtifact?.(active)}>
+      {onShareArtifact ? <button className="dcx-topbar-icon" type="button" title="Share document" aria-label="Share document" onClick={() => onShareArtifact(active)}>
         <Share2 size={16}/>
-      </button>
+      </button> : null}
       <CreationMenu onCreate={selectCreation} onCreateBrandGuidelines={createBrandGuidelines}/>
       {onToggleOutputs ? <button className="dcx-topbar-icon" type="button" title={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-label={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-pressed={outputsOpen} onClick={onToggleOutputs}>
         {outputsOpen ? <PanelRightClose size={16}/> : <PanelRight size={16}/>}
@@ -1154,7 +1260,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     onAssistantOpenChange: updateAssistantOpen, assistantDock, onAssistantDockChange
   };
   const editor = active ? active.type === 'slides'
-    ? <SlideEditor artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+    ? <SlideEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
     : active.type === 'system'
       ? <DesignSystemEditor artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
       : active.type === 'code'
