@@ -66,7 +66,7 @@ test('child spawn binds parent + WorkGraph projection, suspends parent, and queu
 
   const parent = await fx.client.getRun(fx.parentId);
   assert.equal(parent.status, 'waiting_child');
-  assert.equal(parent.storageStatus, 'paused');
+  assert.equal(parent.storageStatus, 'running');
   assert.deepEqual(parent.suspension.dependencyRunIds, ['arun_child']);
 
   const dependency = await first(
@@ -204,6 +204,7 @@ test('agentsam run spawn exposes the same provider-neutral child-run primitive',
   const spawned = await runRun([
     'spawn',
     fx.parentId,
+    '--local',
     '--objective',
     'Research current implementation',
     '--role',

@@ -1,6 +1,6 @@
-import { createAgentControlHttpHandler } from "../../../../src/acp/http.js";
-import { createD1QueueControl } from "../../../../src/acp/dependencies.js";
-import { DatabaseAgentControlClient } from "../../../../src/acp/database-client.js";
+import { createAgentControlHttpHandler } from "@inneranimalmedia/agentsam-sdk/acp/http";
+import { createD1QueueControl } from "@inneranimalmedia/agentsam-sdk/acp/dependencies";
+import { DatabaseAgentControlClient } from "@inneranimalmedia/agentsam-sdk/acp/database-client";
 import { emitAnalyticsFact } from "./analytics-service.js";
 
 const ROUTE_PREFIX = "/api/agent-control";

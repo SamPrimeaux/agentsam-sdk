@@ -20,7 +20,7 @@ test('lead Local Studio conversation mounts one composer through the reusable su
     'utf8',
   );
   assert.match(source, /AgentConversationSurface/);
-  assert.match(source, /AgentRuntimeField/);
+  assert.match(source, /composer=\{leadComposerDetached \? null : leadComposer\}/);
   assert.equal((source.match(/<Composer\b/g) ?? []).length, 1);
 });
 

@@ -15,7 +15,7 @@ test('mini composer exposes compact, focused, expandable review chrome', async (
   assert.match(source, /data-expanded={expanded/);
   assert.ok(source.includes("querySelector('textarea')"));
 
-  assert.match(host, /containerClassName="mini-agentsam-composer"/);
+  assert.match(host, /containerClassName=\{["']mini-agentsam-composer["']/);
   assert.match(host, /inputClassName="mini-agentsam-input"/);
   assert.match(host, /<ArrowUp/);
   assert.match(host, /data-composer-send=""/);
