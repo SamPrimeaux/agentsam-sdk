@@ -816,6 +816,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
         cursor: url.searchParams.get('cursor') || undefined,
         perPage: Number(url.searchParams.get('per_page') || 100) || 100,
         prefix: url.searchParams.get('prefix') || undefined,
+        delimiter: url.searchParams.has('delimiter') ? url.searchParams.get('delimiter') : '/',
       });
       return json({ ok: true, ...page });
     } catch (error) {

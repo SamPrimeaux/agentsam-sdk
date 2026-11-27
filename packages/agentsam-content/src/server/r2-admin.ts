@@ -53,6 +53,22 @@ export interface R2AdminObject {
   uploaded?: string;
 }
 
+export interface R2AdminListOptions {
+  cursor?: string;
+  delimiter?: string;
+  limit?: number;
+}
+
+export interface R2AdminListPage {
+  bucket: string;
+  prefix: string;
+  delimiter: string;
+  objects: R2AdminObject[];
+  prefixes: string[];
+  cursor: string | null;
+  truncated: boolean;
+}
+
 export interface R2AdminMutationOptions {
   cwd?: string;
   dryRun?: boolean;
@@ -120,90 +136,85 @@ export function createCloudflareR2Admin(
     subprocessEnv.CLOUDFLARE_API_TOKEN = token;
   }
 
-  async function listR2Objects(
+  async function listR2ObjectsPage(
     prefix = "",
-  ): Promise<R2AdminObject[]> {
+    options: R2AdminListOptions = {},
+  ): Promise<R2AdminListPage> {
     if (!token) {
-      throw new Error(
-        "Cloudflare R2 admin token required",
-      );
+      throw new Error("Cloudflare R2 admin token required");
+    }
+    if (prefix.length > 1024) {
+      throw new Error("R2 prefix exceeds 1024 characters");
     }
 
-    const objects: R2AdminObject[] = [];
-    let cursor = "";
+    const delimiter = options.delimiter === "" ? "" : String(options.delimiter ?? "/");
+    if (delimiter !== "" && delimiter !== "/") {
+      throw new Error("R2 delimiter must be '/' or an empty string");
+    }
+    const limit = Math.min(Math.max(Math.floor(Number(options.limit) || 100), 1), 1000);
+    const cursor = String(options.cursor ?? "");
 
-    for (;;) {
-      const url = new URL(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects`,
-      );
+    const url = new URL(
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/r2/buckets/${encodeURIComponent(bucketName)}/objects`,
+    );
+    url.searchParams.set("prefix", prefix);
+    url.searchParams.set("per_page", String(limit));
+    if (delimiter) url.searchParams.set("delimiter", delimiter);
+    if (cursor) url.searchParams.set("cursor", cursor);
 
-      url.searchParams.set("prefix", prefix);
-      url.searchParams.set("per_page", "1000");
-
-      if (cursor) {
-        url.searchParams.set("cursor", cursor);
-      }
-
-      const res = await fetchImpl(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const body = await res.json() as {
-        success?: boolean;
-        errors?: unknown;
-        result?:
-          | Array<{
-              key: string;
-              size?: number;
-              uploaded?: string;
-            }>
-          | {
-              objects?: Array<{
-                key: string;
-                size?: number;
-                uploaded?: string;
-              }>;
-              cursor?: string;
-            };
-        result_info?: {
-          cursor?: string;
-        };
+    const response = await fetchImpl(url, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    const body = await response.json() as {
+      success?: boolean;
+      errors?: unknown;
+      result?: Array<{ key: string; size?: number; uploaded?: string }> | {
+        objects?: Array<{ key: string; size?: number; uploaded?: string }>;
+        cursor?: string;
+        delimited?: string[];
       };
+      result_info?: {
+        cursor?: string;
+        is_truncated?: boolean;
+        truncated?: boolean;
+        delimited?: string[];
+      };
+    };
 
-      if (!body.success) {
-        throw new Error(
-          `R2 list failed: ${JSON.stringify(
-            body.errors || body,
-          )}`,
-        );
-      }
-
-      const rows = Array.isArray(body.result)
-        ? body.result
-        : body.result?.objects || [];
-
-      objects.push(
-        ...rows.map((object) => ({
-          key: object.key,
-          size: Number(object.size || 0),
-          uploaded: object.uploaded,
-        })),
-      );
-
-      cursor =
-        body.result_info?.cursor ||
-        (!Array.isArray(body.result)
-          ? body.result?.cursor
-          : "") ||
-        "";
-
-      if (!cursor || rows.length === 0) {
-        break;
-      }
+    if (!response.ok || body.success === false) {
+      throw new Error(`R2 list failed: ${JSON.stringify(body.errors || body)}`);
     }
 
+    const result = body.result;
+    const rows = Array.isArray(result) ? result : result?.objects || [];
+    const info = body.result_info || {};
+    const nextCursor = info.cursor || (!Array.isArray(result) ? result?.cursor : "") || null;
+    const rawPrefixes = info.delimited || (!Array.isArray(result) ? result?.delimited : undefined) || [];
+
+    return {
+      bucket: bucketName,
+      prefix,
+      delimiter,
+      objects: rows.map((object) => ({
+        key: String(object.key || ""),
+        size: Number(object.size || 0),
+        uploaded: object.uploaded,
+      })).filter((object) => object.key),
+      prefixes: Array.isArray(rawPrefixes) ? rawPrefixes.filter((value): value is string => typeof value === "string" && value.length > 0) : [],
+      cursor: nextCursor,
+      truncated: Boolean(info.is_truncated ?? info.truncated ?? nextCursor),
+    };
+  }
+
+  async function listR2Objects(prefix = ""): Promise<R2AdminObject[]> {
+    const objects: R2AdminObject[] = [];
+    let cursor: string | undefined;
+    for (;;) {
+      const page = await listR2ObjectsPage(prefix, { delimiter: "", limit: 1000, cursor });
+      objects.push(...page.objects);
+      if (!page.truncated || !page.cursor) break;
+      cursor = page.cursor;
+    }
     return objects;
   }
 
@@ -403,6 +414,7 @@ export function createCloudflareR2Admin(
 
   return {
     listR2Objects,
+    listR2ObjectsPage,
     downloadObjectToFile,
     putObjectFromFile,
     deleteR2Object,

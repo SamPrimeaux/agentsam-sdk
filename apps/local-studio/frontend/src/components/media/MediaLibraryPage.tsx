@@ -146,6 +146,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [cfAccountId, setCfAccountId] = useState("");
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
+  const [r2Prefix, setR2Prefix] = useState("");
+  const [r2Prefixes, setR2Prefixes] = useState<string[]>([]);
   const [pinned, setPinned] = useState<string[]>(() => loadPinnedBuckets());
   const [accountChoices, setAccountChoices] = useState<AccountChoice[]>([]);
   const [driveAccounts, setDriveAccounts] = useState<Array<{ id: string; accountIdentifier: string; accountLabel: string }>>([]);
@@ -195,6 +197,10 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   useEffect(() => {
     if (preferencesReady) rememberMediaPreference(accountId, "bucket", activeBucket || "", cfAccountId);
   }, [accountId, activeBucket, cfAccountId, preferencesReady]);
+  useEffect(() => {
+    setR2Prefix("");
+    setR2Prefixes([]);
+  }, [activeBucket]);
   useEffect(() => {
     if (preferencesReady) rememberMediaPreference(accountId, "account", cfAccountId);
   }, [accountId, cfAccountId, preferencesReady]);
@@ -361,7 +367,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           setAssets([]); setTotal(null); setHasMore(false);
           return;
         }
-        const qs = accountQs("connection_id", new URLSearchParams({ per_page: String(PAGE_SIZE) }));
+        const qs = accountQs("connection_id", new URLSearchParams({ per_page: String(PAGE_SIZE), delimiter: "/" }));
+        if (r2Prefix) qs.set("prefix", r2Prefix);
         if (append && cursorRef.current) qs.set("cursor", cursorRef.current);
         const { res, body } = await getJson(`/api/connections/cloudflare/r2/buckets/${encodeURIComponent(activeBucket)}/objects?${qs}`);
         if (ticket !== requestRef.current) return;
@@ -371,6 +378,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           return;
         }
         const objects: Array<{ key: string; size?: number; uploaded?: string | null }> = Array.isArray(body?.objects) ? body.objects : [];
+        const prefixes: string[] = Array.isArray(body?.prefixes) ? body.prefixes.filter((value: unknown): value is string => typeof value === "string") : [];
+        setR2Prefixes((prev) => append ? [...new Set([...prev, ...prefixes])] : prefixes);
         const rows = objects.map((row) => {
           const key = String(row.key || "");
           const name = key.split("/").pop() || key;
@@ -420,7 +429,18 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     } finally {
       if (ticket === requestRef.current) { setLoading(false); setLoadingMore(false); }
     }
-  }, [source, activeBucket, accountQs, localHost, localDirectory, surface.kind, query, intakeCollection, driveAccountId]);
+  }, [source, activeBucket, r2Prefix, accountQs, localHost, localDirectory, surface.kind, query, intakeCollection, driveAccountId]);
+
+  const openR2Prefix = useCallback((prefix: string) => {
+    setR2Prefix(prefix);
+    setAssets([]);
+    setR2Prefixes([]);
+    setSelected(new Set());
+    setHasMore(false);
+    setError(null);
+    cursorRef.current = null;
+    pageRef.current = 1;
+  }, []);
 
   useEffect(() => {
     if (!preferencesReady) return;
@@ -439,6 +459,14 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     });
     return sortAssets(filtered, sort);
   }, [assets, surface.kind, query, sort]);
+
+  const r2Breadcrumbs = useMemo(() => {
+    const parts = r2Prefix.split("/").filter(Boolean);
+    return parts.map((label, index) => ({
+      label,
+      prefix: `${parts.slice(0, index + 1).join("/")}/`,
+    }));
+  }, [r2Prefix]);
 
   const viewerIndex = visible.findIndex((a) => a.id === viewerId);
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
@@ -904,6 +932,19 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           ) : null}
 
           <div className="agentsam-media-body">
+            {source === "r2" && activeBucket ? (
+              <div className="agentsam-media-chips" aria-label="R2 folder navigation">
+                <button type="button" className="agentsam-media-btn" onClick={() => openR2Prefix("")}>Root</button>
+                {r2Breadcrumbs.map((crumb) => (
+                  <button key={crumb.prefix} type="button" className="agentsam-media-btn" onClick={() => openR2Prefix(crumb.prefix)}>{crumb.label}</button>
+                ))}
+                {r2Prefixes.map((prefix) => (
+                  <button key={prefix} type="button" className="agentsam-media-btn" onClick={() => openR2Prefix(prefix)}>
+                    <FolderOpen size={14} /> {prefix.replace(/\/$/, "").split("/").at(-1)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {loading ? (
               <div className="agentsam-media-grid" aria-busy="true">
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -942,7 +983,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                   </div>
                 ) : null}
               </div>
-            ) : !visible.length ? (
+            ) : !visible.length && !(source === "r2" && r2Prefixes.length) ? (
               <div className="agentsam-media-state">
                 <strong>{assets.length ? "Nothing matches" : source === "r2" ? "This bucket is empty" : "No media yet"}</strong>
                 <p>{assets.length ? "Try a different search." : "Files you add to Cloudflare will appear here."}</p>

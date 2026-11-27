@@ -3,6 +3,7 @@ import { cloudflareImages } from "../src/providers/cloudflare-images.js";
 import { cloudflareStream } from "../src/providers/cloudflare-stream.js";
 import { localFiles } from "../src/providers/local.js";
 import { cms } from "../src/providers/cms.js";
+import { r2 } from "../src/providers/r2.js";
 import { createProviderRegistry } from "../src/providers/registry.js";
 
 const jsonResponse = (body: unknown) =>
@@ -76,6 +77,33 @@ describe("providers", () => {
     expect(p.deliveryUrl("vid1", { format: "poster", width: 640 })).toContain(
       "/thumbnails/thumbnail.jpg?width=640",
     );
+  });
+
+  it("R2 provider exposes folder prefixes and preserves object pagination", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const p = r2({
+      bucketName: "theme-store",
+      bucket: {
+        async list(options = {}) {
+          calls.push(options);
+          return {
+            objects: [{ key: "packages/platform/index.json", size: 20, uploaded: "2026-11-27T00:00:00.000Z" }],
+            delimitedPrefixes: ["packages/platform/assistant-workspace/"],
+            truncated: true,
+            cursor: "next-page",
+          };
+        },
+        async head() { return null; },
+        async put() { return {}; },
+        async delete() {},
+      },
+    });
+    const page = await p.list({ prefix: "packages/", delimiter: "/", limit: 25 });
+    expect(calls[0]).toMatchObject({ prefix: "packages/", delimiter: "/", limit: 25 });
+    expect(page.objects[0]?.ref).toBe("packages/platform/index.json");
+    expect(page.prefixes).toEqual(["packages/platform/assistant-workspace/"]);
+    expect(page.cursor).toBe("next-page");
+    expect(page.truncated).toBe(true);
   });
 
   it("cms provider is a read-only ingest facade", async () => {

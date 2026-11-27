@@ -17,6 +17,7 @@ const r2 = createCloudflareR2Admin({
 });
 
 export const listR2Objects = r2.listR2Objects;
+export const listR2ObjectsPage = r2.listR2ObjectsPage;
 export const downloadObjectToFile = r2.downloadObjectToFile;
 export const putObjectFromFile = r2.putObjectFromFile;
 export const deleteR2Object = r2.deleteR2Object;

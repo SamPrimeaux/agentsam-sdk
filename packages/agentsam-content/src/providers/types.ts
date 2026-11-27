@@ -29,11 +29,16 @@ export interface ProviderListOptions {
   cursor?: string;
   limit?: number;
   prefix?: string;
+  /** Folder-style grouping. Use "/" to return immediate child prefixes. */
+  delimiter?: string;
 }
 
 export interface ProviderListResult {
   objects: ProviderObject[];
+  /** Immediate child prefixes when the provider supports delimiter listing. */
+  prefixes?: string[];
   cursor?: string;
+  truncated?: boolean;
 }
 
 export interface ProviderUploadInput {

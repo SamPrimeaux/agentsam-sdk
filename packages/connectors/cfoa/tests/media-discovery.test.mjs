@@ -15,7 +15,9 @@ import {
 import { isCloudflareConnectionPath } from '../src/routes.js';
 
 function mockClient({ accountId = 'acct123', scopes = [], responses = {} } = {}) {
+  const calls = [];
   return {
+    calls,
     accountId,
     connectionId: 'conn_1',
     authSource: 'oauth',
@@ -25,6 +27,7 @@ function mockClient({ accountId = 'acct123', scopes = [], responses = {} } = {})
       return `/accounts/${accountId}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
     },
     async request(method, path) {
+      calls.push({ method, path });
       const key = `${method} ${path.split('?')[0]}`;
       if (typeof responses[key] === 'function') return responses[key]();
       if (responses[key]) return responses[key];
@@ -93,14 +96,29 @@ describe('cloudflare media discovery', () => {
       responses: {
         'GET /accounts/acct123/r2/buckets/website-assets/objects': {
           result: [{ key: 'public/great-room.png', size: 1200 }],
-          result_info: { cursor: 'next', truncated: true },
+          result_info: {
+            cursor: 'next',
+            truncated: true,
+            delimited: ['public/brand/'],
+          },
         },
       },
     });
-    const page = await listCloudflareR2Objects(client, 'website-assets');
+    const page = await listCloudflareR2Objects(client, 'website-assets', {
+      prefix: 'public/', delimiter: '/', perPage: 25, cursor: 'prior',
+    });
     assert.equal(page.bucket, 'website-assets');
+    assert.equal(page.prefix, 'public/');
+    assert.equal(page.delimiter, '/');
     assert.equal(page.objects[0].key, 'public/great-room.png');
+    assert.deepEqual(page.prefixes, ['public/brand/']);
+    assert.equal(page.cursor, 'next');
     assert.equal(page.truncated, true);
+    const request = new URL('https://cloudflare.invalid' + client.calls[0].path);
+    assert.equal(request.searchParams.get('prefix'), 'public/');
+    assert.equal(request.searchParams.get('delimiter'), '/');
+    assert.equal(request.searchParams.get('per_page'), '25');
+    assert.equal(request.searchParams.get('cursor'), 'prior');
   });
 
   it('distinguishes needs_scope from empty discovery results', async () => {

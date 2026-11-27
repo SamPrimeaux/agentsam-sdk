@@ -21,6 +21,19 @@ function db(rows){
       return rows.find(row=>row.account_id===args[0]&&row.provider===(sql.includes("'cloudflare'")?'cloudflare':args[1])&&row.account_identifier===(sql.includes("'cloudflare'")?args[1]:args[2]))||null;
     },
     async all(){
+      if(sql.includes('FROM agentsam_plugins')) {
+        const provider=args[0];
+        const defaults=['https://www.googleapis.com/auth/drive.file'];
+        return {results:[{
+          id:'plg_test_google_drive',
+          plugin_key:provider,
+          config_json:JSON.stringify({oauth_permissions:{
+            default_scopes:defaults,
+            required_scopes:defaults,
+            available_scopes:[...defaults,'https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/drive.readonly'],
+          }}),
+        }]};
+      }
       const filtered=rows.filter(row=>row.account_id===args[0]&&
         (sql.includes("'cloudflare'")?row.provider==='cloudflare':row.provider==='google_drive'));
       return {results:filtered};
@@ -70,13 +83,13 @@ test('Drive missing grant and wrong granted scope fail before provider API calls
   const other=await parse(await handleIdeSourceRequest(get('/api/work/ide/drive/files?account='+a),env(rows),'unrelated_user',{fetchImpl}));
   assert.equal(other.status,401);
 });
-test('R2 listing preserves provider folder prefixes and verified ETags',()=>{
+test('R2 listing normalizes shared provider folder prefixes and object metadata',()=>{
   const value=normalizeR2Listing({
-    result:[{key:'src/a.ts',etag:'hash123',size:34,http_metadata:{contentType:'text/typescript'}}],
-    result_info:{delimited:['src/'],cursor:'next',is_truncated:true},
-  });
-  assert.deepEqual(value.entries.map(x=>x.path),['src/']);
-  const nested=normalizeR2Listing({result:[{key:'src/a.ts',etag:'hash123',size:34}],result_info:{delimited:[]}},'src/');
+    objects:[{key:'src/a.ts',etag:'hash123',size:34,http_metadata:{contentType:'text/typescript'}}],
+    prefixes:['src/components/'],cursor:'next',truncated:true,
+  },'src/');
+  assert.deepEqual(value.entries.map(x=>x.path),['src/components/','src/a.ts']);
+  const nested=normalizeR2Listing({objects:[{key:'src/a.ts',etag:'hash123',size:34}],prefixes:[]},'src/');
   assert.deepEqual(nested.entries.map(x=>x.path),['src/a.ts']);
   assert.equal(nested.entries[0].version,'hash123');
   assert.equal(value.truncated,true);
@@ -97,13 +110,17 @@ test('R2 OAuth-backed browse returns live provider data but not bearer credentia
   const data=await parse(await handleIdeSourceRequest(get('/api/work/ide/r2/objects?account='+cloud+'&bucket=my-bucket&prefix=src%2F'),env(rows),owner,{
     fetchImpl:async (url,opts)=>{
       seen=String(url);
-      assert.equal(opts.headers.authorization,'Bearer unit-test-access');
-      return Response.json({success:true,result:[{key:'src/index.ts',etag:'v1',size:7,http_metadata:{contentType:'text/plain'}}],result_info:{delimited:[],is_truncated:false}});
+      assert.equal(opts.headers.Authorization || opts.headers.authorization,'Bearer unit-test-access');
+      return Response.json({success:true,result:[{key:'src/index.ts',etag:'v1',size:7,http_metadata:{contentType:'text/plain'}}],result_info:{delimited:['src/components/'],cursor:'next',is_truncated:true}});
     }
   }));
   assert.equal(data.status,200);
-  assert.equal(data.entries[0].path,'src/index.ts');
+  assert.deepEqual(data.entries.map(entry=>entry.path),['src/components/','src/index.ts']);
   assert.ok(seen.includes('/accounts/'+cloud+'/r2/buckets/my-bucket/objects'));
+  assert.ok(seen.includes('delimiter=%2F'));
+  assert.ok(seen.includes('prefix=src%2F'));
+  assert.equal(data.cursor,'next');
+  assert.equal(data.truncated,true);
   assert.equal(JSON.stringify(data).includes('unit-test-access'),false);
 });
 test('Cloudflare control-plane scope cannot be silently promoted to container file access',async()=>{
