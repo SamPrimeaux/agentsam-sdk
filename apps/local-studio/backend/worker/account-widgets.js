@@ -7,6 +7,8 @@
  */
 import { BUILTIN_WIDGET_DEFINITIONS, WIDGET_GALLERY_DEFINITIONS } from '../../../../packages/agentsam-workbench/src/widgets/registry.ts';
 
+import { validReleaseWidgetConfiguration } from '../../../../packages/agentsam-workbench/src/widgets/release-snapshots.ts';
+
 const BUILTIN = new Map(BUILTIN_WIDGET_DEFINITIONS.map(def => [def.id, def]));
 // The store-chat embed is a separate storefront surface, not a New Tab widget.
 // This is the compiled Workbench surface allowlist; D1 never loads code by itself.
@@ -53,6 +55,10 @@ function validatedConfiguration(key, value) {
     try { new Intl.DateTimeFormat('en', {timeZone:value.timeZone}); }
     catch { throw Error('widget_configuration_invalid'); }
     return {timeZone:value.timeZone};
+  }
+  if (key === 'pull-request-summary' || key === 'release-readiness') {
+    if (!validReleaseWidgetConfiguration(key,value)) throw Error('widget_configuration_invalid');
+    return value;
   }
   if (keys.length) throw Error('widget_configuration_invalid');
   return {};

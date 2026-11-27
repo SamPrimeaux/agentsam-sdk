@@ -1,0 +1,5 @@
+-- Register the compiled Workbench evidence renderers; never create account installations globally.
+INSERT INTO agentsam_widget_catalog (widget_key,name,description,category,icon_key,package_name,component_key,default_size,supported_sizes_json,data_adapter_key,tags_json,is_builtin,is_enabled) VALUES
+('pull-request-summary','Pull Request Summary','Repository change statistics and branch status for a recorded pull request.','glance','git-pull-request','@inneranimalmedia/agentsam-workbench/widgets','PullRequestSummaryWidget','medium','["medium","large"]','widget.configuration.snapshot','["github","pull-requests","release"]',1,1),
+('release-readiness','Verification & Release Readiness','Recorded test results, evidence and unresolved release blockers for a specific commit.','glance','check-circle','@inneranimalmedia/agentsam-workbench/widgets','ReleaseReadinessWidget','medium','["medium","large"]','widget.configuration.snapshot','["verification","tests","release"]',1,1)
+ON CONFLICT(widget_key) DO NOTHING;

@@ -54,6 +54,20 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     availability: 'ready',
     ownerPackage: '@inneranimalmedia/agentsam-workbench',
   } satisfies AgentSamWidgetDefinition),
+  Object.freeze({
+    id: 'pull-request-summary', kind: 'pull-request-summary', componentKey: 'PullRequestSummaryWidget',
+    title: 'Pull Request Summary', description: 'Repository change statistics and branch status for a recorded pull request.', icon: 'git-pull-request',
+    category: 'glance', tags: ["github","pull-requests","release"], sizes: ['medium', 'large'] as const,
+    availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench',
+    data: {source: 'widget.configuration.snapshot', refresh: 'manual'},
+  } satisfies AgentSamWidgetDefinition),
+  Object.freeze({
+    id: 'release-readiness', kind: 'release-readiness', componentKey: 'ReleaseReadinessWidget',
+    title: 'Verification & Release Readiness', description: 'Recorded test results, evidence and unresolved release blockers for a specific commit.', icon: 'check-circle',
+    category: 'glance', tags: ["verification","tests","release"], sizes: ['medium', 'large'] as const,
+    availability: 'ready', ownerPackage: '@inneranimalmedia/agentsam-workbench',
+    data: {source: 'widget.configuration.snapshot', refresh: 'manual'},
+  } satisfies AgentSamWidgetDefinition),
 ] satisfies readonly AgentSamWidgetDefinition[]);
 
 /** Curated metadata from the preserved 22-widget donor gallery.

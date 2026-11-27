@@ -3,6 +3,8 @@ import { QueueDepthWidget } from './QueueDepthWidget';
 import { ClockWidget } from './ClockWidget';
 import { CalculatorWidget } from './CalculatorWidget';
 
+import { PullRequestSummaryWidget, ReleaseReadinessWidget } from './ReleaseWidgets';
+
 export interface BuiltinWidgetProps {
   widgetId: string;
   compact?: boolean;
@@ -14,6 +16,8 @@ export function BuiltinWidget({
   compact = false,
   configuration = {},
 }: BuiltinWidgetProps) {
+  if (widgetId === 'pull-request-summary') return <PullRequestSummaryWidget configuration={configuration} />;
+  if (widgetId === 'release-readiness') return <ReleaseReadinessWidget configuration={configuration} />;
   if (widgetId === 'queues') return <QueueDepthWidget compact={compact} />;
   if (widgetId === 'clock') return <ClockWidget compact={compact} defaultTimeZone={typeof configuration.timeZone === 'string' ? configuration.timeZone : ''} />;
   if (widgetId === 'calculator') return <CalculatorWidget />;
