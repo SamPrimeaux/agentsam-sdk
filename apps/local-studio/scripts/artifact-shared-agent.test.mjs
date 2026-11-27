@@ -22,6 +22,21 @@ test('native Data creation stays in Side Stage and shares the existing conversat
   assert.match(css, /prefers-reduced-motion:no-preference/);
 });
 
+test('phone shell reserves a dock band only when a dock is mounted', () => {
+  const css = source('frontend/agentsam/shell.css');
+  assert.match(css, /\.agentsam-shell \.agentsam-main\s*\{\s*padding-bottom: env\(safe-area-inset-bottom, 0px\);/);
+  assert.match(css, /\.agentsam-shell \.agentsam-main:has\(\.as-nav-launch-dock\)\s*\{\s*padding-bottom: calc\(77px \+ env\(safe-area-inset-bottom, 0px\)\);/);
+});
+
+test('Slides creation opens the existing creative editor and retains the active conversation', () => {
+  const launch = source('frontend/src/lib/work/artifact-launcher.ts');
+  assert.match(launch, /kind === "design" \|\| kind === "whiteboard" \|\| kind === "slides"/);
+  assert.match(launch, /const chatId = work.activeChatId \|\| work.startChat\(\)/);
+  assert.match(launch, /openSideTab\("design", \{/);
+  assert.match(launch, /url: "\/canvas\?host=" \+ kind/);
+  assert.doesNotMatch(launch, /slides: "Start a new presentation artifact/);
+});
+
 test('Docs and Canvas selections use the same scoped composer-context mechanism', () => {
   const helper = source('frontend/src/lib/work/artifact-assistance.ts');
   const docs = source('frontend/src/components/workbench/document-editor.tsx');
@@ -52,4 +67,19 @@ test('portable Ask AgentSam pill is a callback only; no duplicate assistant or t
   for (const kind of ['slides','whiteboard','doc','data','sheets'])
     assert.ok(design.includes(`| "${kind}"`));
   assert.match(design, /point\?: \{ x: number; y: number \}/);
+});
+
+test('artifact layouts use one filter state, and Slides use the existing lead composer', () => {
+  const gallery = readFileSync(new URL('../../../packages/agentsam-work/src/frontend/surfaces/ArtifactsSurface.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../../packages/agentsam-work/src/frontend/theme.css', import.meta.url), 'utf8');
+  const page = source('frontend/agentsam/AgentSamPage.tsx');
+  const composer = source('frontend/src/components/workbench/composer.tsx');
+  assert.ok(gallery.includes('aria-label="Artifact layout"'));
+  assert.ok(gallery.includes('agentsam.artifacts.layout'));
+  assert.ok(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(css.includes('grid-template-columns:minmax(100px,38%) minmax(0,1fr)'));
+  assert.ok(page.includes('artifactContext={isMobile ? slidesContext : undefined}'));
+  assert.ok(composer.includes('Ask about these slides'));
+  assert.ok(composer.includes("'artifact:slides:' + artifactContext.id"));
+  assert.ok(composer.includes('setPendingAnnotations(targetId'));
 });

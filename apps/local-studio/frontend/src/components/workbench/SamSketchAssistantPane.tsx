@@ -46,12 +46,12 @@ export function SamSketchMiniComposer({selected,context,onExpand}:MiniProps){
   void store.send(chatId,"chat",selectionContext+input);
   setValue("");
  }
- return <div className="pointer-events-auto mx-auto w-[min(420px,calc(100%-24px))] rounded-[13px] border border-[#dcdde4] bg-white/95 p-1.5 shadow-[0_14px_45px_rgba(20,29,51,.17)] backdrop-blur-xl" role="group" aria-label="miniAgentSam for SamSketch">
-   <div className="flex items-center gap-1.5">
-    <IconAction onClick={onExpand} type="button" size="icon-sm" className="!size-8 shrink-0 rounded-[8px] bg-[#f0ebfa] text-[#7252b8] hover:bg-[#e9e0fc]" label="Expand AgentSam" hint="Open the contextual scene side assistant"><Sparkles size={16}/></IconAction>
-    <input className="h-8 min-w-0 flex-1 border-0 bg-transparent px-1 text-[12px] text-[#24252a] outline-none placeholder:text-[#85858c]" value={value} onChange={e=>setValue(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();submit();}}} aria-label="Ask AgentSam about the scene" placeholder={selected?"Ask about "+selected+"…":"Ask AgentSam about this scene…"} />
-    <button type="button" onClick={submit} disabled={!value.trim()} className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#282830] text-white hover:bg-[#504b61] disabled:opacity-40" aria-label="Send to AgentSam">{streaming?<ChevronRight size={16}/>:<ArrowUp size={16}/>}</button>
-    <IconAction type="button" size="icon-sm" onClick={onExpand} className="!size-8 shrink-0 rounded-[8px] text-[#656772] hover:bg-[#f2f2f5]" label="Open conversation" hint="Expand the current scene conversation"><ChevronRight size={16}/></IconAction>
+ return <div className="as-sketch-mini-composer pointer-events-auto mx-auto w-[min(420px,calc(100%-24px))]" role="group" aria-label="miniAgentSam for SamSketch">
+   <div className="flex w-full min-w-0 items-center gap-1">
+    <IconAction onClick={onExpand} type="button" size="icon-sm" className="shrink-0" label="Expand AgentSam" hint="Open the contextual scene side assistant"><Sparkles size={16}/></IconAction>
+    <input className="min-w-0 flex-1" value={value} onChange={e=>setValue(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();submit();}}} aria-label="Ask AgentSam about the scene" placeholder={streaming?"Follow up":"Ask AgentSam"} />
+    <button type="button" onClick={submit} disabled={!value.trim()} className="flex shrink-0 items-center justify-center" data-composer-send="" aria-label={streaming?"Queue follow-up":"Send to AgentSam"}><ArrowUp size={20}/></button>
+    <IconAction type="button" size="icon-sm" onClick={onExpand} className="shrink-0" label="Open conversation" hint="Expand the current scene conversation"><ChevronRight size={16}/></IconAction>
    </div>
  </div>;
 }

@@ -62,6 +62,7 @@
     },
     "./agent/contextual-composer.css": "./dist/agent/contextual-composer.css",
     "./agent/tool-permission.css": "./dist/agent/tool-permission.css",
+    "./agent/thread.css": "./dist/agent/thread.css",
     "./project-control.css": "./dist/project-control.css",
     "./manufacturing": {
       "types": "./dist/manufacturing/index.d.ts",

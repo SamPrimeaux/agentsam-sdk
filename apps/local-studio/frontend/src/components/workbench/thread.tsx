@@ -6,11 +6,13 @@ import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { createIndexedDbContentStorage } from "@inneranimalmedia/agentsam-content";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { stageChatFile, type ChatAttachmentReference, type ChatImageReference } from "@/lib/content/chat-images";
-import { AgentConversationSurface, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
+import { AgentActivityLine, AgentConversationSurface, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
 import { StudioMark } from "@/components/mark";
-import { formatElapsed } from "@/lib/utils";
+import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
+import { useLoadingScene } from "@inneranimalmedia/agentsam-loading-scene/react";
+import "@inneranimalmedia/agentsam-workbench/agent/thread.css";
 import { useWorkStore, useActiveChat } from "@/lib/work/store";
 import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
@@ -125,22 +127,15 @@ function MessageBubble({
   message,
   chatId,
   streaming,
-  startedAt,
+  activityLabel,
   outputs,
 }: {
   message: ChatMessage;
   chatId?: string;
   streaming?: boolean;
-  startedAt?: number;
+  activityLabel?: string;
   outputs?: Artifact[];
 }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (!streaming) return;
-    const t = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(t);
-  }, [streaming]);
-
   if (message.role === "user") {
     const refs = Array.isArray(message.metadata?.attachments)
       ? (message.metadata.attachments as ChatAttachmentReference[]).filter(ref =>
@@ -166,17 +161,8 @@ function MessageBubble({
 
   return (
     <div className="space-y-2">
-      {streaming && !message.content ? (
-        <p className="thinking text-sm">
-          Thinking{startedAt ? ` · ${formatElapsed(now - startedAt)}` : ""}
-        </p>
-      ) : null}
-      {streaming && message.content ? (
-        <p className="text-xs text-muted-foreground">
-          Working{startedAt ? ` · ${formatElapsed(now - startedAt)}` : ""}
-        </p>
-      ) : null}
-      {message.content ? <MessageMarkdown content={message.content} chatId={chatId} /> : null}
+      {message.content ? <MessageMarkdown content={message.content} chatId={chatId} messageId={message.id} streaming={streaming} /> : null}
+      {streaming ? <AgentActivityLine active label={activityLabel || "Preparing response"} icon={<img src="/brand/agentsam-mark.svg" alt=""/>}/> : null}
       {!streaming && outputs?.length ? <WorkOutputCards files={outputs}/> : null}
     </div>
   );
@@ -187,12 +173,15 @@ export function MessageList({
   chatId,
   streaming,
   readingMode = false,
+  runtimeSurfaceId,
 }: {
   messages: ChatMessage[];
   chatId?: string;
   streaming: boolean;
   readingMode?: boolean;
+  runtimeSurfaceId?: string;
 }) {
+  const scene = useLoadingScene(localStudioRuntimeVisuals.controllerFor(runtimeSurfaceId ?? chatId));
   const chatFiles = useWorkStore(s => s.chats.find(chat => chat.id === chatId)?.files) ?? [];
   const projectFiles = useWorkStore(s => s.projects.find(project => project.id === s.activeProjectId)?.files) ?? [];
   const documents = [...chatFiles,...projectFiles.filter(file=>file.chatId===chatId)]
@@ -211,7 +200,7 @@ export function MessageList({
           message={message as ChatMessage}
           chatId={chatId}
           streaming={streaming && index === messages.length - 1 && message.role === "assistant"}
-          startedAt={streaming ? message.createdAt : undefined}
+          activityLabel={scene.status === "running" || scene.status === "waiting" ? scene.label : undefined}
           outputs={readingMode && index===lastAssistantIndex ? documents : undefined}
         />
         </div>

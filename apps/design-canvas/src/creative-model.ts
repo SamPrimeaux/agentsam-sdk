@@ -4,12 +4,13 @@ export type DesignCanvasAgentContext = {
   artifactId?: string;
   artifactType: CreativeType;
   title: string;
-  selection?: { id: string; kind: string; label?: string };
+  selection?: { id: string; kind: string; label?: string; source?: string };
+  comment?: string;
 };
 export type CodeLanguage = 'html' | 'css' | 'javascript' | 'json' | 'markdown' | 'svg';
 export type CodeFile = { id: string; name: string; language: CodeLanguage; content: string };
 export type CodeDocument = { files: CodeFile[]; activeFileId: string; previewOpen: boolean };
-export type ObjectType = 'text' | 'shape' | 'image' | 'media' | 'path' | 'chart' | 'table';
+export type ObjectType = 'text' | 'shape' | 'image' | 'svg' | 'media' | 'path' | 'chart' | 'table';
 export type ChartType = 'bar' | 'line' | 'pie' | 'area' | 'scatter' | 'histogram' | 'waterfall' | 'funnel' | 'treemap';
 export type ShapeKind = 'rect' | 'circle' | 'diamond' | 'triangle' | 'line' | 'star' | 'arrow' | 'plus' | 'chevron' | 'callout';
 export type CreativeObject = {
@@ -29,6 +30,8 @@ export type CreativeObject = {
   verticalAlign?: 'top' | 'middle' | 'bottom';
   shape?: ShapeKind;
   src?: string;
+  /** Sanitized inline SVG source. Kept as editable vector markup, not a raster data URL. */
+  svgMarkup?: string;
   label?: string;
   mediaType?: 'video';
   points?: { x: number; y: number }[];
@@ -433,7 +436,75 @@ export function artifactHasImages(artifact: CreativeArtifact): boolean {
   const data = artifact.data as DesignSystemDocument;
   return data.assets.some((asset) => asset.kind.startsWith('image/') || asset.dataUrl.startsWith('data:image/'));
 }
+export function reorderSlides(slides: Slide[], sourceId: string, targetId: string): Slide[] {
+  if (!sourceId || !targetId || sourceId === targetId) return slides;
+  const from = slides.findIndex((item) => item.id === sourceId);
+  const to = slides.findIndex((item) => item.id === targetId);
+  if (from < 0 || to < 0) return slides;
+  const next = [...slides];
+  const [moving] = next.splice(from, 1);
+  if (!moving) return slides;
+  next.splice(to, 0, moving);
+  return next;
+}
+
 export function makeSlidePreset(kind: string): Slide {
+  const ink = '#171a1f';
+  const muted = '#68717d';
+  const accent = '#315fea';
+  const paper = '#f5f6f8';
+  const makeText = (value: string, x: number, y: number, w: number, h: number, size: number, color = ink, weight = 500) =>
+    text(makeId('object'), value, x, y, w, h, size, color, weight);
+  const makeShape = (x: number, y: number, w: number, h: number, fill: string, radius = 12) =>
+    ({ ...shape(makeId('object'), x, y, w, h, fill, 'rect'), radius });
+  const layouts: Record<string, () => Slide> = {
+    Blank: () => slide('Blank slide', '#ffffff', []),
+    Title: () => slide('Title', '#ffffff', [
+      makeShape(84, 160, 76, 6, accent, 3),
+      makeText('Presentation title', 84, 205, 1032, 112, 68, ink, 720),
+      makeText('Add a clear, concise subtitle', 88, 342, 900, 52, 25, muted, 450),
+    ]),
+    Section: () => slide('Section', ink, [
+      makeShape(84, 174, 7, 310, accent, 4),
+      makeText('SECTION 01', 122, 196, 360, 24, 13, '#aeb7c4', 700),
+      makeText('Section title', 122, 254, 970, 112, 62, '#ffffff', 700),
+      makeText('A short line to introduce the next part', 126, 390, 860, 44, 22, '#c1c8d2', 450),
+    ]),
+    'Title + body': () => slide('Title + body', '#ffffff', [
+      makeText('Slide title', 80, 66, 1040, 70, 46, ink, 700),
+      makeShape(82, 154, 1036, 2, '#e1e5ea', 1),
+      makeText('Add your supporting content here. Keep the message focused, use short paragraphs, and let the layout provide room for the ideas to breathe.', 84, 194, 1000, 300, 27, '#424b57', 450),
+    ]),
+    Bullets: () => slide('Bullets', '#ffffff', [
+      makeText('Key points', 80, 66, 1040, 70, 46, ink, 700),
+      ...['First point — state the main idea clearly', 'Second point — add the evidence or detail', 'Third point — explain why it matters', 'Fourth point — close with the next step'].map((value, index) => makeText('•  ' + value, 104, 176 + index * 86, 1000, 54, 24, '#424b57', 500)),
+    ]),
+    'Two columns': () => slide('Two columns', '#ffffff', [
+      makeText('Compare two ideas', 80, 66, 1040, 70, 46, ink, 700),
+      makeShape(80, 174, 496, 390, paper, 16),
+      makeShape(624, 174, 496, 390, paper, 16),
+      makeText('First column', 112, 210, 430, 44, 27, ink, 700),
+      makeText('Add the first perspective, its supporting detail, and the most important takeaway.', 112, 278, 420, 210, 21, muted, 450),
+      makeText('Second column', 656, 210, 430, 44, 27, ink, 700),
+      makeText('Add the second perspective, its supporting detail, and the most important takeaway.', 656, 278, 420, 210, 21, muted, 450),
+    ]),
+    Summary: () => slide('Summary', '#ffffff', [
+      makeText('Summary', 80, 66, 1040, 70, 46, ink, 700),
+      ...[
+        { x: 80, label: '01 / Insight', copy: 'The most important finding or message.' },
+        { x: 448, label: '02 / Impact', copy: 'Why it matters to the audience or project.' },
+        { x: 816, label: '03 / Next step', copy: 'The action that should happen next.' },
+      ].flatMap((item) => [
+        makeShape(item.x, 190, 304, 310, paper, 16),
+        makeShape(item.x + 24, 218, 44, 4, accent, 2),
+        makeText(item.label, item.x + 24, 250, 256, 36, 17, ink, 700),
+        makeText(item.copy, item.x + 24, 306, 256, 144, 21, muted, 450),
+      ]),
+    ]),
+  };
+  const layout = layouts[kind];
+  if (layout) return layout();
+
   const presetIndex: Record<string, number> = {
     'Brand Cover': 0,
     'Brand Foundations': 1,
@@ -443,7 +514,6 @@ export function makeSlidePreset(kind: string): Slide {
     'Imagery & Art Direction': 5,
     'Voice & Messaging': 6,
     'Applications & Governance': 7,
-    // Retain the earlier preset labels for existing decks and saved menus.
     'Iconography': 5,
     'Photography Gallery': 5,
     'Applications': 7,
@@ -452,6 +522,7 @@ export function makeSlidePreset(kind: string): Slide {
   if (!template) return slide('Slide ' + kind, '#ffffff', []);
   return { ...template, id: makeId('slide'), objects: template.objects.map((item) => ({ ...item, id: makeId('object') })), comments: [] };
 }
+
 export function contrastRatio(hex: string, against: string) {
   const rgb = (value: string) => {
     const raw = value.replace('#', '');

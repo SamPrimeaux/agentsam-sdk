@@ -2,6 +2,9 @@
 
 This directory owns the composed AgentSam application UI. `AgentSamShell.tsx` adapts application data/routing to `@inneranimalmedia/agentsam-nav`; `AgentSamPage.tsx` composes the conversation, existing composer, and Side Panel. `brand.ts` owns replaceable identity. `shell.css` maps navigation tokens to the existing app controls.
 
+ChatWorkspace owns the single conversation ChatThread and the Side Stage split. The divider resizes the existing panes and can be dragged past its limit to dock that same chat pane on the opposite side; the header swap action is the accessible equivalent. Creative editors must stage selection context into this existing chat through onAskAgentSam and must not mount a second conversation or create a parallel assistant runtime.
+
+
 Routes in `frontend/src/routes/(apps)` are thin application adapters. `/cms` consumes `apps/ecommerce-cms-agentsam`; `/cad` loads the actual `apps/cad-creator` frontend built into generated public assets. CAD remains independently owned. Its runtime/API integration is outside this UI change.
 
 The donor `agentsam.html`, `agentsam-page.js`, and `agentsam-page.css` are retained as reference material. Their commerce-specific shell and backend calls are not the reusable package contract.

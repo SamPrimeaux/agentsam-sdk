@@ -1,3 +1,4 @@
+import { ToolReceipt } from './ToolReceipt';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   AgentArtifact,
@@ -115,6 +116,7 @@ export function useAgentSession({
     const text = draft.trim();
     if (!text || streaming) return;
     setError(null);
+    setToolCalls([]);
     const context = await contextProvider.getContext();
     const optimistic: AgentMessage = {
       id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -189,6 +191,12 @@ export function ConnectedAgentPanel({ className, header, empty, renderMessage, .
       selectedModelId={session.selectedModelId}
       onModelChange={session.setSelectedModelId}
       renderMessage={renderMessage}
+      activity={session.toolCalls.filter(call => !session.currentRun || !call.runId || call.runId === session.currentRun.id).map(call => {
+        const capability = session.capabilities.find(entry => entry.id === (call.toolKey || call.name));
+        const iconUrl = capability?.metadata?.iconUrl ?? capability?.metadata?.icon_url;
+        const icon = typeof iconUrl === 'string' && /^(https:\/\/|\/(?!\/))/.test(iconUrl) ? <img src={iconUrl} alt="" referrerPolicy="no-referrer"/> : undefined;
+        return <ToolReceipt key={call.id} call={call} icon={icon} label={typeof call.metadata?.label === 'string' ? call.metadata.label : capability?.label}/>;
+      })}
     />
   );
 }

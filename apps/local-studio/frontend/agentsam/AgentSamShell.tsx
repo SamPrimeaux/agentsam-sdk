@@ -19,7 +19,7 @@ import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, G
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
-import { SideStage } from '@/components/workbench/side-stage';
+import { SideStage, MobileStageActions } from '@/components/workbench/side-stage';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { CliDrawer } from '@/components/shell/cli-drawer';
 import { OfflineBanner } from '@/components/shell/offline-banner';
@@ -80,23 +80,24 @@ function initialCachedAppearance() {
 
 /** The selected pet belongs to the shared header, not to a specific page.
  * Mount into the existing packaged Console slot without creating another bar. */
-function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
+function HostedCompanionHeader({ state, assistantOpen = false }: { state: 'idle' | 'working'; assistantOpen?: boolean }) {
   const companion = useActiveCompanion();
   const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [actionsTarget, setActionsTarget] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const find = () => setTarget(document.getElementById('agentsam-console-mode-slot'));
+    const find = () => { setTarget(document.getElementById('agentsam-console-mode-slot')); setActionsTarget(document.getElementById('agentsam-console-actions-slot')); };
     find();
     const observer = new MutationObserver(find);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
-  return target ? createPortal(
+  return <>{target ? createPortal(
     <div className="agentsam-mobile-companion-identity" title={companion.name + ' · ' + state}>
       <AgentSamPetTrigger state={state}
         onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
       <span>AgentSam</span>
     </div>, target
-  ) : null;
+  ) : null}{assistantOpen && actionsTarget ? createPortal(<MobileStageActions desktopHidden />, actionsTarget) : null}</>;
 }
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
@@ -773,12 +774,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen mobileBreakpoint={901} resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}
-      {embedded && !isConversation ? <HostedCompanionHeader state={petState} /> : null}
+      {embedded && !isConversation ? <HostedCompanionHeader state={petState} assistantOpen={!isCanvasRoute && state.sideOpen} /> : null}
       <div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
           <Nav.TopbarSpacer />
           <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+          {!isCanvasRoute && state.sideOpen ? <MobileStageActions desktopHidden /> : null}
           <NotificationsMenu />
         </Nav.Topbar> : null}
         <OfflineBanner />

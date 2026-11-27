@@ -39,6 +39,7 @@ export function Composer({
   contextLabel,
   workMode = false,
   showWorkShortcuts = false,
+  artifactContext,
 }: {
   targetId: string;
   targetKind: "chat" | "side";
@@ -50,6 +51,7 @@ export function Composer({
   workMode?: boolean;
   /** Work landing view quick actions; the composer remains the canonical input. */
   showWorkShortcuts?: boolean;
+  artifactContext?: { id: string; title: string };
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
   const { user } = useCurrentUserState();
@@ -67,20 +69,12 @@ export function Composer({
   const [submitting, setSubmitting] = useState(false);
   const streaming = busy ?? workStreaming;
   const cancel = () => onCancel ? onCancel() : stop(targetId);
-  // Follow-ups typed while the agent works are held here (never interrupting the
-  // run) and delivered together as the next message once the turn finishes.
-  const [queued, setQueued] = useState<string[]>([]);
-  const wasStreaming = useRef(streaming);
-  useEffect(() => {
-    if (wasStreaming.current && !streaming && queued.length) {
-      const text = queued.join("\n\n");
-      setQueued([]);
-      setDraft(targetId, text);
-      void send(targetId, targetKind);
-    }
-    wasStreaming.current = streaming;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming]);
+  // One persisted FIFO queue per conversation, owned by the existing Work store.
+  const queued = useWorkStore(s => s.followupQueue);
+  const targetQueue = queued.filter(item => item.targetId === targetId);
+  const removeFollowup = useWorkStore(s => s.removeFollowup);
+  const queuePaused = useWorkStore(s => s.pausedQueueTargets.includes(targetId));
+  const resumeFollowups = useWorkStore(s => s.resumeFollowups);
   const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
   const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -162,16 +156,15 @@ export function Composer({
 
   async function submitWithAttachments() {
     if (imageMode) { await generateImage(); return; }
-    if (pendingAnnotations.length && (streaming || (typeof navigator !== 'undefined' && !navigator.onLine))) {
-      toast.message('Annotations will stay attached. Send them when this conversation is available.');
+    if ((pendingAnnotations.length || artifactContext) && typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.message('Annotations will stay attached. Send them when this conversation is online.');
       return;
     }
-    if (streaming && !onSubmit && !staging && !submitting && value.trim()) {
-      setQueued((items) => [...items, value.trim()]);
-      setDraft(targetId, "");
+    if (streaming && (onSubmit || pendingAttachments.length)) {
+      toast.message('This request stays in your draft until the current operation finishes.');
       return;
     }
-    if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length && !pendingAnnotations.length)) return;
+    if (staging || submitting || (!value.trim() && !pendingAttachments.length && !pendingAnnotations.length)) return;
     if (onSubmit) {
       setSubmitting(true);
       try {
@@ -186,6 +179,12 @@ export function Composer({
         toast.error(error instanceof Error ? error.message : "The instruction could not be sent. Your draft is retained.");
       } finally { setSubmitting(false); }
       return;
+    }
+    if (artifactContext) {
+      const page = 'artifact:slides:' + artifactContext.id;
+      useWorkStore.getState().setPendingAnnotations(targetId, current => current.some(item => item.page === page) ? current : [...current, {
+        id: crypto.randomUUID(), page, tag: 'slides', label: artifactContext.title, text: artifactContext.title,
+      }].slice(-8));
     }
     const bag = (window as unknown as { __agentsamComposerAttachments?: unknown });
     bag.__agentsamComposerAttachments = {
@@ -295,10 +294,10 @@ export function Composer({
     <span className="as-composer-send-wrap" data-mobile-voice-idle={mobileVoiceIdle}><button type="button" className="as-composer-mobile-voice" aria-label="Start voice" onClick={() => setVoiceOpen(true)}><AudioLines size={20}/></button><button type="button" className="as-composer-voice-quick" onClick={() => setVoiceOpen(true)}>Start voice</button><IconAction
       type="button"
       size="icon-sm"
-      label="Send"
+      label={streaming ? "Queue follow-up" : "Send"}
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={staging || submitting || (streaming && (!!onSubmit || !value.trim())) || (!value.trim() && pendingAttachments.length === 0 && pendingAnnotations.length === 0)}
+      disabled={staging || submitting || (streaming && (!!onSubmit || pendingAttachments.length > 0)) || (!value.trim() && pendingAttachments.length === 0 && pendingAnnotations.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
@@ -373,15 +372,16 @@ export function Composer({
           }
         />
       ) : null}
-      {queued.length ? (
+      {targetQueue.length ? (
         <div className="mx-auto mb-2 flex w-full max-w-6xl flex-col gap-1.5" role="list" aria-label="Queued follow-ups">
-          {queued.map((text, index) => (
-            <div key={index} role="listitem" data-composer-queued="" className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground opacity-70">
-              <span className="min-w-0 flex-1 truncate">{text}</span>
+          {targetQueue.map((item) => (
+            <div key={item.id} role="listitem" data-composer-queued="" className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground opacity-70">
+              <span className="min-w-0 flex-1 truncate">{item.text}</span>
               <span className="shrink-0 text-[10px] uppercase tracking-wide">Queued</span>
-              <IconAction type="button" size="icon-sm" label="Remove queued message" className="size-6 shrink-0 rounded-full" onClick={() => setQueued((items) => items.filter((_, i) => i !== index))}><X className="size-3.5" /></IconAction>
+              <IconAction type="button" size="icon-sm" label="Remove queued message" className="size-6 shrink-0 rounded-full" onClick={() => removeFollowup(item.id)}><X className="size-3.5" /></IconAction>
             </div>
           ))}
+          {!streaming ? <button type="button" onClick={() => resumeFollowups(targetId)}>{queuePaused ? "Resume queued follow-ups" : "Send next queued follow-up"}</button> : null}
         </div>
       ) : null}
       <PluginPicker targetChatId={targetKind === "chat" ? targetId : undefined} value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
@@ -399,13 +399,15 @@ export function Composer({
         onSend={submitWithAttachments}
         onCancel={cancel}
         streaming={streaming}
-        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Follow up' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        queueWhileStreaming={!onSubmit && !pendingAttachments.length}
+        hasPendingContent={pendingAnnotations.length > 0}
+        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Follow up' : artifactContext ? "Ask about these slides…" : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
         toolbarEnd={<><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></>}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface', (value.trim() || pendingAttachments.length || pendingAnnotations.length) && 'has-draft')}
+        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface', artifactContext && 'as-artifact-composer', (value.trim() || pendingAttachments.length || pendingAnnotations.length) && 'has-draft')}
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",

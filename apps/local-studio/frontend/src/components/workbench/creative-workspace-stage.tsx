@@ -1,3 +1,4 @@
+import { WorkspaceOpeningField } from "@/components/runtime/LocalStudioRuntimeField";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Check, LoaderCircle, RefreshCw } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
@@ -409,7 +410,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       </div>
     </div>;
   }
-  if (!ready) return <div className="flex h-full min-h-0 items-center justify-center gap-2 text-xs text-muted-foreground"><LoaderCircle size={15} className="animate-spin"/> Loading Creative Workspace…</div>;
+  if (!ready) return <WorkspaceOpeningField label="Opening Creative Workspace" />;
 
   return <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
     <div className="min-h-0 min-w-0 flex-1 overflow-hidden"><DesignCanvasApp
@@ -431,7 +432,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
           page: context.title,
           tag: context.selection?.kind || "canvas",
           text: ["Canvas " + (context.artifactId || "unsaved") + " (" + context.artifactType + ")",
-            context.selection ? "Selected object: " + context.selection.id : ""].filter(Boolean).join(" · "),
+            context.selection ? "Selected object: " + context.selection.id : "", context.selection?.source ? "Current editable SVG source:\n" + context.selection.source : "", context.comment ? "Comment: " + context.comment : ""].filter(Boolean).join(" · "),
         };
         store.setActiveChat(chatId);
         store.setPendingAnnotations(chatId, items => [...items.filter(item => item.text !== annotation.text), annotation].slice(-8));
