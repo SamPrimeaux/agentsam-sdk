@@ -29,7 +29,7 @@ export interface SamGeneratedInputs {
   "media.model.optimize": { "assetId": string; "profile": "web" | "mobile" | "original_preserving"; "expectedVersion"?: number; };
   "product.artwork.preflight": { "assetId": string; "productId": string; "placement"?: string; };
   "cloudflare.r2.buckets.list": { "connectionRef"?: string; };
-  "cloudflare.r2.objects.inventory": { "bucketRef": string; "prefix"?: string; "cursor"?: string; "pageSize"?: number; };
+  "cloudflare.r2.objects.inventory": { "bucketRef": string; "prefix"?: string; "cursor"?: string; "pageSize"?: number; "delimiter"?: "/" | ""; "connectionRef"?: string; };
   "media.image.background.remove": { "assetId": string; "method"?: "flat_connected" | "subject_ai"; "tolerance"?: number; "idempotencyKey"?: string; };
   "media.image.generate": { "prompt": string; "model"?: string; "size"?: string; "variations"?: number; };
   "media.image.edit": { "prompt": string; "sourceArtifactRef": string; "model"?: string; "size"?: string; };

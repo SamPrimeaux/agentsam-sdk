@@ -1097,12 +1097,15 @@ export const OPERATION_CATALOG = Object.freeze([
   {
     "id": "tool_cloudflare_r2_objects_inventory",
     "name": "cloudflare.r2.objects.inventory",
-    "description": "cloudflare.r2.objects.inventory: use the authorized authorized_r2_bucket domain service; validate source versions, resource ownership and results.",
+    "description": "Browse one page of an authorized Cloudflare R2 bucket by name, with folder prefixes and an opaque continuation cursor. No D1 inventory or object mutations.",
     "input_schema": {
       "type": "object",
       "properties": {
         "bucketRef": {
-          "type": "string"
+          "type": "string",
+          "description": "Cloudflare R2 bucket name in the authorized connection",
+          "minLength": 3,
+          "maxLength": 63
         },
         "prefix": {
           "type": "string"
@@ -1114,6 +1117,19 @@ export const OPERATION_CATALOG = Object.freeze([
           "type": "integer",
           "minimum": 1,
           "maximum": 1000
+        },
+        "delimiter": {
+          "type": "string",
+          "enum": [
+            "/",
+            ""
+          ],
+          "default": "/"
+        },
+        "connectionRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional authorized Cloudflare connection ID; required when account selection is ambiguous."
         }
       },
       "required": [
@@ -1121,7 +1137,86 @@ export const OPERATION_CATALOG = Object.freeze([
       ],
       "additionalProperties": false
     },
-    "output_schema": null,
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "delimiter": {
+          "type": "string"
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "size": {
+                "type": "number"
+              },
+              "etag": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uploaded": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "storage_class": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "size"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "bucket",
+        "prefix",
+        "delimiter",
+        "objects",
+        "prefixes",
+        "cursor",
+        "truncated"
+      ],
+      "additionalProperties": false
+    },
     "capability_key": "cloudflare.r2.objects.read",
     "handler_ref": "cloudflare.r2.objects.inventory",
     "policy": {
