@@ -22,6 +22,21 @@ test('native Data creation stays in Side Stage and shares the existing conversat
   assert.match(css, /prefers-reduced-motion:no-preference/);
 });
 
+test('phone shell reserves a dock band only when a dock is mounted', () => {
+  const css = source('frontend/agentsam/shell.css');
+  assert.match(css, /\.agentsam-shell \.agentsam-main\s*\{\s*padding-bottom: env\(safe-area-inset-bottom, 0px\);/);
+  assert.match(css, /\.agentsam-shell \.agentsam-main:has\(\.as-nav-launch-dock\)\s*\{\s*padding-bottom: calc\(77px \+ env\(safe-area-inset-bottom, 0px\)\);/);
+});
+
+test('Slides creation opens the existing creative editor and retains the active conversation', () => {
+  const launch = source('frontend/src/lib/work/artifact-launcher.ts');
+  assert.match(launch, /kind === "design" \|\| kind === "whiteboard" \|\| kind === "slides"/);
+  assert.match(launch, /const chatId = work.activeChatId \|\| work.startChat\(\)/);
+  assert.match(launch, /openSideTab\("design", \{/);
+  assert.match(launch, /url: "\/canvas\?host=" \+ kind/);
+  assert.doesNotMatch(launch, /slides: "Start a new presentation artifact/);
+});
+
 test('Docs and Canvas selections use the same scoped composer-context mechanism', () => {
   const helper = source('frontend/src/lib/work/artifact-assistance.ts');
   const docs = source('frontend/src/components/workbench/document-editor.tsx');

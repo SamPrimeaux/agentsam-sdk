@@ -641,9 +641,12 @@
 }
 
 
-/* Reserve a real layout band for the mobile launch dock: never cover the composer or route content. */
+/* Reserve the dock band only while the dock is actually mounted. */
 @media (max-width: 767px) {
   .agentsam-shell .agentsam-main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .agentsam-shell .agentsam-main:has(.as-nav-launch-dock) {
     padding-bottom: calc(77px + env(safe-area-inset-bottom, 0px));
   }
   .agentsam-shell .agentsam-page-layout .agentsam-conversation-dock {
