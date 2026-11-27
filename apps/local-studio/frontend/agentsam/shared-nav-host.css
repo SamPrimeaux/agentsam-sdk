@@ -228,3 +228,35 @@ body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-ex
  body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] button:last-child{justify-self:end}
  body.agentsam-shared-navigation .as-nav-launch-dock[aria-label="Merchant navigation"] .as-nav-launch-dock-icon svg{width:24px;height:24px}
 }
+
+/* Only the hosted non-chat companion header needs extra height. The PWA
+   status-bar inset is included once, and the drawer follows the flex body. */
+@media(max-width:767px) {
+ body.agentsam-shared-navigation .console-shell:has(.console-topbar .agentsam-mobile-companion-identity) {
+   --c-topbar-h:96px;
+ }
+ body.agentsam-shared-navigation .console-topbar:has(.agentsam-mobile-companion-identity) {
+   height:var(--c-topbar-h); min-height:var(--c-topbar-h); box-sizing:border-box;
+ }
+ body.agentsam-shared-navigation .console-topbar:has(.agentsam-mobile-companion-identity) .console-topbar-center {
+   top:50%; transform:translate(-50%,-50%);
+ }
+ body.agentsam-shared-navigation:not(.agentsam-native-store-route):has(.console-topbar [data-shared-nav-toggle]) .as-nav-mobile-drawer .as-nav-work-brand-toggle {
+   display:none;
+ }
+ body.agentsam-shared-navigation .console-topbar .console-topbar-spacer {padding-left:0;}
+ body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle] {
+   width:44px;height:44px;min-width:44px;min-height:44px;padding:0;
+   background:linear-gradient(170deg,color-mix(in srgb,var(--c-ink) 10%,transparent),transparent 65%),color-mix(in srgb,var(--c-surface) 78%,transparent);
+   border:1px solid color-mix(in srgb,var(--c-ink) 20%,transparent);
+   -webkit-backdrop-filter:blur(24px) saturate(1.15);backdrop-filter:blur(24px) saturate(1.15);
+ }
+}
+@media(max-width:767px) and (display-mode:standalone) {
+ #console-app:has(#agentsam-host-workspace) .console-shell:has(.console-topbar .agentsam-mobile-companion-identity) {
+   --c-topbar-h:calc(96px + env(safe-area-inset-top,0px));
+ }
+ #console-app:has(#agentsam-host-workspace) .console-topbar:has(.agentsam-mobile-companion-identity) .console-topbar-center {
+   top:calc(50% + env(safe-area-inset-top,0px) / 2);
+ }
+}

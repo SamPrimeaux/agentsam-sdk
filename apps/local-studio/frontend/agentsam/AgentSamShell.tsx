@@ -54,6 +54,13 @@ import { applyActiveStudioTheme } from '@/lib/themes/inventory';
 import { THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 import { forgetHostedAccountId, knownHostedAccountId, resolveHostedAccountId } from '@/lib/themes/hosted-account';
 
+type AvatarMode = 'auto' | 'photo' | 'companion' | 'initials';
+type AvatarPreference = { avatar_url: string | null; mode: AvatarMode; companion_url: string | null };
+function resolveAccountAvatar(pref: AvatarPreference | null, authImage?: string | null) {
+  if (pref?.mode === 'initials') return undefined;
+  if (pref?.mode === 'companion') return pref.companion_url || undefined;
+  return pref?.avatar_url || authImage || (pref?.mode !== 'photo' ? pref?.companion_url : null) || undefined;
+}
 async function accountAvatarRequest(options: RequestInit = {}) {
   return fetch('/api/settings/account-avatar', { credentials: 'same-origin', ...options });
 }
@@ -178,7 +185,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   }, []);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
-  const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
+  const [avatarPreference, setAvatarPreference] = useState<AvatarPreference | null>(null);
+  const accountAvatarUrl = avatarPreference?.avatar_url;
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>('auto');
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [avatarDraft, setAvatarDraft] = useState('');
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -217,19 +226,26 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const pendingChromeShares = useRef<ChromeTabShare[]>([]);
   hydratedRef.current = state.hydrated;
   useEffect(() => {
+    setAvatarPreference(null);
     if (!user?.id || user.isDevFallback) return;
-    const controller = new AbortController();
-    void accountAvatarRequest({ credentials: 'same-origin', signal: controller.signal })
-      .then(async (res) => res.ok ? res.json() as Promise<{avatar_url?: string | null}> : null)
-      .then(data => {
-        if (controller.signal.aborted) return;
-        setAccountAvatarUrl(data?.avatar_url || null);
-        const shell = window as Window & { __shellUser?: Record<string, unknown>; hydrateShellProfile?: (profile: unknown) => void };
-        if (shell.__shellUser?.id === user.id) shell.hydrateShellProfile?.({ ...shell.__shellUser, avatar_url: data?.avatar_url || user.profileImageUrl });
-      })
-      .catch(() => { /* Auth image remains a usable fallback when preferences cannot be read. */ });
-    return () => controller.abort();
-  }, [user?.id]);
+    let controller: AbortController | undefined;
+    const refresh = () => {
+      controller?.abort();
+      const request = controller = new AbortController();
+      void accountAvatarRequest({ signal: request.signal })
+        .then(async res => res.ok ? res.json() as Promise<AvatarPreference> : null)
+        .then(data => { if (!request.signal.aborted && data) setAvatarPreference(data); })
+        .catch(() => { /* Auth image remains available when preferences cannot be read. */ });
+    };
+    refresh();
+    window.addEventListener('agentsam:companions-changed', refresh);
+    window.addEventListener('agentsam:account-avatar-changed', refresh);
+    return () => {
+      controller?.abort();
+      window.removeEventListener('agentsam:companions-changed', refresh);
+      window.removeEventListener('agentsam:account-avatar-changed', refresh);
+    };
+  }, [user?.id, user?.isDevFallback]);
   const chat = state.chats.find((item) => item.id === state.activeChatId);
   // The store can hold a placeholder New chat before the user sends a message.
   const hasStartedConversation = Boolean(chat?.messages.some(message => message.role === 'user'));
@@ -607,7 +623,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         && !accountChats.some(chat => chat.id === item.id))
         .map(item => ({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
     ],
-    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
+    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: resolveAccountAvatar(avatarPreference, user.profileImageUrl) } : undefined,
     showSidebarHeader: true,
     // New conversation is the first entry; product destinations follow below.
     showHistory: true,
@@ -716,7 +732,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         {id:'store-create',label:'Create store',icon:<Plus />,separatorBefore:merchantStores.length > 0,
           onSelect:() => window.location.assign('/start')},
       ]},
-      {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
+      {id:'profile-image',label:'Profile appearance',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || ''); setAvatarMode(avatarPreference?.mode || 'auto'); setAvatarDialogOpen(true); }},
       {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/admin/settings/general')},
       ...(isPackagedDesktop() ? [{id:'desktop-pet',label:'Desktop pet',icon:<PawPrint />,onSelect:() => { void toggleAgentSamPet().then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden')).catch(() => toast.error('Desktop pet could not be opened')); }}] : []),
       ...(!user || user.isDevFallback ? [{id:'sign-in',label:'Sign in',icon:<LogIn />,onSelect:() => isPackagedDesktop() ? setIdentityOpen(true) : go('/auth/login')}] : hasGateSessionMarker() ? [] : [{id:'sign-out',label:'Sign out',icon:<LogOut />,onSelect:() => {void signOut().catch(() => toast.error('Sign out could not be completed. Please try again.'));}}]),
@@ -779,7 +795,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
           <Nav.TopbarSpacer />
-          <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+          <div className="agentsam-mobile-companion-identity"><AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} /><span>AgentSam</span></div>
           {!isCanvasRoute && state.sideOpen ? <MobileStageActions desktopHidden /> : null}
           <NotificationsMenu />
         </Nav.Topbar> : null}
@@ -801,25 +817,34 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       </div><CliDrawer /><CommandPalette />
       <ChatShareDialog open={sharing} onOpenChange={setSharing} chat={chat ?? null} />
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>
-        <DialogTitle>Profile image</DialogTitle>
-        <DialogDescription>Select an image from your authorized Brand/Media assets, then paste its image URL here. Saved against your signed-in user, not as an installation default.</DialogDescription>
-        <label className="flex flex-col gap-1 text-sm">Image URL
+        <DialogTitle>Profile appearance</DialogTitle>
+        <DialogDescription>Choose how your account appears. Your selected companion continues to animate in the header independently.</DialogDescription>
+        <label className="flex flex-col gap-1 text-sm">Avatar source
+          <select value={avatarMode} onChange={event => setAvatarMode(event.target.value as AvatarMode)} className="rounded border border-border bg-background px-3 py-2">
+            <option value="auto">Profile image or active companion</option>
+            <option value="photo">My profile image</option>
+            <option value="companion">Active companion</option>
+            <option value="initials">My initials</option>
+          </select>
+        </label>
+        {(avatarMode === 'auto' || avatarMode === 'photo') && <label className="flex flex-col gap-1 text-sm">Image URL
           <input type="text" value={avatarDraft} onChange={event => setAvatarDraft(event.target.value)}
             className="rounded border border-border bg-background px-3 py-2" placeholder="/brand/... or https://..." />
-        </label>
+        </label>}
         <button type="button" className="as-nav-button" disabled={avatarSaving} onClick={() => {
           setAvatarSaving(true);
           void accountAvatarRequest({
             method: 'PUT', credentials: 'same-origin',
-            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ avatar_url: avatarDraft.trim() || null }),
+            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ avatar_url: avatarDraft.trim() || null, mode: avatarMode }),
           }).then(async response => {
             if (!response.ok) throw Error('Could not save profile image');
-            const data = await response.json() as { avatar_url: string | null };
-            setAccountAvatarUrl(data.avatar_url);
+            const data = await response.json() as AvatarPreference;
+            setAvatarPreference(data);
+            window.dispatchEvent(new Event('agentsam:account-avatar-changed'));
             setAvatarDialogOpen(false);
-            toast.success('Profile image saved');
+            toast.success('Profile appearance saved');
           }).catch(() => toast.error('Profile image could not be saved')).finally(() => setAvatarSaving(false));
-        }}>{avatarSaving ? 'Saving…' : 'Save profile image'}</button>
+        }}>{avatarSaving ? 'Saving…' : 'Save profile appearance'}</button>
       </DialogContent></Dialog>
       <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />
       <DesktopStartupOverlay />

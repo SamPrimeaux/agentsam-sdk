@@ -117,12 +117,12 @@ test('packaged Ecommerce Console routes authenticated Work and project reads thr
 
 test('packaged Console navigation search invokes its existing authorized dialog', () => {
   const code = extractFunction(
-    '  function navigationValue(user) {',
+    '  let accountAvatarPreference = null;',
     '  function hostedParent() {',
   );
   let openCount = 0;
   const context = {
-    window: { __shellUser: { id: 'account-1' } },
+    window: { __shellUser: { id: 'account-1' }, addEventListener() {} },
     document: { getElementById: id => {
       assert.equal(id, 'console-search-trigger');
       return { click: () => { openCount += 1; } };
@@ -133,11 +133,20 @@ test('packaged Console navigation search invokes its existing authorized dialog'
     safeAvatarUrl: () => null,
     navigateHost: () => {},
   };
-  runInNewContext(code + '\nthis.navigationValue = navigationValue;', context);
+  runInNewContext(code + '\nthis.navigationValue = navigationValue; this.setPreference = (id, pref) => { avatarAccountId = id; accountAvatarPreference = pref; };', context);
   const navigation = context.navigationValue({ id: 'account-1', display_name: 'Member' });
   assert.equal(typeof navigation.onSearch, 'function');
   navigation.onSearch();
   assert.equal(openCount, 1);
+  context.safeAvatarUrl = value => typeof value === 'string' ? value : null;
+  const profile = {id:'account-1',display_name:'Member',avatar_url:'/media/auth.png'};
+  context.setPreference('account-1',{mode:'companion',avatar_url:'/media/photo.png',companion_url:'/media/pet.png'});
+  assert.equal(context.navigationValue(profile).account.avatar,'/media/pet.png');
+  context.setPreference('account-1',{mode:'initials',avatar_url:'/media/photo.png'});
+  assert.equal(context.navigationValue(profile).account.avatar,undefined);
+  context.setPreference('account-1',{mode:'auto',avatar_url:'/media/photo.png',companion_url:'/media/pet.png'});
+  assert.equal(context.navigationValue(profile).account.avatar,'/media/photo.png');
+  assert.equal(context.navigationValue({...profile,id:'account-2'}).account.avatar,'/media/auth.png');
 });
 
 test('hosted mobile chrome styles target the packaged header rather than a hidden child header', () => {

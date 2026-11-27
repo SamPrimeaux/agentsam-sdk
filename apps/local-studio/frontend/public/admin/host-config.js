@@ -18,6 +18,7 @@
       const hostedApi = url.origin === window.location.origin && (
         url.pathname.startsWith('/api/admin/') ||
         url.pathname.startsWith('/api/work/') ||
+        url.pathname === '/api/settings/account-avatar' ||
         url.pathname === '/api/projects' ||
         url.pathname.startsWith('/api/projects/')
       );
@@ -291,6 +292,51 @@
       },
     };
   }
+  let accountAvatarPreference = null;
+  let avatarAccountId = null;
+  let avatarRequest = null;
+  function resolvedProfileAvatar(profile) {
+    const pref = avatarAccountId === profile?.id ? accountAvatarPreference : null;
+    if (pref?.mode === 'initials') return null;
+    if (pref?.mode === 'companion') return safeAvatarUrl(pref.companion_url) || null;
+    return safeAvatarUrl(pref?.avatar_url || profile?.avatar_url) ||
+      (pref?.mode !== 'photo' ? safeAvatarUrl(pref?.companion_url) : null) || null;
+  }
+  async function refreshProfileAvatar(user = window.__shellUser, force = false) {
+    const id = user?.id || null;
+    if (!force && id === avatarAccountId) return;
+    avatarRequest?.abort();
+    if (id !== avatarAccountId) accountAvatarPreference = null;
+    avatarAccountId = id;
+    if (!id) return;
+    const controller = avatarRequest = new AbortController();
+    try {
+      const res = await fetch('/api/settings/account-avatar', { credentials:'same-origin', signal:controller.signal });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (controller.signal.aborted || avatarAccountId !== id) return;
+      accountAvatarPreference = data;
+      updateSharedNavigation(window.__shellUser || user);
+    } catch (error) { if (!controller.signal.aborted) console.warn('[profile appearance]', error); }
+  }
+  async function selectProfileAvatarMode(mode) {
+    const id = window.__shellUser?.id;
+    if (!id) return;
+    const res = await fetch('/api/settings/account-avatar', { method:'PUT', credentials:'same-origin',
+      headers:{'content-type':'application/json'}, body:JSON.stringify({mode}) });
+    if (!res.ok) throw new Error('Profile appearance could not be saved');
+    const data = await res.json();
+    if (window.__shellUser?.id !== id) return;
+    avatarRequest?.abort();
+    avatarAccountId = id;
+    accountAvatarPreference = data;
+    updateSharedNavigation();
+    window.dispatchEvent(new Event('agentsam:account-avatar-changed'));
+  }
+  for (const eventName of ['agentsam:companions-changed','agentsam:account-avatar-changed']) {
+    window.addEventListener(eventName, () => void refreshProfileAvatar(window.__shellUser, true));
+  }
+  window.addEventListener('focus', () => void refreshProfileAvatar(window.__shellUser, true));
   function navigationValue(user) {
     const profile = user || window.__shellUser || {};
     const sitesForMenu = typeof merchantStores !== 'undefined' ? merchantStores : [];
@@ -323,7 +369,7 @@
       destinations: [...nav.main.filter(entry => entry.id !== 'projects'), { id: 'sales-channels', label: 'Sales channels', icon: 'store', children: nav.channels },
         { id: 'installed-apps', label: 'Apps', icon: 'apps', children: nav.apps }, ...(nav.utilities || [])].map(toDestination),
       account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
-        avatar: safeAvatarUrl(profile.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },
+        avatar: resolvedProfileAvatar(profile) || undefined, plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },
       accountActions: [
         { id:'stores',label:'Stores',icon:window.AgentSamNav?.navIcon?.('store'),children:[
           ...sitesForMenu.map(site => ({id:'store-' + site.id,
@@ -331,7 +377,10 @@
             onSelect:() => switchMerchantStore(site.id)})),
           {id:'store-create',label:'Create store',separatorBefore:sitesForMenu.length > 0,onSelect:() => openCreateMerchantStore()}
         ]},
-        { id:'account',label:'Account',onSelect:() => navigateHost('/admin/settings/general') },
+        { id:'account',label:'Account',icon:window.AgentSamNav?.navIcon?.('user'),onSelect:() => navigateHost('/admin/settings/general') },
+        ...(profile.id ? [{id:'profile-appearance',label:'Profile appearance',children:[
+          ['auto','Profile image or active companion'],['photo','My profile image'],['companion','Active companion'],['initials','My initials']
+        ].map(([mode,label])=>({id:'avatar-'+mode,label,icon:(accountAvatarPreference?.mode || 'auto')===mode ? window.AgentSamNav?.navIcon?.('check') : undefined,onSelect:()=>void selectProfileAvatarMode(mode).catch(()=>window.alert('Profile appearance could not be saved. Please try again.'))}))}] : []),
         { id:'settings',label:'Settings',onSelect:() => navigateHost('/admin/settings/general') },
         ...(!profile.id ? [{id:'sign-in',label:'Sign in',onSelect:() => navigateHost('/auth/login')}] : profile.can_sign_out === false ? [] : [{
           id:'sign-out',label:'Sign out',separatorBefore:true,onSelect:async () => {
@@ -459,6 +508,7 @@
   function updateSharedNavigation(user) {
     sharedNavigation?.update({ value: navigationValue(user), ...(sharedAppearance || {theme:document.documentElement.dataset.theme || readConsoleAppearance()}), storageKey: 'agentsam-nav:' + ((user || window.__shellUser)?.id || 'local') });
     void refreshAccountAppearance(user);
+    void refreshProfileAvatar(user || window.__shellUser);
   }
   if (typeof renderShell === 'function') {
     const originalRender = renderShell;
@@ -524,7 +574,7 @@
   if (originalProfile) hydrateShellProfile = function (user) {
     user = window.__shellUser || user;
     updateSharedNavigation(user);
-    originalProfile(user && { ...user, avatar_url: user.avatar_url || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' });
+    originalProfile(user && { ...user, avatar_url: resolvedProfileAvatar(user) });
     document.querySelectorAll('.console-profile-store-logo').forEach(image => {
       image.src = user?.avatar_url && safeAvatarUrl(user.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg';
     });

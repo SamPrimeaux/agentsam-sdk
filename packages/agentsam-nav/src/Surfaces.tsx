@@ -262,7 +262,7 @@ export function NavAccountSwitcher({ accounts, activeAccountId, onAccountChange,
   ];
   return <div className={cx('as-nav-account', expanded && 'as-nav-account--expanded')}>
     <NavOverflowMenu label={account?.name ?? 'Account'} actions={actions} align="start">
-      <span className="as-nav-avatar">{account?.avatar ? <img src={account.avatar} alt="" /> : <User />}</span>
+      <span className="as-nav-avatar">{account?.avatar ? <img src={account.avatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} onLoad={event => { event.currentTarget.hidden = false; }} /> : null}<span className="as-nav-avatar-initials" aria-hidden="true">{account?.name?.trim().split(/\s+/).slice(0,2).map(word=>word[0]?.toUpperCase()).join('') || <User />}</span></span>
       {expanded ? <span className="as-nav-account-copy"><strong>{account?.name ?? 'Account'}</strong>{account?.plan ? <small>{account.plan}</small> : null}</span> : null}
       {expanded ? <ChevronDown /> : null}
     </NavOverflowMenu>

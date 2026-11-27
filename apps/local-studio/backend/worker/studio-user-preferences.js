@@ -114,6 +114,17 @@ function normalizeAccountAvatar(value) {
  return undefined;
 }
 
+function accountAvatarPreference(existing) {
+ const mode = ['auto','photo','companion','initials'].includes(existing.account_avatar_mode) ? existing.account_avatar_mode : 'auto';
+ const settings = normalizeCompanionSettings(existing.inneranimal_companions);
+ const id = settings.activeId;
+ const companion = settings.customCompanions.find(item => item.id === id);
+ const companionUrl = companion
+  ? normalizeAccountAvatar(companion.imageUrl) ?? null
+  : BUILT_IN_COMPANION_IDS.has(id) ? '/brand/inneranimal-companions/v1/' + id + '/avatars/' + id + '-avatar-128.png' : null;
+ return { avatar_url: normalizeAccountAvatar(existing.account_avatar_url) ?? null, mode, companion_url: companionUrl };
+}
+
 export async function handleStudioAccountAvatar(request, env, userId) {
  if(!userId) return answer({ok:false,error:"unauthorized"},401);
  if(!env.DB) return answer({ok:false,error:"database_unavailable"},503);
@@ -126,20 +137,22 @@ export async function handleStudioAccountAvatar(request, env, userId) {
  const row=await env.DB.prepare(`SELECT ui_preferences_json FROM agentsam_user_ui_preferences
   WHERE account_id=? LIMIT 1`).bind(userId).first();
  const existing=decode(row?.ui_preferences_json);
- if(request.method==="GET") return answer({ok:true,avatar_url:normalizeAccountAvatar(existing.account_avatar_url) ?? null});
+ if(request.method==="GET") return answer({ok:true,...accountAvatarPreference(existing)});
  const input=await request.json().catch(()=>null);
- if(!input || typeof input!=="object" || Array.isArray(input) || !("avatar_url" in input))
+ if(!input || typeof input!=="object" || Array.isArray(input) || !("avatar_url" in input || "mode" in input))
   return answer({ok:false,error:"avatar_invalid"},400);
- const avatar=normalizeAccountAvatar(input.avatar_url);
+ const avatar="avatar_url" in input ? normalizeAccountAvatar(input.avatar_url) : normalizeAccountAvatar(existing.account_avatar_url) ?? null;
  if(avatar===undefined) return answer({ok:false,error:"avatar_invalid"},400);
- const next={...existing,account_avatar_url:avatar};
+ const mode="mode" in input ? input.mode : "auto";
+ if(!["auto","photo","companion","initials"].includes(mode)) return answer({ok:false,error:"avatar_mode_invalid"},400);
+ const next={...existing,account_avatar_url:avatar,account_avatar_mode:mode};
  await env.DB.prepare(`INSERT INTO agentsam_user_ui_preferences
   (account_id,ui_preferences_json,updated_at)
   VALUES (?,?,unixepoch())
   ON CONFLICT(account_id) DO UPDATE SET
   ui_preferences_json=excluded.ui_preferences_json,updated_at=unixepoch()`)
   .bind(userId,JSON.stringify(next)).run();
- return answer({ok:true,avatar_url:avatar});
+ return answer({ok:true,...accountAvatarPreference(next)});
 }
 
 
