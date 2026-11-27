@@ -19,9 +19,9 @@ test('persisted plugin tabs migrate to the current builtin renderer', () => {
   assert.match(sideStage, /nativeAlreadyOpen/);
   assert.match(sideStage, /pluginId: undefined/);
   assert.match(pluginPicker, /kind === "design" && !existing/);
-  assert.match(pluginPicker, /url: "\/canvas\?library=sources"/);
+  assert.match(pluginPicker, /url: "\/admin\/design-canvas\/"/);
   assert.match(sideStage, /candidate\.kind === kind/);
-  assert.match(sideStage, /\/canvas\?library=sources/);
+  assert.match(sideStage, /\/admin\/design-canvas\//);
 });
 
 test('full-stage Canvas is the only mounted editor and reuses the current document', () => {

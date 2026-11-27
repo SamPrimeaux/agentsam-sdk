@@ -42,6 +42,7 @@ jobs:
         run: |
           mkdir -p node_modules/@inneranimalmedia
           ln -sfn "$GITHUB_WORKSPACE" node_modules/@inneranimalmedia/agentsam-sdk
+          node apps/local-studio/scripts/link-local-sdk.mjs
 
       - name: Verify SDK shard
         run: node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:shard:${{ matrix.shard }}
