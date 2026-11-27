@@ -11,9 +11,9 @@ import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-li
 import { resolveComposerPopoverLayout } from './composer-popover-layout';
 
 /** A single compact capability/context picker for both + and typed @. */
-function PlusMenuRow({ icon, title, hint, onClick, meta }: { icon: ReactNode; title: string; hint: string; onClick: () => void; meta?: string }) {
-  return <button type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={onClick}>
-    {icon}
+function PlusMenuRow({ icon, title, hint, onClick, meta, desktopOnly = false }: { icon: ReactNode; title: string; hint: string; onClick: () => void; meta?: string; desktopOnly?: boolean }) {
+  return <button type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" data-desktop-only={desktopOnly || undefined} onClick={onClick}>
+    <span className="agentsam-plus-action-icon">{icon}</span>
     <span className="agentsam-plugin-row-copy"><strong>{title}</strong><small>{hint}</small></span>
     {meta ? <small className="agentsam-plugin-row-meta">{meta}</small> : null}
   </button>;
@@ -277,7 +277,7 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
         setOpen(typingMention);
       },
     })}
-    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
+    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} data-typed-mention={Boolean(match)} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
       {section!=='root'&&<div className="agentsam-plugin-heading">
         {!(section==='mention' && match) && <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setActive(0);}}>Back</button>}
         <strong>{section==='skills'?'Skills':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Plugins and tools'}</strong>
@@ -287,11 +287,11 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
         {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
         {onLibrary&&<PlusMenuRow icon={<Folder size={17}/>} title="Add from Library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
         {onImage&&<PlusMenuRow icon={<ImagePlus size={17}/>} title="Create image" hint="Visualize anything" onClick={()=>{setOpen(false);onImage();}}/>}
-        <PlusMenuRow icon={<Globe size={17}/>} title="Add browser tabs" hint="Use open browser tabs" onClick={openBrowserTabPicker}/>
+        <PlusMenuRow icon={<Globe size={17}/>} desktopOnly title="Add browser tabs" hint="Use open browser tabs" onClick={openBrowserTabPicker}/>
         {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Find current information" onClick={()=>{setOpen(false);onWebSearch();}}/>}
         {onProject&&<PlusMenuRow icon={<Folder size={17}/>} title="Work in a project" hint="Start or continue work in a project" onClick={()=>{setOpen(false);onProject();}}/>}
         <div className="agentsam-plugin-section-divider" />
-        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins and tools" hint="Search installed tools and connected services"
+        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins" hint="Search installed tools and connected services"
           onClick={()=>{setMentionFromComposer(false);setSection('mention');setQuery('');setActive(0);}}/>
         <div className="agentsam-plugin-section-divider" />
         {onModeChange&&<PlusMenuRow icon={<Bot size={17}/>} title={`Mode · ${(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}`}
@@ -331,7 +331,7 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
             {!shown.length&&!loading&&<p className="agentsam-plugin-notice">No matching capabilities.</p>}
             {shown.map((entry,index)=><button type="button" key={entry.id} role="option" aria-selected={index===active} className="agentsam-plugin-row agentsam-plugin-row--compact" data-active={index===active} onClick={()=>choose(entry)}>
               {rowIcon(entry)}<span className="agentsam-plugin-row-copy"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
-              {!entry.ready?<small className="agentsam-plugin-row-meta">{entry.status==='enable'?'Enable':entry.status==='reconnect'?'Reconnect':'Set up'}</small>:null}
+              {<small className="agentsam-plugin-row-meta">{!entry.ready?(entry.status==='enable'?'Enable':entry.status==='reconnect'?'Reconnect':'Set up'):({plugin:'Plugin',connection:'Connection',mcp:'MCP',widget:'App',skill:'Skill',agent:'Agent',command:'Command'} as const)[entry.kind]}</small>}
             </button>)}
           </div>
         </>}

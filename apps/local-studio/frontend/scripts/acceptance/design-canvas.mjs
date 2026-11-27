@@ -87,6 +87,27 @@ try {
   }
   await page.keyboard.press('Escape');
 
+  await insertToolbar.getByRole('button', { name: 'SVG', exact: true }).click();
+  const svgObject = page.locator('.dcx-object-svg').first();
+  await svgObject.waitFor();
+  const svgEditor = page.getByLabel('Inline SVG markup');
+  const svgSource = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10h80v80H10z" fill="#276749"/></svg>';
+  await svgEditor.fill(svgSource);
+  await page.getByRole('button', { name: 'Apply source' }).click();
+  assert.equal(await svgObject.locator('.dcx-object-svg-content svg path').count(), 1, 'inline SVG source should render as vector artwork');
+
+  await svgEditor.fill('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  await page.getByRole('button', { name: 'Apply source' }).click();
+  assert.equal(await page.getByRole('alert').filter({ hasText: 'svg_embedded_content_unsupported' }).count(), 1, 'unsafe inline SVG should be rejected');
+
+  await page.locator('input[accept=".svg,image/svg+xml"]').setInputFiles({
+    name: 'brand-mark.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="#276749"/></svg>'),
+  });
+  await page.waitForFunction(() => document.querySelector('.dcx-object-svg-content svg circle') !== null);
+  assert.equal(await svgObject.locator('.dcx-object-svg-content svg circle').count(), 1, 'uploaded SVG should replace the selected vector source');
+
   await page.getByRole('button', { name: 'View options' }).click();
   const viewItems = await page.getByRole('menuitem').allTextContents();
   for (const item of ['Show grid', 'Snap to grid', 'Show alignment guides', 'Show safe area']) assert.ok(viewItems.includes(item), 'missing view control: ' + item);
@@ -102,8 +123,35 @@ try {
   const mobile = await page.evaluate(() => ({ width: window.innerWidth, documentWidth: document.documentElement.scrollWidth, toolbar: document.querySelector('.dcx-slide-insert-toolbar')?.getBoundingClientRect().toJSON() }));
   assert.equal(mobile.documentWidth, mobile.width, 'mobile Slides must not create horizontal page overflow');
   assert.ok(mobile.toolbar && mobile.toolbar.left >= 0 && mobile.toolbar.right <= mobile.width, 'mobile insert toolbar must remain within the viewport');
+  // Fresh phone navigation, not merely a resized desktop editor.
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  phone.on('pageerror', (error) => pageErrors.push(error.message));
+  await phone.goto(url, { waitUntil: 'networkidle' });
+  await phone.getByRole('button', { name: 'Slides', exact: true }).click();
+  await phone.getByRole('region', { name: 'Presentation overview' }).waitFor();
+  assert.equal(await phone.locator('.dcx-slide-overview-card').count(), 1);
+  assert.equal(await phone.locator('.dcx-slide-insert-toolbar').count(), 0, 'overview must not mount edit chrome');
+  const card = await phone.locator('.dcx-slide-overview-card').boundingBox();
+  assert.ok(card && card.x >= 0 && card.x + card.width <= 390, 'slide preview fits phone');
+  await phone.getByRole('button', { name: 'Presentation options' }).click();
+  await phone.getByRole('menuitem').filter({ hasText: 'Full-screen slide show' }).first().click();
+  await phone.locator('.dcx-present-mode').waitFor();
+  await phone.getByRole('button', { name: 'Exit' }).click();
+  await phone.getByRole('button', { name: 'Edit', exact: true }).click();
+  const phoneTools = phone.getByRole('toolbar', { name: 'Slide insert tools' });
+  await phoneTools.waitFor();
+  await phoneTools.getByRole('button', { name: 'Comment', exact: true }).click();
+  await phone.locator('[data-contextual-inspector="true"][data-mobile-pane="inspector"]').waitFor();
+  const commentInput = phone.getByRole('textbox', { name: 'Add a comment' });
+  await commentInput.fill('Mobile comment acceptance');
+  await phone.getByRole('button', { name: 'Add comment', exact: true }).click();
+  await phone.getByText('Mobile comment acceptance', { exact: true }).waitFor();
+  assert.equal(await commentInput.inputValue(), '');
+  await phone.getByRole('button', { name: 'Close comments', exact: true }).click();
+  await phone.locator('[data-mobile-pane="stage"]').waitFor();
+  await phone.close();
   assert.deepEqual(pageErrors, [], 'Slides should not throw browser runtime errors');
-  console.log('Design Canvas browser acceptance passed: layouts, insert tools, contextual inspector, collision avoidance, charts, shapes, view controls, slide reordering, 390×844 mobile.');
+  console.log('Design Canvas browser acceptance passed: layouts, insert tools, inline SVG import/edit/sanitization, contextual inspector, collision avoidance, charts, shapes, view controls, slide reordering, 390×844 mobile.');
 } finally {
   if (browser) await browser.close();
   preview.kill('SIGTERM');

@@ -68,3 +68,18 @@ test('portable Ask AgentSam pill is a callback only; no duplicate assistant or t
     assert.ok(design.includes(`| "${kind}"`));
   assert.match(design, /point\?: \{ x: number; y: number \}/);
 });
+
+test('artifact layouts use one filter state, and Slides use the existing lead composer', () => {
+  const gallery = readFileSync(new URL('../../../packages/agentsam-work/src/frontend/surfaces/ArtifactsSurface.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../../packages/agentsam-work/src/frontend/theme.css', import.meta.url), 'utf8');
+  const page = source('frontend/agentsam/AgentSamPage.tsx');
+  const composer = source('frontend/src/components/workbench/composer.tsx');
+  assert.ok(gallery.includes('aria-label="Artifact layout"'));
+  assert.ok(gallery.includes('agentsam.artifacts.layout'));
+  assert.ok(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(css.includes('grid-template-columns:minmax(100px,38%) minmax(0,1fr)'));
+  assert.ok(page.includes('artifactContext={isMobile ? slidesContext : undefined}'));
+  assert.ok(composer.includes('Ask about these slides'));
+  assert.ok(composer.includes("'artifact:slides:' + artifactContext.id"));
+  assert.ok(composer.includes('setPendingAnnotations(targetId'));
+});

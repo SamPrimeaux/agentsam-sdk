@@ -4,12 +4,13 @@ export type DesignCanvasAgentContext = {
   artifactId?: string;
   artifactType: CreativeType;
   title: string;
-  selection?: { id: string; kind: string; label?: string };
+  selection?: { id: string; kind: string; label?: string; source?: string };
+  comment?: string;
 };
 export type CodeLanguage = 'html' | 'css' | 'javascript' | 'json' | 'markdown' | 'svg';
 export type CodeFile = { id: string; name: string; language: CodeLanguage; content: string };
 export type CodeDocument = { files: CodeFile[]; activeFileId: string; previewOpen: boolean };
-export type ObjectType = 'text' | 'shape' | 'image' | 'media' | 'path' | 'chart' | 'table';
+export type ObjectType = 'text' | 'shape' | 'image' | 'svg' | 'media' | 'path' | 'chart' | 'table';
 export type ChartType = 'bar' | 'line' | 'pie' | 'area' | 'scatter' | 'histogram' | 'waterfall' | 'funnel' | 'treemap';
 export type ShapeKind = 'rect' | 'circle' | 'diamond' | 'triangle' | 'line' | 'star' | 'arrow' | 'plus' | 'chevron' | 'callout';
 export type CreativeObject = {
@@ -29,6 +30,8 @@ export type CreativeObject = {
   verticalAlign?: 'top' | 'middle' | 'bottom';
   shape?: ShapeKind;
   src?: string;
+  /** Sanitized inline SVG source. Kept as editable vector markup, not a raster data URL. */
+  svgMarkup?: string;
   label?: string;
   mediaType?: 'video';
   points?: { x: number; y: number }[];

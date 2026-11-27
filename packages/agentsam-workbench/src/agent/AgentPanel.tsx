@@ -18,6 +18,7 @@ export interface AgentPanelProps {
   renderMessage?: (message: AgentMessage, index: number) => ReactNode;
   empty?: ReactNode;
   header?: ReactNode;
+  activity?: ReactNode;
   className?: string;
 }
 
@@ -31,6 +32,7 @@ export function AgentPanel(props: AgentPanelProps) {
       streaming={props.streaming}
       renderMessage={props.renderMessage}
       empty={props.empty}
+      activity={props.activity}
     />
   );
   const composer = (

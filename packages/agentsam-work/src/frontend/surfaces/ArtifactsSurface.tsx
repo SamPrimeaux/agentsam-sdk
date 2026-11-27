@@ -74,7 +74,13 @@ export function ArtifactsSurface({
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const [layout, setLayout] = useState<"grid" | "list">(() => {
+    try { return sessionStorage.getItem("agentsam.artifacts.layout") === "list" ? "list" : "grid"; }
+    catch { return "grid"; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem("agentsam.artifacts.layout", layout); } catch { /* storage unavailable */ }
+  }, [layout]);
   const [visibleLimit, setVisibleLimit] = useState(ARTIFACT_PAGE_SIZE);
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(() => new Set());
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -285,6 +291,13 @@ export function ArtifactsSurface({
                 </summary>
                 <div className="agentsam-artifact-hub__menu-panel agentsam-artifact-hub__filter-panel">
                   <label>
+                    Layout
+                    <select aria-label="Artifact layout" value={layout} onChange={(event) => setLayout(event.target.value === "list" ? "list" : "grid")}>
+                      <option value="grid">Grid</option>
+                      <option value="list">List</option>
+                    </select>
+                  </label>
+                  <label>
                     View
                     <select aria-label="Filter by view" value={view} onChange={(event) => setView(event.target.value as LibraryView)}>
                       <option value="all">All artifacts</option>
@@ -423,7 +436,7 @@ export function ArtifactsSurface({
                     const hasDestination = Boolean(artifact.open || artifact.preview || (artifact.source === "local" && onOpenArtifact));
                     const isRenaming = renaming === artifact.id;
                     const isBusy = mutating === artifact.id;
-                    const visual = Boolean(artifact.preview && !failedPreviews.has(artifact.id) && (["image", "video", "design", "website", "product", "document"].includes(artifact.kind) || artifact.mime === "application/pdf"));
+                    const visual = Boolean(artifact.preview && !failedPreviews.has(artifact.id) && (["image", "video", "design", "website", "product", "document", "presentation"].includes(artifact.kind) || artifact.mime === "application/pdf"));
                     return (
                       <article key={artifact.id} className="agentsam-artifact-hub__item" data-kind={artifact.kind} data-preview={visual ? "image" : "symbol"} data-busy={isBusy || undefined}>
                         <button type="button" className="agentsam-artifact-hub__preview" aria-label={"Open " + artifact.name} onClick={() => openOrPreview(artifact, hasDestination)}>
@@ -458,9 +471,8 @@ export function ArtifactsSurface({
                               </button>
                             )}
                             <div className="agentsam-artifact-hub__item-meta">
-                              {artifact.sourceLabel || sourceLabels[artifact.source]}
-                              {artifact.updatedLabel ? " · " + artifact.updatedLabel : ""}
-                              {artifact.sizeLabel ? " · " + artifact.sizeLabel : ""}
+                              {layout === "grid" ? (artifact.kind === "presentation" ? "Slides" : artifact.kind.charAt(0).toUpperCase() + artifact.kind.slice(1)) : artifact.shared === true ? "Shared" : artifact.shared === false ? "Not shared" : artifact.sourceLabel || sourceLabels[artifact.source]}
+                              {layout === "list" && artifact.updatedLabel ? <span className="agentsam-artifact-hub__edited">{artifact.updatedLabel}</span> : null}
                             </div>
                           </div>
                           {artifact.starred ? <Star className="agentsam-artifact-hub__star" size={13} fill="currentColor" /> : null}

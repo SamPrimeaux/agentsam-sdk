@@ -9,6 +9,7 @@ import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { useWorkStore } from "@/lib/work/store";
 import { Button } from "@/components/ui/button";
+import { InlineSvgPreview } from "@inneranimalmedia/agentsam-workbench/agent";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -50,8 +51,8 @@ function CodeBlock({
   const runnable = SHELL_LANGS.has((language.split(/\s+/)[0] ?? "").toLowerCase());
 
   return (
-    <div className="overflow-hidden rounded-xl bg-ink shadow-hairline">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
+    <div className="overflow-hidden rounded-2xl bg-card">
+      <div className="flex items-center gap-2 px-3 py-1.5">
         <span className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
           {artifact?.path ?? language ?? "code"}
         </span>
@@ -127,7 +128,7 @@ function CodeBlock({
         </button>
       ) : null}
       {displayCode ? (
-        <pre className="overflow-x-auto p-3 font-mono text-[12.5px] leading-relaxed text-paper">
+        <pre className="overflow-x-auto p-3 font-mono text-[12.5px] leading-relaxed text-foreground">
           <code>{text}</code>
         </pre>
       ) : null}
@@ -136,10 +137,12 @@ function CodeBlock({
 }
 
 export function MessageMarkdown({
-  content,
+  content, chatId, messageId, streaming = false,
 }: {
   content: string;
   chatId?: string;
+  messageId?: string;
+  streaming?: boolean;
 }) {
   const artifacts = useMemo(() => extractArtifacts(content), [content]);
   const openSideTab = useWorkStore((s) => s.openSideTab);
@@ -185,7 +188,17 @@ export function MessageMarkdown({
               );
             }
             const matchingArtifact = artifacts.find((item) => item.content === text);
-            return <CodeBlock language={lang ?? "text"} text={text} artifactHint={matchingArtifact} />;
+            const code = <CodeBlock language={lang ?? "text"} text={text} artifactHint={matchingArtifact} />;
+            if (lang?.toLowerCase() !== "svg") return code;
+            return <><InlineSvgPreview source={text} complete={!streaming} onReview={chatId && messageId ? review => {
+              const state = useWorkStore.getState();
+              const reference = "SVG design review — message " + messageId + ", SHA-256 " + review.sha256 + ", backdrop " + review.backdrop + ".";
+              const instruction = review.decision === 'approve'
+                ? "I approve this exact visual revision for implementation. Reuse existing components and verify the result against the reference. Tool and deployment approvals remain separate."
+                : "Request changes to this visual revision: ";
+              const current = state.drafts[chatId] || "";
+              state.setDraft(chatId, [current, reference + "\n" + instruction].filter(Boolean).join("\n\n"));
+            } : undefined}/>{code}</>;
           },
         }}
       >

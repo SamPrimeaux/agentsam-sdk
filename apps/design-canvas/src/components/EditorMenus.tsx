@@ -238,9 +238,9 @@ export function ViewMenu({ grid, snap, guides, bounds, onToggleGrid, onToggleSna
   </MenuPopover>;
 }
 
-export function SlideInsertToolbar({ activeTool, onToolChange, onText, onImage, onMedia, onTable, onShape, onChart, onComment, onAsk }: {
+export function SlideInsertToolbar({ activeTool, onToolChange, onText, onImage, onNewSvg, onMedia, onTable, onShape, onChart, onComment, onAsk }: {
   activeTool: 'select' | 'hand'; onToolChange: (tool: 'select' | 'hand') => void;
-  onText: () => void; onImage: () => void; onMedia: () => void; onTable: () => void;
+  onText: () => void; onImage: () => void; onNewSvg: () => void; onMedia: () => void; onTable: () => void;
   onShape: (kind: ShapeKind) => void; onChart: (type: ChartType) => void;
   onComment: () => void; onAsk?: () => void;
 }) {
@@ -267,6 +267,7 @@ export function SlideInsertToolbar({ activeTool, onToolChange, onText, onImage, 
     <span className="dcx-slide-insert-divider" aria-hidden="true"/>
     <button type="button" className="dcx-slide-insert-action" onClick={onText}><Type size={16}/><span>Text</span></button>
     <button type="button" className="dcx-slide-insert-action" onClick={onImage}><Image size={16}/><span>Image</span></button>
+    <button type="button" className="dcx-slide-insert-action" onClick={onNewSvg}><Code2 size={16}/><span>SVG</span></button>
     <button type="button" className="dcx-slide-insert-action" onClick={onMedia}><Play size={16}/><span>Media</span></button>
     <button type="button" className="dcx-slide-insert-action" onClick={onTable}><Table2 size={16}/><span>Table</span></button>
     <MenuPopover label="Insert shape" trigger={<><Shapes size={16}/><span>Shape</span><ChevronDown size={11}/></>} triggerClassName="dcx-slide-insert-action">

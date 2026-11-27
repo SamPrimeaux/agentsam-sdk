@@ -98,7 +98,7 @@ try {
     });
     await page.goto(origin + pathname, { waitUntil: "domcontentloaded" });
     try {
-      await page.getByPlaceholder("Brief the co-worker").waitFor({ timeout: 12000 });
+      await page.locator("[data-aux-chat]").getByPlaceholder("Ask AgentSam").waitFor({ timeout: 12000 });
       await page.getByText("Saved co-worker conversation", { exact: true }).waitFor({ timeout: 12000 });
       await page.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
       if (pathname === "/admin/store") {

@@ -177,6 +177,7 @@ type FollowupQueuedSend = {
   modelSelection: StudioModelSelection;
   runMode: AgentRunMode;
   createdAt: number;
+  annotations?: PendingAnnotation[];
 };
 
 /** Unsent composer resources survive Chat / Work / floating Stage transitions.
@@ -286,7 +287,7 @@ type WorkState = {
     targetId: string,
     targetKind: "chat" | "side",
     text?: string,
-    context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode },
+    context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode; queuedAnnotations?: PendingAnnotation[] },
   ) => Promise<void>;
   stop: (id: string) => void;
   removeFollowup: (id: string) => void;
@@ -1147,12 +1148,13 @@ export const useWorkStore = create<WorkState>()(
       resumeFollowups: (targetId) => {
         set((s) => ({ pausedQueueTargets: s.pausedQueueTargets.filter((id) => id !== targetId) }));
         const next = get().followupQueue.find((item) => item.targetId === targetId);
-        if (!next || get().streamingIds.includes(targetId)) return;
+        if (!next || get().streamingIds.includes(targetId) || (typeof navigator !== "undefined" && !navigator.onLine)) return;
         set((s) => ({ followupQueue: s.followupQueue.filter((item) => item.id !== next.id) }));
         void get().send(next.targetId, next.targetKind, next.text, {
           projectId: next.projectId,
           modelSelection: next.modelSelection,
           runMode: next.runMode,
+          queuedAnnotations: next.annotations ?? [],
         });
       },
       send: async (targetId, targetKind, text, context) => {
@@ -1169,12 +1171,12 @@ export const useWorkStore = create<WorkState>()(
         if (typeof window !== "undefined" && pendingBag?.targetId === targetId) {
           delete (window as unknown as { __agentsamComposerAttachments?: unknown }).__agentsamComposerAttachments;
         }
-        const annotations = state.pendingAnnotations[targetId] ?? [];
+        const fromQueue = context?.queuedAnnotations !== undefined;
+        const annotations = context?.queuedAnnotations ?? state.pendingAnnotations[targetId] ?? [];
         const draft = (text ?? state.drafts[targetId] ?? "").trim() || (annotations.length ? 'Review selected annotation' : '');
         if (!draft && !pendingAttachments.length && !annotations.length) return;
         // Preserve unsent annotations rather than losing their context in an offline/queued turn.
-        if (annotations.length && (state.streamingIds.includes(targetId) ||
-          (typeof navigator !== 'undefined' && !navigator.onLine))) return;
+        if (annotations.length && typeof navigator !== 'undefined' && !navigator.onLine) return;
         // A chat turn is not a durable goal. Goals are created explicitly via
         // the goal editor; quick questions and single replies never self-enroll.
         if (state.streamingIds.includes(targetId)) {
@@ -1187,9 +1189,11 @@ export const useWorkStore = create<WorkState>()(
             modelSelection: { ...state.modelSelection },
             runMode: context?.runMode ?? state.runModes[targetId] ?? defaultRunModeForTarget(targetKind),
             createdAt: Date.now(),
+            annotations: annotations.length ? structuredClone(annotations) : undefined,
           };
           set((s) => ({
             drafts: { ...s.drafts, [targetId]: "" },
+            pendingAnnotations: { ...s.pendingAnnotations, [targetId]: [] },
             followupQueue: [...s.followupQueue, queued],
           }));
           return;
@@ -1257,7 +1261,7 @@ export const useWorkStore = create<WorkState>()(
             ...(annotations.length ? { annotations } : {}),
           } } : {}),
         };
-        if (annotations.length) get().setPendingAnnotations(targetId, []);
+        if (annotations.length && !fromQueue) get().setPendingAnnotations(targetId, []);
         const assistantId = uid();
         const assistantMsg: ChatMessage = {
           id: assistantId,
@@ -1268,7 +1272,7 @@ export const useWorkStore = create<WorkState>()(
 
         if (targetKind === "chat") {
           set((s) => ({
-            drafts: { ...s.drafts, [targetId]: "" },
+            drafts: fromQueue ? s.drafts : { ...s.drafts, [targetId]: "" },
             chats: s.chats.map((t) =>
               t.id === targetId
                 ? {
@@ -1283,7 +1287,7 @@ export const useWorkStore = create<WorkState>()(
           }));
         } else {
           set((s) => ({
-            drafts: { ...s.drafts, [targetId]: "" },
+            drafts: fromQueue ? s.drafts : { ...s.drafts, [targetId]: "" },
             sideTabs: s.sideTabs.map((t) =>
               t.id === targetId ? { ...t, messages: [...t.messages, userMsg, assistantMsg] } : t,
             ),
@@ -1500,7 +1504,7 @@ export const useWorkStore = create<WorkState>()(
         } finally {
           aborts.delete(targetId);
           set((s) => ({ streamingIds: s.streamingIds.filter((x) => x !== targetId) }));
-          if (completed && !get().pausedQueueTargets.includes(targetId)) {
+          if (completed && !get().pausedQueueTargets.includes(targetId) && (typeof navigator === "undefined" || navigator.onLine)) {
             const next = get().followupQueue.find((item) => item.targetId === targetId);
             if (next) {
               set((s) => ({ followupQueue: s.followupQueue.filter((item) => item.id !== next.id) }));
@@ -1508,6 +1512,7 @@ export const useWorkStore = create<WorkState>()(
                 projectId: next.projectId,
                 modelSelection: next.modelSelection,
                 runMode: next.runMode,
+                queuedAnnotations: next.annotations ?? [],
               });
             }
           }

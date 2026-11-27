@@ -797,3 +797,46 @@ button{cursor:pointer}
 .dcx-explorer-content>.dcx-slide-layout-menu{display:block;width:100%;margin-top:8px}
 .dcx-explorer-content>.dcx-slide-layout-menu>.dcx-menu-trigger{width:100%;justify-content:flex-start;height:34px;padding:0 10px;border:1px solid #343b46;border-radius:7px;background:#1d2229;color:#d4dbe5}
 .dcx-explorer-content>.dcx-slide-layout-menu>.dcx-menu-trigger:hover,.dcx-explorer-content>.dcx-slide-layout-menu>.dcx-menu-trigger[aria-expanded=true]{background:#29323e;border-color:#4b6078}
+
+/* Read-first overview uses the existing slide renderer and presentation commands. */
+.dcx-slide-overview{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;background:var(--dcx-bg);color:var(--dcx-text)}
+.dcx-slide-overview-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;flex:none;flex-wrap:wrap}
+.dcx-slide-overview-leading{min-width:0;flex:1}
+.dcx-slide-overview-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.dcx-slide-overview-list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 16px 20px;overscroll-behavior:contain}
+.dcx-slide-overview-card{position:relative;width:100%;max-width:1000px;flex:none;aspect-ratio:16/9;overflow:hidden;border:1px solid var(--dcx-line);border-radius:10px;background:var(--dcx-panel)}
+.dcx-slide-overview-card.active{outline:2px solid var(--dcx-blue);outline-offset:0}
+.dcx-slide-overview-preview,.dcx-slide-overview-preview .dcx-editable-surface{width:100%;height:100%;max-height:none;margin:0;pointer-events:none;box-shadow:none}
+.dcx-slide-overview-select{position:absolute;inset:0;background:transparent;border:0;cursor:pointer}
+.dcx-slide-overview-select:focus-visible{outline:2px solid var(--dcx-blue);outline-offset:-4px}
+@media(max-width:767px){.dcx-slide-overview-header{padding:8px 16px}.dcx-slide-overview-header .dcx-library-menu-button{display:none}.dcx-slide-overview-list{gap:18px}.dcx-slide-overview-actions .dcx-command-button{min-height:40px}}
+
+/* Inline vector artwork remains source-backed and scales as a native canvas object. */
+.dcx-object-svg{overflow:visible;background:transparent}
+.dcx-object-svg-content{display:block;width:100%;height:100%;pointer-events:none}
+.dcx-object-svg-content>svg{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.dcx-object-svg-invalid{display:grid;width:100%;height:100%;place-items:center;border:1px dashed #b85b5b;border-radius:6px;background:#b85b5b12;color:#b85b5b;font-size:11px;text-align:center}
+.dcx-svg-error{margin:6px 12px;padding:7px 9px;border:1px solid #b85b5b55;border-radius:6px;background:#b85b5b12;color:#d88b8b;font-size:11px}
+
+/* Existing comment forms share the selection-aware glass treatment. */
+.dcx-comment-entry{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.dcx-comment-target{font-size:13px;color:var(--dcx-muted);overflow-wrap:anywhere}
+.dcx-comment-entry .dcx-comment-composer{margin:0;gap:4px;padding:10px;border:1px solid var(--dcx-line);border-radius:22px;background:color-mix(in srgb,var(--nav-popover,var(--dcx-panel)) 90%,transparent);backdrop-filter:blur(20px) saturate(120%)}
+.dcx-comment-entry textarea{padding:6px 3px;min-height:56px;border:0;outline:none;background:transparent;color:var(--dcx-text);font-size:15px;resize:vertical}
+.dcx-comment-entry textarea::placeholder{color:var(--dcx-muted)}
+.dcx-comment-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.dcx-comment-agent-toggle{margin-right:auto;display:flex;align-items:center;gap:6px;color:var(--dcx-muted);font-size:12px;min-height:44px;cursor:pointer}
+.dcx-comment-agent-toggle input{appearance:none;width:38px;height:22px;flex:none;border-radius:999px;background:var(--dcx-muted);position:relative;cursor:pointer}
+.dcx-comment-agent-toggle input:before{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;background:white;border-radius:50%}
+.dcx-comment-agent-toggle input:checked{background:var(--nav-accent,var(--dcx-blue))}
+.dcx-comment-agent-toggle input:checked:before{left:19px}
+.dcx-comment-submit{display:grid;place-items:center;border:0;border-radius:50%;width:44px;height:44px;flex:none;background:var(--nav-accent,var(--dcx-blue));color:var(--nav-accent-ink,#fff);cursor:pointer}
+.dcx-comment-submit:disabled{opacity:.45;cursor:default}
+@media(max-width:767px){.dcx-comment-entry textarea{font-size:16px}.dcx-comment-target{font-size:14px}.dcx-comment-agent-toggle{font-size:13px}}
+
+/* Comment sheet uses the same theme accent and translucent material. */
+
+.dcx-comment-entry .dcx-comment-composer{background:linear-gradient(170deg,color-mix(in srgb,var(--dcx-text) 10%,transparent),transparent 50%,color-mix(in srgb,var(--dcx-text) 5%,transparent)),color-mix(in srgb,var(--nav-popover,var(--dcx-panel)) 72%,transparent);border-color:color-mix(in srgb,var(--dcx-text) 20%,transparent);box-shadow:inset 0 1px 1px #ffffff18,0 6px 24px #0002;backdrop-filter:blur(28px) saturate(145%);-webkit-backdrop-filter:blur(28px) saturate(145%)}
+.dcx-comment-agent-toggle input:checked,.dcx-comment-submit{background:var(--nav-accent,var(--dcx-blue))}
+.dcx-comment-agent-toggle{gap:8px;min-width:0}
+@media(prefers-reduced-transparency:reduce){.dcx-comment-entry .dcx-comment-composer{background:var(--dcx-panel);backdrop-filter:none;-webkit-backdrop-filter:none}}

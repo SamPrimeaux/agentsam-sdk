@@ -1,3 +1,4 @@
+import { WorkspaceOpeningField } from "@/components/runtime/LocalStudioRuntimeField";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Check, LoaderCircle, RefreshCw } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
@@ -349,7 +350,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       </div>
     </div>;
   }
-  if (!ready) return <div className="flex h-full min-h-0 items-center justify-center gap-2 text-xs text-muted-foreground"><LoaderCircle size={15} className="animate-spin"/> Loading Creative Workspace…</div>;
+  if (!ready) return <WorkspaceOpeningField label="Opening Creative Workspace" />;
 
   return <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
     <DesignCanvasApp
@@ -366,9 +367,11 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         if (!chatId) return;
         const current = store.drafts[chatId] || "";
         const reference = "Canvas: " + context.title + " (" + context.artifactType + ", " + (context.artifactId || "unsaved") + ")" +
-          (context.selection ? "\nSelection: " + (context.selection.label || context.selection.kind) + " (" + context.selection.id + ")" : "");
+          (context.selection ? "\nSelection: " + (context.selection.label || context.selection.kind) + " (" + context.selection.id + ")" : "") +
+          (context.selection?.source ? "\nCurrent editable SVG source:\n```svg\n" + context.selection.source + "\n```" : "");
+        const withComment = reference + (context.comment ? "\nComment: " + context.comment : "");
         store.setActiveChat(chatId);
-        store.setDraft(chatId, current ? current + "\n\n" + reference : reference + "\n\n");
+        store.setDraft(chatId, current ? current + "\n\n" + withComment : withComment + "\n\n");
       }}
       onOpenCode={() => useWorkStore.getState().setWorkSurface("code")}
       outputsOpen={outputsOpen}

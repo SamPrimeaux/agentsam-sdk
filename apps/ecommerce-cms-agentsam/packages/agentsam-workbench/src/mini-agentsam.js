@@ -9,7 +9,7 @@ import { attachCapabilityMenu } from './composer.js';
 // Until that consumer swap lands, keep this ship copy; never delete it first.
 // Status: Decide=packages React SSOT for Studio; this file remains Ecommerce release SSOT.
 export const miniAgentSamTokens = {
-  accent: '#8b5cf6',
+  accent: 'var(--nav-accent, var(--te-accent, var(--primary, #737373)))',
   icon: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail',
 };
 
@@ -26,37 +26,38 @@ export function createMiniAgentSam(host) {
   const root = portal.attachShadow({ mode: 'open' });
 
   root.innerHTML = `<style>
-    :host{position:fixed;inset:0;z-index:10000;pointer-events:none;font:13px/1.4 system-ui;color:#f5f2fb;--accent:${miniAgentSamTokens.accent}}
+    :host{position:fixed;inset:0;z-index:10000;pointer-events:none;font:14px/1.4 var(--nav-font,system-ui);--mini-surface:var(--nav-popover,var(--te-panel,var(--card,#292929)));--mini-text:var(--nav-text,var(--te-text,var(--foreground,#f5f5f5)));--mini-muted:var(--nav-muted,var(--te-muted,var(--muted-foreground,#a3a3a3)));--mini-border:var(--nav-border,var(--te-border,var(--border,#ffffff26)));--accent:${miniAgentSamTokens.accent};--accent-ink:var(--nav-accent-ink,var(--te-accent-ink,var(--primary-foreground,#fff)));color:var(--mini-text)}
     *{box-sizing:border-box}[hidden]{display:none!important}
-    .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:#8b5cf60c;box-shadow:0 0 0 1px #ffffff35 inset;pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease,height .08s ease}
-    .hint{position:fixed;top:72px;left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:9px 14px;border:1px solid #ffffff2c;border-radius:999px;background:#211b30e8;backdrop-filter:blur(18px);box-shadow:0 10px 34px #160c3430;color:#eee7fb;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .composer{position:fixed;width:min(416px,calc(100vw - 24px));min-height:48px;padding:7px 9px;border:1px solid #ffffff2a;border-radius:24px;background:#211b30eb;backdrop-filter:blur(18px);box-shadow:0 12px 36px #160c342e;pointer-events:auto}
-    .composer.message-expanded{border-radius:18px}
-    .row{display:flex;align-items:center;gap:8px;min-width:0}.icon{width:26px;height:26px;border-radius:50%;flex:0 0 26px;object-fit:cover}
-    textarea{font:13px/1.4 system-ui;color:inherit;background:transparent;border:0;resize:none;flex:1 1 auto;min-width:0;width:auto;height:32px;padding:7px 0;outline:none;white-space:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none}textarea::-webkit-scrollbar{display:none;width:0;height:0}textarea::placeholder{color:#cac0dc}.message-expanded textarea{height:88px;white-space:pre-wrap;overflow-y:auto}
-    button{border:0;background:transparent;color:#c5a5ff;cursor:pointer;flex:0 0 30px;min-width:30px;min-height:32px;border-radius:50%;font:inherit;padding:3px}.expand{font-size:15px;line-height:1;color:#d8caef}.more{font-size:17px;line-height:1;color:#d8caef}.send{background:var(--accent);color:white;width:32px;flex:0 0 32px}button:disabled{opacity:.45;cursor:wait}
-    .tools{display:flex;align-items:center;gap:6px;margin-top:6px}.tools button{border-radius:8px}.tools .dismiss{margin-left:auto}.status{color:#d3bfff;margin:6px 8px 2px;overflow-wrap:anywhere}
-    .thinking{background:linear-gradient(100deg,#b08aff 20%,#f3e9ff 45%,#a17bf7 70%);background-size:200%;color:transparent;background-clip:text;animation:shimmer 1.8s linear infinite}
+    .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 6%,transparent);pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease,height .08s ease}
+    .hint{position:fixed;top:72px;left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:9px 14px;border:1px solid var(--mini-border);border-radius:999px;background:color-mix(in srgb,var(--mini-surface) 88%,transparent);backdrop-filter:blur(24px) saturate(125%);box-shadow:0 10px 34px #0003;color:var(--mini-text);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .composer{position:fixed;width:min(416px,calc(100vw - 24px));min-height:52px;padding:5px 6px 5px 10px;border:1px solid var(--mini-border);border-radius:999px;background:color-mix(in srgb,var(--mini-surface) 88%,transparent);backdrop-filter:blur(24px) saturate(125%);-webkit-backdrop-filter:blur(24px) saturate(125%);box-shadow:0 12px 36px #0003,inset 0 1px 0 #ffffff0a;pointer-events:auto}
+    .composer.message-expanded,.composer:has(.attachments:not(:empty)),.composer:has(.status:not([hidden])){border-radius:22px}
+    .row{display:flex;align-items:center;gap:4px;min-width:0;width:100%}.icon{width:24px;height:24px;border-radius:5px;flex:0 0 24px;object-fit:contain}
+    textarea{font:inherit;color:inherit;background:transparent;border:0;resize:none;flex:1 1 0;min-width:0;width:0;height:40px;padding:10px 4px;outline:none;white-space:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}textarea::-webkit-scrollbar{display:none;width:0;height:0}textarea::placeholder{color:var(--mini-muted)}.message-expanded textarea{height:88px;white-space:pre-wrap;overflow-y:auto}
+    button{border:0;background:transparent;color:var(--mini-text);cursor:pointer;flex:0 0 36px;min-width:36px;min-height:36px;border-radius:50%;font:inherit;padding:4px;display:inline-flex;align-items:center;justify-content:center}button:hover{background:color-mix(in srgb,var(--mini-text) 8%,transparent)}button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.send{background:var(--accent);color:var(--accent-ink);width:40px;height:40px;flex:0 0 40px}.send:hover{background:var(--accent)}button:disabled{opacity:.45;cursor:default}
+    .tools{position:absolute;bottom:calc(100% + 8px);left:0;width:min(280px,100%);display:flex;flex-direction:column;gap:2px;padding:6px;border:1px solid var(--mini-border);border-radius:20px;background:color-mix(in srgb,var(--mini-surface) 92%,transparent);backdrop-filter:blur(24px);box-shadow:0 12px 36px #0004}.tools button{width:100%;min-height:44px;flex:auto;justify-content:flex-start;gap:12px;padding:8px 12px;border-radius:12px}.status{color:var(--mini-muted);margin:6px 8px 2px;overflow-wrap:anywhere}
+    .thinking{background:linear-gradient(100deg,var(--mini-muted) 20%,var(--mini-text) 45%,var(--mini-muted) 70%);background-size:200%;color:transparent;background-clip:text;animation:shimmer 1.8s linear infinite}
     .attachments{display:flex;flex-wrap:wrap;gap:4px}.attachments button{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;border-radius:8px}
-    :focus-visible{outline:2px solid #c1a3ff;outline-offset:2px}
+    :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     @keyframes shimmer{to{background-position:-200%}}
-    @media(max-width:600px){.hint{top:62px}.composer{max-width:calc(100vw - 24px)}}
-    @media(prefers-reduced-motion:reduce){${'*'}animation:none!important}}
+    @media(max-width:600px){.hint{top:62px}.composer{max-width:calc(100vw - 24px)}.row button{min-width:44px;min-height:44px;flex-basis:44px}.row .send{width:44px;height:44px}textarea{font-size:16px}.row .icon{width:20px;height:20px;flex-basis:20px}.row{gap:2px}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   </style>
   <div class="outline" hidden></div>
   <div class="hint" role="status" aria-live="polite" hidden>Click an element to annotate · Esc to exit</div>
   <section class="composer" aria-label="miniAgentSam" hidden>
     <div class="row">
-      <img class="icon" src="${host.iconUrl || miniAgentSamTokens.icon}" alt="AgentSam">
-      <textarea aria-label="Ask for changes" placeholder="Ask for changes" rows="1" wrap="off"></textarea>
-      <button class="expand" aria-label="Expand message preview" aria-expanded="false">↗</button>
-      <button class="more" aria-label="More miniAgentSam tools" aria-expanded="false">…</button>
-      <button class="send" aria-label="Send message">↑</button>
+      <img class="icon" alt="" aria-hidden="true" hidden>
+      <button class="more" aria-label="Add tools and plugins" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <textarea aria-label="Ask AgentSam" placeholder="Ask AgentSam" rows="1" wrap="off"></textarea>
+      <button class="mic" aria-label="Talk to type"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg></button>
+      <button class="send" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </div>
     <div class="tools" hidden>
-      <button class="attach" aria-label="Attach files">＋</button>
-      <button class="mic" aria-label="Talk to type">Mic</button>
-      <button class="dismiss" aria-label="Close miniAgentSam">×</button>
+      <button class="attach" aria-label="Attach files"><span aria-hidden="true">＋</span> Files</button>
+      <button class="plugins" aria-label="Browse plugins"><span aria-hidden="true">@</span> Plugins</button>
+      <button class="expand" aria-label="Expand message preview" aria-expanded="false">Expand message</button>
+      <button class="dismiss" aria-label="Close miniAgentSam">Close</button>
     </div>
     <div class="capabilities attachments"></div>
     <div class="files attachments"></div>
@@ -67,6 +68,18 @@ export function createMiniAgentSam(host) {
 
   const composer = root.querySelector('.composer');
   const input = root.querySelector('textarea');
+  const icon = root.querySelector('.icon');
+  function setIcon(url) {
+    if (!url) { icon.hidden = true; icon.removeAttribute('src'); return true; }
+    try {
+      const resolved = new URL(url, document.baseURI);
+      if (!['https:', 'http:'].includes(resolved.protocol)) return false;
+      icon.src = resolved.href;
+      icon.hidden = false;
+      return true;
+    } catch { return false; }
+  }
+  setIcon();
   const status = root.querySelector('.status');
   const outline = root.querySelector('.outline');
   const hint = root.querySelector('.hint');
@@ -120,10 +133,15 @@ export function createMiniAgentSam(host) {
     // miniAgentSam consumer (Product Studio included).
     const region = typeof host.positionBounds === 'function' ? host.positionBounds() : null;
     const valid = region && [region.left, region.top, region.right, region.bottom].every(Number.isFinite);
-    const leftEdge = valid ? Math.max(gap, region.left + gap) : gap;
-    const topEdge = valid ? Math.max(gap, region.top + gap) : gap;
-    const rightEdge = valid ? Math.min(innerWidth - gap, region.right - gap) : innerWidth - gap;
-    const bottomEdge = valid ? Math.min(innerHeight - gap, region.bottom - gap) : innerHeight - gap;
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft || 0;
+    const viewportTop = viewport?.offsetTop || 0;
+    const viewportRight = viewportLeft + (viewport?.width || innerWidth);
+    const viewportBottom = viewportTop + (viewport?.height || innerHeight);
+    const leftEdge = valid ? Math.max(viewportLeft + gap, region.left + gap) : viewportLeft + gap;
+    const topEdge = valid ? Math.max(viewportTop + gap, region.top + gap) : viewportTop + gap;
+    const rightEdge = valid ? Math.min(viewportRight - gap, region.right - gap) : viewportRight - gap;
+    const bottomEdge = valid ? Math.min(viewportBottom - gap, region.bottom - gap) : viewportBottom - gap;
     const boundX = (x) => Math.max(leftEdge, Math.min(Math.max(leftEdge, rightEdge - width), x));
     const boundY = (y) => Math.max(topEdge, Math.min(Math.max(topEdge, bottomEdge - height), y));
     const centerX = r.left + r.width / 2;
@@ -185,7 +203,7 @@ export function createMiniAgentSam(host) {
     const button = root.querySelector('.expand');
     button.setAttribute('aria-expanded', String(messageExpanded));
     button.setAttribute('aria-label', messageExpanded ? 'Collapse message preview' : 'Expand message preview');
-    button.textContent = messageExpanded ? '↙' : '↗';
+    button.textContent = messageExpanded ? 'Collapse message' : 'Expand message';
     position();
   }
 
@@ -310,6 +328,16 @@ export function createMiniAgentSam(host) {
   root.querySelector('.expand').onclick = () => setMessageExpanded(!messageExpanded);
   root.querySelector('.more').onclick = () => setToolsExpanded(!toolsExpanded);
   root.querySelector('.dismiss').onclick = close;
+  root.querySelector('.plugins').hidden = !host.capabilities;
+  root.querySelector('.plugins').onclick = () => {
+    setToolsExpanded(false);
+    input.focus();
+    const end = input.selectionStart ?? input.value.length;
+    const prefix = input.value.slice(0, end);
+    const mention = (prefix && !/\s$/.test(prefix) ? ' ' : '') + '@';
+    input.setRangeText(mention, end, end, 'end');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
   root.querySelector('.mic').hidden = !host.voice;
   root.querySelector('.mic').onclick = async () => {
     try {
@@ -336,6 +364,8 @@ export function createMiniAgentSam(host) {
 
   addEventListener('resize', position);
   addEventListener('scroll', position, true);
+  window.visualViewport?.addEventListener('resize', position);
+  window.visualViewport?.addEventListener('scroll', position);
 
   return {
     startSelecting(message = 'Click an element to annotate · Esc to exit') {
@@ -359,6 +389,7 @@ export function createMiniAgentSam(host) {
       outline.hidden = true;
     },
     reposition: position,
+    setIcon,
     select(selection, bounds) {
       if (busy) close();
       resource = selection;
@@ -369,7 +400,7 @@ export function createMiniAgentSam(host) {
       setToolsExpanded(false);
       setMessageExpanded(false);
       input.value = '';
-      input.placeholder = 'Ask for changes';
+      input.placeholder = 'Ask AgentSam';
       showStatus('');
       position();
     },
@@ -379,6 +410,8 @@ export function createMiniAgentSam(host) {
       menuCleanup();
       removeEventListener('resize', position);
       removeEventListener('scroll', position, true);
+      window.visualViewport?.removeEventListener('resize', position);
+      window.visualViewport?.removeEventListener('scroll', position);
       portal.remove();
     },
     get expanded() {

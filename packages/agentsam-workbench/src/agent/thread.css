@@ -1,0 +1,20 @@
+/* Shared conversation activity: unboxed status, matte evidence. */
+.as-activity-line{appearance:none;display:flex;align-items:flex-start;gap:12px;width:100%;min-width:0;padding:6px 0;background:none;border:0;color:var(--nav-muted,var(--color-muted-foreground,#989898));font:inherit;font-size:15px;line-height:1.5;text-align:left}
+button.as-activity-line{cursor:pointer}
+button.as-activity-line:hover{color:var(--nav-text,var(--color-foreground,#ddd))}
+.as-activity-icon{display:grid;place-items:center;width:20px;height:23px;flex:0 0 20px}
+.as-activity-icon img,.as-activity-icon svg{width:17px;height:17px;object-fit:contain}
+.as-activity-label{min-width:0;flex:1;overflow-wrap:anywhere}
+.as-activity-chevron{flex:none;margin-top:4px;opacity:.75}
+.as-activity-line[data-active="true"] .as-activity-label{background:linear-gradient(105deg,currentColor 35%,color-mix(in srgb,currentColor 30%,var(--nav-text,var(--color-foreground,#fff))) 50%,currentColor 65%);background-size:250% 100%;background-position:130% 0;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:as-activity-glisten 2.8s linear infinite}
+@keyframes as-activity-glisten{to{background-position:-130% 0}}
+.as-tool-preview{margin:6px 0 12px;padding:14px 16px;border:0;border-radius:16px;background:var(--nav-popover,var(--color-card,#202020));color:var(--nav-text,var(--color-foreground,#ddd));box-shadow:none;min-width:0;overflow:hidden}
+.as-tool-preview-section+.as-tool-preview-section{margin-top:12px}
+.as-tool-preview-label{font-size:11px;line-height:1.5;color:var(--nav-muted,var(--color-muted-foreground,#999));margin-bottom:6px}
+.as-tool-preview pre{margin:0;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;max-height:360px;overscroll-behavior:contain}
+.as-tool-preview code{font:inherit;color:inherit;background:none;padding:0}
+.as-syntax-key{color:var(--as-code-key,#c48b59)}
+.as-syntax-string{color:var(--as-code-string,#80a766)}
+.as-syntax-literal{color:var(--as-code-literal,#8ea3d6)}
+@media(max-width:900px){.as-activity-line{font-size:16px;gap:10px}.as-tool-preview{padding:12px 14px}}
+@media(prefers-reduced-motion:reduce){.as-activity-line[data-active="true"] .as-activity-label{animation:none;background:none;-webkit-text-fill-color:currentColor}}

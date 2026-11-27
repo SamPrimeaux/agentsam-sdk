@@ -1938,7 +1938,17 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
   .agentsam-artifact-hub__create-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
   .agentsam-artifact-hub__create-art {min-height:54px;}
   .agentsam-artifact-hub__items.is-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
-  .agentsam-artifact-hub__items.is-list .agentsam-artifact-hub__item {grid-template-columns:100px minmax(0,1fr);}
+  .agentsam-artifact-hub__items {gap:14px;}
+  .agentsam-artifact-hub__item {border-radius:20px;}
+  .agentsam-artifact-hub__item-name {font-size:16px;line-height:1.25;}
+  .agentsam-artifact-hub__item-meta {font-size:13px;line-height:1.4;}
+  .agentsam-artifact-hub__items.is-grid .agentsam-artifact-hub__item-footer {padding:12px;}
+  .agentsam-artifact-hub__items.is-grid .agentsam-artifact-hub__type-icon {display:none;}
+  .agentsam-artifact-hub__items.is-list .agentsam-artifact-hub__item {grid-template-columns:minmax(100px,38%) minmax(0,1fr);padding:7px;gap:2px;}
+  .agentsam-artifact-hub__items.is-list .agentsam-artifact-hub__preview {height:auto;aspect-ratio:16/9;border:0;border-radius:14px;}
+  .agentsam-artifact-hub__items.is-list .agentsam-artifact-hub__item-footer {padding:4px 5px;gap:5px;}
+  .agentsam-artifact-hub__items.is-list .agentsam-artifact-hub__type-icon {display:none;}
+  .agentsam-artifact-hub__edited {display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;}
   .agentsam-artifact-hub__focused {padding:10px;}
   .agentsam-artifact-hub__focused-header {gap:7px;}
   .agentsam-artifact-hub__focused-title {order:3;flex:1 0 100%;}

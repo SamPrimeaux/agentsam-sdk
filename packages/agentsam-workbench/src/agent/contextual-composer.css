@@ -618,3 +618,15 @@
 .agentsam-ask-pill:focus-visible {outline:2px solid var(--nav-text,var(--foreground));outline-offset:3px;}
 .agentsam-ask-pill:disabled {cursor:not-allowed;opacity:.45;}
 @media (prefers-reduced-motion:reduce) {.agentsam-ask-pill {transition:none;}}
+
+/* Contextual CMS composer shares the host theme glass material. */
+
+.as-contextual-composer{--cc-accent:var(--nav-accent,var(--te-accent,var(--color-accent,#737373)));--cc-ink:var(--nav-accent-ink,var(--color-accent-foreground,#fff));--cc-text:var(--nav-text,var(--color-foreground,#f4f4f5));--cc-surface:var(--nav-popover,var(--te-panel,var(--color-card,#292929)))}
+.as-cc-input-row,.as-cc-thread-menu{background:linear-gradient(170deg,color-mix(in srgb,var(--cc-text) 10%,transparent),transparent 50%,color-mix(in srgb,var(--cc-text) 5%,transparent)),color-mix(in srgb,var(--cc-surface) 72%,transparent);border:1px solid color-mix(in srgb,var(--cc-text) 20%,transparent);box-shadow:inset 0 1px 1px #ffffff18,0 6px 24px #0002;backdrop-filter:blur(28px) saturate(145%);-webkit-backdrop-filter:blur(28px) saturate(145%)}
+.as-cc-input-row{min-height:56px;padding:5px 7px}
+.as-cc-input-row input{font-size:16px;color:var(--cc-text)}
+.as-cc-input-row :is(.as-cc-send,.as-cc-icon-btn){width:44px;height:44px;flex:none;border-radius:50%}
+.as-cc-send,.as-cc-input-row [aria-label="Stop"]{background:var(--cc-accent);color:var(--cc-ink)}
+.as-cc-thread-menu{margin:6px;border-radius:20px}
+.as-cc-thread-menu button{min-height:44px}
+@media(prefers-reduced-transparency:reduce){.as-cc-input-row,.as-cc-thread-menu{background:var(--cc-surface);backdrop-filter:none;-webkit-backdrop-filter:none}}

@@ -7,15 +7,14 @@ import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
-import { SideStage } from '@/components/workbench/side-stage';
+import { SideStage, MobileStageActions } from '@/components/workbench/side-stage';
 import { WorkProjectSelect } from '@/components/workbench/work-project-select';
 
 import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
 import { emitCompanionHandoff } from './companion-events';
 import { SplitHandle } from '@/components/shell/split-handle';
-import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
-import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-runtime';
+import { AgentConversationSurface } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@/components/workbench/work-layout.css';
 
 const WORK_PANEL_MIN = 380;
@@ -251,7 +250,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     '--agentsam-chat-right': floatingPosition ? 'auto' : '16px',
     '--agentsam-chat-bottom': floatingPosition ? 'auto' : '16px',
   } as CSSProperties;
-  const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
+  const activeStage = state.sideTabs.find(tab => tab.id === state.activeSideTabId);
+  const stageParams = new URLSearchParams(activeStage?.url?.split('?')[1] || '');
+  const slidesContext = (state.sideOpen || mobileWorkOpen) && activeStage?.kind === 'design' && stageParams.get('type') === 'slides' && stageParams.get('canvas')
+    ? { id: stageParams.get('canvas')!, title: activeStage.title }
+    : undefined;
+  const leadComposer = <Composer artifactContext={isMobile ? slidesContext : undefined} workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     {!isMobile ? <>
@@ -263,7 +267,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     {data.mode === 'work' && !isMobile ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = isMobile ? (empty ? null : <div className="agentsam-header-utilities">
+  const mobileStageVisible = isMobile && (mobileWorkOpen || state.sideOpen);
+  const mobileFocusedStage = mobileStageVisible && !!activeStage && !["newtab", "files", "artifacts", "apps"].includes(activeStage.kind);
+  const headerActions = isMobile ? (mobileStageVisible ? <MobileStageActions /> : empty ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions additionalActions={mobileMoreActions} mobile />
@@ -286,7 +292,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <Nav.PinnedSummary />
     </div>}
   </div>;
-  return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
+  return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface} data-mobile-stage-focused={mobileFocusedStage ? "true" : undefined}>
     {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
     {hostLeadingSlot && !isMobile ? createPortal(leadingControls, hostLeadingSlot) : null}
     {hostActionsSlot ? createPortal(headerActions ?? <span className="agentsam-blank-conversation-actions" aria-hidden="true" />, hostActionsSlot) : null}
@@ -313,15 +319,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
         </div>}
         <AgentConversationSurface
           empty={empty}
-          runtime={
-            <AgentRuntimeField
-              controller={localStudioRuntimeVisuals.controllerFor(chat.id)}
-              blocking={false}
-              passiveOpacity={0.48}
-              className="z-[1]"
-              narrationStyle={{ bottom: 96 }}
-            />
-          }
           thread={<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} readingMode={data.mode === 'work'} />}
           emptyState={<div className="agentsam-welcome-heading">
             {data.mode === 'work' ? <div className="agentsam-work-welcome" data-companion-id={companion.id}>
