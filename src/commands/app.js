@@ -1,9 +1,14 @@
+import { AgentSamDiagnosticError } from '../errors/diagnostic.js';
 import { buildAppInventory, formatAppInventory } from './app-inventory.js';
 import { evidenceStorageProblems } from '../sam/packs/evidence/endpoint.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+
+function appFailure(code, message) {
+  return new AgentSamDiagnosticError({ source: 'agentsam-sdk', kind: 'runtime_error', code, message });
+}
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 /**
@@ -61,7 +66,7 @@ function resolveApp(id, root = REPO_ROOT) {
   const hit = apps.find((row) => row.id === id || path.basename(row.dir) === id);
   if (!hit) {
     const available = apps.map((a) => a.id).join(', ') || '(none)';
-    throw new Error(`unknown AgentSam app: ${id}. Available: ${available}`);
+    throw appFailure('app_unknown', `unknown AgentSam app: ${id}. Available: ${available}`);
   }
   return hit;
 }
@@ -74,7 +79,7 @@ const APP_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 function npmGlobalRoot(env = process.env) {
   const result = spawnSync('npm', ['root', '--global'], { encoding: 'utf8', env });
   if (result.error || result.status !== 0 || !path.isAbsolute(String(result.stdout || '').trim())) {
-    throw new Error('Unable to resolve the npm global installation directory');
+    throw appFailure('npm_global_root_unavailable', 'Unable to resolve the npm global installation directory');
   }
   return String(result.stdout).trim();
 }
@@ -90,7 +95,7 @@ function installedApp(app, globalRoot, expectedVersion) {
   if (pkg.name !== name || manifest.schema !== 'agentsam.app.v1' || manifest.kind !== 'app' ||
       manifest.id !== app.id || manifest.package !== name || manifest.version !== pkg.version ||
       (expectedVersion && pkg.version !== expectedVersion)) {
-    throw new Error(`Installed package identity/version mismatch: ${name}`);
+    throw appFailure('app_identity_mismatch', `Installed package identity/version mismatch: ${name}`);
   }
   const bin = manifest.bin || manifest.entrypoints?.cli || null;
   if (bin) {
@@ -99,10 +104,10 @@ function installedApp(app, globalRoot, expectedVersion) {
     const bins = typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin || {});
     if (!relative || relative.startsWith('..' + path.sep) || relative === '..' || path.isAbsolute(relative) ||
         !bins.some(value => path.resolve(dir, value) === target) || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
-      throw new Error(`Installed app has an invalid or missing executable: ${name}`);
+      throw appFailure('app_executable_invalid', `Installed app has an invalid or missing executable: ${name}`);
     }
     const actual = path.relative(fs.realpathSync(dir), fs.realpathSync(target));
-    if (actual === '..' || actual.startsWith('..' + path.sep) || path.isAbsolute(actual)) throw new Error('Installed app executable escapes package');
+    if (actual === '..' || actual.startsWith('..' + path.sep) || path.isAbsolute(actual)) throw appFailure('app_executable_escape', 'Installed app executable escapes package');
   }
   return { ...app, dir, manifestPath, manifest, bin, commands: manifest.commands || {} };
 }
@@ -113,29 +118,29 @@ export function installAppPackage(app, args = [], options = {}) {
   let version;
   let previewPackage = false;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--version') { version = args[++i]; if (!version) throw new Error('--version requires an exact version'); }
+    if (args[i] === '--version') { version = args[++i]; if (!version) throw appFailure('app_version_required', '--version requires an exact version'); }
     else if (args[i] === '--preview-package') previewPackage = true;
-    else throw new Error(`Unknown app install option: ${args[i]}`);
+    else throw appFailure('app_install_option_unknown', `Unknown app install option: ${args[i]}`);
   }
   const name = app.manifest.package;
-  if (!APP_PACKAGE.test(name || '') || (version !== undefined && !APP_VERSION.test(version))) throw new Error(`App ${app.id} has no valid npm package identity or exact requested version`);
+  if (!APP_PACKAGE.test(name || '') || (version !== undefined && !APP_VERSION.test(version))) throw appFailure('app_package_identity_invalid', `App ${app.id} has no valid npm package identity or exact requested version`);
   const distribution = app.manifest.distribution || {};
   const sourcePackage = path.join(app.dir, 'package.json');
   if (['source-private', 'bundled-source'].includes(distribution.release_status) ||
       (fs.existsSync(sourcePackage) && readJson(sourcePackage).private === true)) {
-    throw new Error(`App ${app.id} has no independently released npm distribution`);
+    throw appFailure('app_release_unavailable', `App ${app.id} has no independently released npm distribution`);
   }
   if (distribution.native_release_required && !previewPackage) {
-    throw new Error(`App ${app.id} requires a native installer; npm is only its preview distribution. Use --preview-package explicitly for that distribution.`);
+    throw appFailure('app_native_installer_required', `App ${app.id} requires a native installer; npm is only its preview distribution. Use --preview-package explicitly for that distribution.`);
   }
-  if (previewPackage && !distribution.native_release_required) throw new Error('--preview-package is only for a desktop host preview distribution');
+  if (previewPackage && !distribution.native_release_required) throw appFailure('app_preview_option_invalid', '--preview-package is only for a desktop host preview distribution');
   // The manifest identifies the product; npm's latest dist-tag identifies its
   // released version. A source version may be ahead of the public registry.
   if (version === undefined) {
     const result = spawnSync('npm', ['view', `${name}@latest`, 'version', '--json', '--prefer-online', '--fetch-retries=0', '--fetch-timeout=15000'], { env, encoding: 'utf8' });
-    if (result.error || result.status !== 0) throw new Error(`Cannot resolve published latest release for ${name}: ${String(result.stderr || result.error?.message || '').trim()}`);
-    try { version = JSON.parse(result.stdout); } catch { throw new Error(`Invalid npm release response for ${name}`); }
-    if (typeof version !== 'string' || !APP_VERSION.test(version)) throw new Error(`Invalid npm release version for ${name}`);
+    if (result.error || result.status !== 0) throw appFailure('npm_release_resolution_failed', `Cannot resolve published latest release for ${name}: ${String(result.stderr || result.error?.message || '').trim()}`);
+    try { version = JSON.parse(result.stdout); } catch { throw appFailure('npm_release_response_invalid', `Invalid npm release response for ${name}`); }
+    if (typeof version !== 'string' || !APP_VERSION.test(version)) throw appFailure('npm_release_version_invalid', `Invalid npm release version for ${name}`);
     write(`Published latest: ${name}@${version}\n`);
   }
   const globalRoot = npmGlobalRoot(env);
@@ -144,10 +149,10 @@ export function installAppPackage(app, args = [], options = {}) {
   if (!current || current.manifest.version !== version) {
     write(`Installing ${spec} via npm...\n`);
     const result = spawnSync('npm', ['install', '--global', '--no-audit', '--no-fund', spec], { env, stdio: 'inherit' });
-    if (result.error || result.status !== 0) throw new Error(`npm installation failed for ${spec}; no verified installation recorded`);
+    if (result.error || result.status !== 0) throw appFailure('app_install_failed', `npm installation failed for ${spec}; no verified installation recorded`);
   }
   const installed = installedApp(app, globalRoot, version);
-  if (!installed) throw new Error(`npm did not produce an installed app: ${spec}`);
+  if (!installed) throw appFailure('app_install_missing', `npm did not produce an installed app: ${spec}`);
   const standalone = Boolean(installed.bin);
   write(`Installed package verified: ${spec}\n`);
   if (standalone) write(`Run: agentsam app doctor ${app.id} / agentsam app preview ${app.id}\n`);
@@ -157,9 +162,9 @@ export function installAppPackage(app, args = [], options = {}) {
 }
 
 function runAppBin(app, args, options = {}) {
-  if (!app.bin) throw new Error(`app ${app.id} has no bin entry`);
+  if (!app.bin) throw appFailure('app_bin_undefined', `app ${app.id} has no bin entry`);
   const binPath = path.resolve(app.dir, app.bin);
-  if (!fs.existsSync(binPath)) throw new Error(`app bin missing: ${binPath}`);
+  if (!fs.existsSync(binPath)) throw appFailure('app_bin_missing', `app bin missing: ${binPath}`);
   const result = spawnSync(process.execPath, [binPath, ...args], {
     cwd: options.cwd || process.cwd(),
     stdio: 'inherit',
@@ -443,7 +448,7 @@ export function validateApps(options = {}) {
   const selected = filterId ? apps.filter((a) => a.id === filterId || path.basename(a.dir) === filterId) : apps;
 
   if (filterId && selected.length === 0) {
-    throw new Error(`unknown AgentSam app: ${filterId}`);
+    throw appFailure('app_filter_unknown', `unknown AgentSam app: ${filterId}`);
   }
 
   const idCounts = new Map();
@@ -544,7 +549,7 @@ export async function runApp(argv = [], options = {}) {
     return report;
   }
 
-  if (!appId) throw new Error('agentsam app requires an app id');
+  if (!appId) throw appFailure('app_id_required', 'agentsam app requires an app id');
   const app = resolveApp(appId, resolveSourceRoot(options));
 
   if (command === 'info' || command === 'inspect') {
@@ -562,7 +567,7 @@ export async function runApp(argv = [], options = {}) {
     const dryRun = rest.includes('--dry-run') || !rest.includes('--write');
     const packArgs = ['pack', ...(dryRun ? ['--dry-run', '--ignore-scripts'] : []), '--json'];
     const result = spawnSync('npm', packArgs, { cwd: app.dir, encoding: 'utf8', env: process.env });
-    if (result.status !== 0) throw new Error(String(result.stderr || result.stdout || `npm pack failed for ${app.id}`).trim());
+    if (result.status !== 0) throw appFailure('app_pack_failed', String(result.stderr || result.stdout || `npm pack failed for ${app.id}`).trim());
     const metadata = JSON.parse(result.stdout)[0];
     write(`${JSON.stringify({ app_id: app.id, package: metadata.name, version: metadata.version, filename: metadata.filename, size: metadata.size, dry_run: dryRun }, null, 2)}\n`);
     return metadata;
@@ -576,7 +581,7 @@ export async function runApp(argv = [], options = {}) {
     runAppBin(app, ['scaffold', ...rest], options);
     return;
   }
-  throw new Error(`unknown agentsam app command: ${command}`);
+  throw appFailure('app_command_unknown', `unknown agentsam app command: ${command}`);
 }
 
 export function appCommandHelp() {

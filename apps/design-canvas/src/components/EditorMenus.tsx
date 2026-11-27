@@ -131,9 +131,9 @@ export function DocumentActionsMenu({ name, pinned, currentType, onRename, onDup
   return <MenuPopover label="Document menu" trigger={<><span className="dcx-document-title-label">{name}</span><ChevronDown size={13}/></>} triggerClassName="dcx-document-title-trigger">
     {(close) => <>
       <div className="dcx-menu-document-heading">{name}</div>
-      <MenuAction label="Share" icon={<Share2 size={15}/>} detail={onShare ? 'Manage access and sharing' : 'Sharing is not connected'} onClick={() => onShare?.()} close={close} disabled={!onShare}/>
+      <MenuAction label="Share" icon={<Share2 size={15}/>} detail={onShare ? 'Share a private workspace link' : 'Sharing is not connected'} onClick={() => onShare?.()} close={close} disabled={!onShare}/>
       <MenuAction label="Export" icon={<FileText size={15}/>} detail="Download editable AgentSam source" onClick={onExport} close={close}/>
-      <MenuAction label="Handoff to AgentSam" icon={<Sparkles size={15}/>} detail={onHandoff ? 'Continue in the existing Code workspace' : 'Code handoff is not connected'} onClick={() => onHandoff?.()} close={close} disabled={!onHandoff}/>
+      <MenuAction label="Handoff to AgentSam" icon={<Sparkles size={15}/>} detail={onHandoff ? 'Continue in the shared AgentSam composer' : 'Code handoff is not connected'} onClick={() => onHandoff?.()} close={close} disabled={!onHandoff}/>
       <MenuDivider/>
       <MenuAction label={pinned ? 'Unpin' : 'Pin'} icon={<Pin size={15}/>} onClick={onTogglePin} close={close}/>
       <MenuAction label="Rename" icon={<Pencil size={15}/>} onClick={onRename} close={close}/>
@@ -141,7 +141,7 @@ export function DocumentActionsMenu({ name, pinned, currentType, onRename, onDup
       <div className="dcx-menu-section-label">Turn into</div>
       <MenuAction label="Slides" icon={<Presentation size={15}/>} detail="Presentation workspace" onClick={() => onTurnInto?.('slides')} close={close} disabled={!onTurnInto || currentType === 'slides'}/>
       <MenuAction label="Design" icon={<Shapes size={15}/>} detail="Artboard workspace" onClick={() => onTurnInto?.('design')} close={close} disabled={!onTurnInto || currentType === 'design'}/>
-      <MenuAction label="Whiteboard" icon={<StickyNote size={15}/>} detail="Collaborative canvas" onClick={() => onTurnInto?.('whiteboard')} close={close} disabled={!onTurnInto || currentType === 'whiteboard'}/>
+      <MenuAction label="Whiteboard" icon={<StickyNote size={15}/>} detail="Visual whiteboard workspace" onClick={() => onTurnInto?.('whiteboard')} close={close} disabled={!onTurnInto || currentType === 'whiteboard'}/>
       <MenuDivider/>
       <MenuAction label="Move to" icon={<Folder size={15}/>} detail={onMoveTo ? 'Choose a destination' : 'Collections are not connected'} onClick={() => onMoveTo?.()} close={close} disabled={!onMoveTo}/>
       <MenuAction label="Refresh" icon={<RefreshCw size={15}/>} detail="Reload the saved document" onClick={() => onRefresh?.()} close={close} disabled={!onRefresh}/>

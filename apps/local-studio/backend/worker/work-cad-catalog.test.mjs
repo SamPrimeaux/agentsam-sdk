@@ -99,3 +99,48 @@ test('asset endpoint rejects non-model catalog records', async () => {
   assert.equal(response.status, 404);
   assert.equal((await response.json()).error, 'asset_not_available');
 });
+
+
+test('OAuth catalog payloads honor recorded access mode and never use an ambient Worker binding', async () => {
+  const account = 'a'.repeat(32);
+  const row = {
+    resource_kind: 'slide_template', payload_r2_key: 'studio-templates/deck/cover.json',
+    payload_access_mode: 'oauth_api', payload_bucket_name: 'creative-assets',
+    payload_connection_user_id: 'platform_connector_owner', payload_account: account,
+    payload_ownership: 'platform', payload_owner: 'platform',
+    payload_binding_name: 'AMBIENT_BINDING',
+  };
+  const env = {
+    DB: { prepare: () => ({ bind: () => ({ first: async () => row }) }) },
+    AMBIENT_BINDING: { get() { throw Error('OAuth must not fall back to a binding'); } },
+  };
+  const options = {
+    listConnections: async (_env, owner) => {
+      assert.equal(owner, 'platform_connector_owner');
+      return [{status:'connected', cloudflareAccountId:account}];
+    },
+    resolveCredential: async (input) => {
+      assert.equal(input.ownerId, 'platform_connector_owner');
+      assert.equal(input.authMode, 'oauth');
+      return {status:'ready', bearerToken:'test-token', accountId:account, grantedScopes:['workers-r2-bucket-item.read']};
+    },
+    fetchImpl: async (url, init) => {
+      assert.equal(url, 'https://api.cloudflare.com/client/v4/accounts/'+account+'/r2/buckets/creative-assets/objects/studio-templates/deck/cover.json');
+      assert.equal(init.headers.authorization, 'Bearer test-token');
+      return new Response('{"type":"slides","data":{"slides":[]}}');
+    },
+  };
+  const request = new Request('https://studio.test/api/work/cad/catalog/cover/payload');
+  const response = await handleWorkCadCatalogRequest(request, env, 'viewer', options);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).type, 'slides');
+  row.payload_ownership = 'user'; row.payload_owner = 'someone_else';
+  assert.equal((await handleWorkCadCatalogRequest(request, env, 'viewer', options)).status, 404);
+  row.payload_ownership = 'platform'; row.payload_owner = 'platform';
+  const denied = await handleWorkCadCatalogRequest(request, env, 'viewer', {...options,
+    resolveCredential: async () => ({status:'ready', bearerToken:'test-token', accountId:account, grantedScopes:[]}),
+    fetchImpl: async () => { throw Error('missing scope must prevent provider request'); },
+  });
+  assert.equal(denied.status, 403);
+  assert.equal((await handleWorkCadCatalogRequest(request, env)).status, 401);
+});

@@ -216,10 +216,10 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   }
   assert.equal(isStudioAdminPath('/admin/products'), true);
   assert.equal(isStudioShellAdminPath('/admin/products'), false);
-  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html', 'account-owned Theme Studio is a host-owned document route');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'legacy Theme Editor entry is handled by the host redirect');
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
-  assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES \} from [^;]+studio-admin-routes\.mjs/);
+  assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES, resolveRetiredStructurePath \} from [^;]+studio-admin-routes\.mjs/);
 });
 
 test('Growth appearance is a host-only, theme-token override', () => {
@@ -248,7 +248,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
     renderSideNav: () => '<nav></nav>',
     localStorage: { getItem: () => 'dark' },
     CONSOLE_APPEARANCE_KEY: 'appearance',
-    window: { __AGENTSAM_DESKTOP__: true, location: { hash: '' } },
+    window: { __AGENTSAM_DESKTOP__: true, location: { hash: '' }, addEventListener() {} },
     document: { addEventListener: (name, handler) => { if (name === 'click') clicks.push(handler); } },
     encodeURIComponent,
   };
@@ -271,7 +271,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
   assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
-  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html', 'account-owned Theme Studio is served through the shared host route');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'legacy Theme Editor entry cannot bypass the host redirect');
 });
 
 
@@ -289,9 +289,9 @@ test('hosted AgentSam renders Chat/Work in its single packaged Console header', 
   assert.match(ecommerce, /id="console-search-trigger"/);
   assert.match(ecommerce, /id="console-notifications-trigger"/);
   assert.match(ecommerce, /id="console-notifications-menu"/);
-  assert.match(workspace, /hostModeSlot && empty \? createPortal\(<div className="agentsam-mode-host"><Nav\.ModeSwitcher \/><\/div>, hostModeSlot\)/);
-  assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className=\{"agentsam-conversation-topbar" \+ \(empty \? " is-empty-thread" : " is-active-thread"\)\}/);
-  assert.match(workspace, /empty \? <div className="agentsam-topbar-mode"><Nav\.ModeSwitcher \/><\/div>/);
+  assert.match(workspace, /hostModeSlot \? createPortal\(showModeSwitcher \?/);
+  assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className=\{"agentsam-conversation-topbar" \+ \(showModeSwitcher \? " is-empty-thread" : " is-active-thread"\)\}/);
+  assert.match(workspace, /showModeSwitcher \? <div className="agentsam-topbar-mode"><Nav\.ModeSwitcher \/><\/div>/);
   assert.match(workspace, /<Nav\.ModeSwitcher \/>/);
   assert.doesNotMatch(workspace, /createPortal\(<Nav\.Scope className="agentsam-mode-host"/);
   assert.match(host, /event\.stopImmediatePropagation\(\)/);
@@ -372,7 +372,7 @@ test('hosted product links update the same-origin containing app while preservin
   const context={
     NAV:{main:[],channels:[],apps:[]},renderSideNav:()=>'<nav></nav>',
     localStorage:{getItem:()=>null},CONSOLE_APPEARANCE_KEY:'appearance',
-    window:{parent,location:{origin:'https://studio.test',pathname:'/ecommerce-cms-agentsam/admin/home.html'}},
+    window:{parent,addEventListener(){},location:{origin:'https://studio.test',pathname:'/ecommerce-cms-agentsam/admin/home.html'}},
     document:{addEventListener:(name,fn)=>{if(name==='click')listeners.push(fn);}},
     CustomEvent: class CustomEvent { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } },
     encodeURIComponent,

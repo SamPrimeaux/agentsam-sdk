@@ -1,3 +1,4 @@
+import { readOauthR2Artifact } from './work-r2-read.js';
 /**
  * CAD Creator's studio library transport.
  *
@@ -73,7 +74,7 @@ function contentTypeFor(key, fallback = 'application/octet-stream') {
   return fallback;
 }
 
-export async function handleWorkCadCatalogRequest(request, env) {
+export async function handleWorkCadCatalogRequest(request, env, owner, options = {}) {
   if (request.method !== 'GET') return json({ ok: false, error: 'method_not_allowed' }, 405);
   if (!env.DB?.prepare) return json({ ok: false, error: 'catalog_unavailable' }, 503);
   const match = BASE.exec(new URL(request.url).pathname);
@@ -103,7 +104,13 @@ export async function handleWorkCadCatalogRequest(request, env) {
 
   const row = await env.DB.prepare(
     `SELECT s.resource_kind, s.payload_r2_key, s.preview_r2_key,
-            pb.binding_name AS payload_binding_name, vb.binding_name AS preview_binding_name
+            pb.binding_name AS payload_binding_name, vb.binding_name AS preview_binding_name,
+            pb.bucket_name AS payload_bucket_name, vb.bucket_name AS preview_bucket_name,
+            pb.access_mode AS payload_access_mode, vb.access_mode AS preview_access_mode,
+            pb.connection_user_id AS payload_connection_user_id, vb.connection_user_id AS preview_connection_user_id,
+            pb.connection_account_identifier AS payload_account, vb.connection_account_identifier AS preview_account,
+            pb.ownership_type AS payload_ownership, vb.ownership_type AS preview_ownership,
+            pb.owner_id AS payload_owner, vb.owner_id AS preview_owner
        FROM studio_templates s
        LEFT JOIN r2_buckets pb ON pb.id = s.payload_bucket_id
        LEFT JOIN r2_buckets vb ON vb.id = s.preview_bucket_id
@@ -116,10 +123,26 @@ export async function handleWorkCadCatalogRequest(request, env) {
   const preview = action === 'preview';
   const key = preview ? row.preview_r2_key : row.payload_r2_key;
   const bindingName = preview ? row.preview_binding_name : row.payload_binding_name;
-  const bucket = bindingFor(env, bindingName);
-  if (!key || typeof bucket?.get !== 'function') return json({ ok: false, error: preview ? 'preview_not_found' : 'payload_not_found' }, 404);
-
-  const object = await bucket.get(key);
+  const prefix = preview ? 'preview_' : 'payload_';
+  const missing = () => json({ ok: false, error: preview ? 'preview_not_found' : 'payload_not_found' }, 404);
+  if (!key) return missing();
+  let object;
+  if (row[prefix + 'access_mode'] === 'oauth_api') {
+    if (!owner) return json({ ok: false, error: 'unauthorized' }, 401);
+    const platform = row[prefix + 'ownership'] === 'platform' && row[prefix + 'owner'] === 'platform';
+    if (!platform && row[prefix + 'owner'] !== owner) return missing();
+    const connectionOwner = row[prefix + 'connection_user_id'];
+    if (!connectionOwner || (!platform && connectionOwner !== owner)) return missing();
+    object = await readOauthR2Artifact(env, connectionOwner, {
+      r2_bucket: row[prefix + 'bucket_name'],
+      metadata_json: JSON.stringify({ cloudflare_account_id: row[prefix + 'account'] }),
+    }, key, row[prefix + 'account'], options);
+    if (object instanceof Response) return object;
+  } else {
+    const bucket = bindingFor(env, bindingName);
+    if (typeof bucket?.get !== 'function') return missing();
+    object = await bucket.get(key);
+  }
   if (!object) return json({ ok: false, error: preview ? 'preview_not_found' : 'payload_not_found' }, 404);
 
   const type = contentTypeFor(key, object.httpMetadata?.contentType);
@@ -128,7 +151,7 @@ export async function handleWorkCadCatalogRequest(request, env) {
       'content-type': type,
       'content-disposition': 'inline',
       'x-content-type-options': 'nosniff',
-      'cache-control': preview ? 'public, max-age=3600' : 'private, max-age=300',
+      'cache-control': 'private, max-age=300',
     },
   });
 }

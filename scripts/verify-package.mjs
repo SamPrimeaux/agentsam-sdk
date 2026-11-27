@@ -7,6 +7,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), 'utf8'));
 
 function exportTargetExists(target) {
+  if (target === null) return true; // Explicitly blocked Node export.
+  if (target && typeof target === 'object' && !Array.isArray(target)) {
+    const targets = Object.values(target);
+    return targets.length > 0 && targets.every(exportTargetExists);
+  }
+  if (Array.isArray(target)) return target.length > 0 && target.every(exportTargetExists);
+  if (typeof target !== 'string' || !target.startsWith('./')) return false;
   const relativeTarget = target.replace(/^\.\//, '');
   if (!relativeTarget.includes('*')) return existsSync(join(root, relativeTarget));
 

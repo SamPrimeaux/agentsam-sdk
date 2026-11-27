@@ -67,6 +67,9 @@ type Section = 'overview' | 'colors' | 'typography' | 'spacing' | 'radii' | 'sha
 type Tool = 'select' | 'hand' | 'text' | 'shape' | 'image' | 'media' | 'chart' | 'table' | 'pen' | 'comment' | 'note' | 'frame' | 'rect' | 'ellipse';
 type AlignCommand = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
 type TokenModal = 'color' | 'type' | 'scale' | 'shadow' | 'component' | null;
+type StudioTemplate = { id: string; kind: string; title: string; description: string; category?: string; payloadUrl: string | null };
+type StudioTemplatePayload = { type?: string; prompt?: string; data?: unknown };
+
 
 function snapshotFor(artifact: CreativeArtifact, selection?: { id: string; kind: string }): DesignWorkspaceSnapshot {
   return {
@@ -1045,7 +1048,7 @@ function AgentSamBuildEditor({ artifact, leading, documentActions, assistant, as
         <div className="dcx-build-capabilities">
           <span>Project files</span><span>IDE and terminal</span><span>Shared conversation</span>
         </div>
-        <button type="button" className="dcx-primary-button" onClick={() => onOpenCode?.()}>Open Code in Work <Code2 size={14}/></button>
+        <button type="button" className="dcx-primary-button" onClick={() => onOpenCode?.({ artifactId: artifact.id, artifactType: artifact.type, title: artifact.name })}>Continue with AgentSam <Code2 size={14}/></button>
       </div>
     </div>
   </DesignWorkspaceFrame>;
@@ -1113,6 +1116,11 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   const [renameId, setRenameId] = useState('');
   const [renameValue, setRenameValue] = useState('');
   const [storageError, setStorageError] = useState(false);
+  const [studioTemplates, setStudioTemplates] = useState<StudioTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [templateBusyId, setTemplateBusyId] = useState('');
+  const [templateActionError, setTemplateActionError] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [internalAssistantOpen, setInternalAssistantOpen] = useState(true);
@@ -1123,6 +1131,21 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     onAssistantOpenChange?.(open);
   };
   const active = artifacts.find((item) => item.id === activeId);
+  useEffect(() => {
+    const controller = new AbortController();
+    setTemplatesLoading(true);
+    setTemplatesError('');
+    fetch('/api/work/cad/catalog?app=design-canvas', { credentials: 'same-origin', signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Template catalog could not be loaded (' + response.status + ').');
+        const body = await response.json() as { items?: StudioTemplate[] };
+        const supported = (body.items || []).filter((item) => ['presentation_template', 'slide_template', 'image_generation_template'].includes(item.kind));
+        setStudioTemplates(supported);
+      })
+      .catch((error) => { if (error?.name !== 'AbortError') setTemplatesError(error instanceof Error ? error.message : 'Template catalog could not be loaded.'); })
+      .finally(() => { if (!controller.signal.aborted) setTemplatesLoading(false); });
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     const sync = () => setFullscreen(document.fullscreenElement === rootRef.current);
     document.addEventListener('fullscreenchange', sync);
@@ -1164,6 +1187,53 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   const createBrandGuidelines = () => {
     create(makeArtifact('slides', 'Brand Guidelines', brandGuidelinesSlides()));
     setNavOpen(false);
+  };
+  const applyStudioTemplate = async (template: StudioTemplate) => {
+    setTemplateActionError('');
+    if (template.kind === 'image_generation_template') {
+      if (!template.payloadUrl) { setTemplateActionError('This prompt template has no saved payload.'); return; }
+      setTemplateBusyId(template.id);
+      try {
+        const response = await fetch(template.payloadUrl, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error('The saved prompt could not be loaded (' + response.status + ').');
+        const payload = await response.json() as StudioTemplatePayload;
+        const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
+        if (!prompt.trim()) throw new Error('The saved prompt is empty.');
+        onAskAgentSam?.({ artifactType: 'design', title: template.title, comment: 'Use the saved image-generation template “' + template.title + '” (catalog item ' + template.id + '). Prompt: ' + prompt });
+        if (!onAskAgentSam) throw new Error('The shared AgentSam composer is unavailable in this surface.');
+      } catch (error) { setTemplateActionError(error instanceof Error ? error.message : 'The saved prompt could not be opened.'); }
+      finally { setTemplateBusyId(''); }
+      return;
+    }
+    if (!template.payloadUrl) { setTemplateActionError('This document template has no saved payload.'); return; }
+    setTemplateBusyId(template.id);
+    try {
+      const response = await fetch(template.payloadUrl, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('The saved document could not be loaded (' + response.status + ').');
+      const payload = await response.json() as StudioTemplatePayload;
+      const data = payload.data as { slides?: Slide[] } | undefined;
+      const slides = Array.isArray(data?.slides) ? data.slides : [];
+      if (!slides.length || slides.some((slide) => !slide || typeof slide.name !== 'string' || !Array.isArray(slide.objects))) {
+        throw new Error('The saved template does not contain editable slide data.');
+      }
+      const cleanSlides = JSON.parse(JSON.stringify(slides)) as Slide[];
+      for (const slide of cleanSlides) {
+        slide.id = makeId('slide');
+        slide.comments = Array.isArray(slide.comments) ? slide.comments : [];
+        for (const object of slide.objects) object.id = makeId('object');
+      }
+      if (template.kind === 'slide_template' && active?.type === 'slides') {
+        const activeIdAtInsert = active.id;
+        setArtifacts((items) => items.map((item) => item.id === activeIdAtInsert && item.type === 'slides'
+          ? { ...item, updatedAt: new Date().toISOString(), data: { slides: [...(item.data as SlidesDocument).slides, ...cleanSlides] } }
+          : item));
+        setRoute('editor');
+      } else {
+        create(makeArtifact('slides', template.title, { slides: cleanSlides }));
+      }
+      setNavOpen(false);
+    } catch (error) { setTemplateActionError(error instanceof Error ? error.message : 'The saved document could not be opened.'); }
+    finally { setTemplateBusyId(''); }
   };
   const selectCreation = (type: CreativeType) => {
     if (type === 'code') {
@@ -1237,7 +1307,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       <button className="dcx-back-button" type="button" onClick={() => { setRoute('gallery'); setActiveId(''); }}>
         <ArrowLeft size={15}/><span>All work</span><span className="dcx-breadcrumb-separator">/</span><span>{workspaceLabel}</span>
       </button>
-      <DocumentActionsMenu name={active.name} pinned={active.pinned} currentType={active.type} onRename={() => renameArtifact(active.id)} onDuplicate={() => duplicate(active)} onTogglePin={() => togglePin(active.id)} onExport={() => download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active)} onDelete={() => requestDelete(active.id)} onSaveToLibrary={onSaveToLibrary ? () => onSaveToLibrary(active) : undefined} onShare={onShareArtifact ? () => onShareArtifact(active) : undefined} onHandoff={onOpenCode ? handoffToAgentSam : undefined} onTurnInto={active.type === 'slides' || active.type === 'design' || active.type === 'whiteboard' ? turnInto : undefined} onMoveTo={onMoveArtifact ? () => onMoveArtifact(active) : undefined} onRefresh={refreshActive} onStorage={() => setStorageInfoOpen(true)} onPermissions={onManagePermissions ? () => onManagePermissions(active) : onShareArtifact ? () => onShareArtifact(active) : undefined} onFeedback={onGiveFeedback ? () => onGiveFeedback(active) : undefined} onClose={() => { setRoute('gallery'); setActiveId(''); }}/>
+      <DocumentActionsMenu name={active.name} pinned={active.pinned} currentType={active.type} onRename={() => renameArtifact(active.id)} onDuplicate={() => duplicate(active)} onTogglePin={() => togglePin(active.id)} onExport={() => download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active)} onDelete={() => requestDelete(active.id)} onSaveToLibrary={onSaveToLibrary ? () => onSaveToLibrary(active) : undefined} onShare={onShareArtifact ? () => onShareArtifact(active) : undefined} onHandoff={onOpenCode ? handoffToAgentSam : undefined} onTurnInto={active.type === 'slides' || active.type === 'design' || active.type === 'whiteboard' ? turnInto : undefined} onMoveTo={onMoveArtifact ? () => onMoveArtifact(active) : undefined} onRefresh={refreshActive} onStorage={() => setStorageInfoOpen(true)} onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined} onFeedback={onGiveFeedback ? () => onGiveFeedback(active) : undefined} onClose={() => { setRoute('gallery'); setActiveId(''); }}/>
     </div>
   ) : undefined;
   const documentActions = active ? (
@@ -1313,6 +1383,16 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
             <button className="dcx-create-tile system" onClick={() => selectCreation('system')}><img src={systemCover} alt=""/><span>Design System</span></button>
             <button className="dcx-create-tile whiteboard" onClick={() => selectCreation('whiteboard')}><img src={whiteboardCover} alt=""/><span>Whiteboard <i>Beta</i></span></button>
           </div>
+        </section>
+        <section className="dcx-studio-templates" aria-label="Studio templates">
+          <div className="dcx-section-label">Studio templates <span>From your shared template catalog</span></div>
+          {templatesLoading ? <p role="status">Loading saved templates…</p> : null}
+          {templatesError ? <p role="alert">{templatesError}</p> : null}
+          {templateActionError ? <p role="alert">{templateActionError}</p> : null}
+          {studioTemplates.length ? <div className="dcx-studio-template-list">{studioTemplates.map((template) => <article className="dcx-studio-template" key={template.id}>
+            <div><strong>{template.title}</strong><small>{template.category || (template.kind === 'slide_template' ? 'Slide' : template.kind === 'presentation_template' ? 'Presentation' : 'Image prompt')}</small>{template.description ? <p>{template.description}</p> : null}</div>
+            <button type="button" disabled={templateBusyId === template.id} onClick={() => void applyStudioTemplate(template)}>{templateBusyId === template.id ? 'Opening…' : template.kind === 'image_generation_template' ? 'Use prompt' : template.kind === 'slide_template' && active?.type === 'slides' ? 'Add to current presentation' : 'Create editable slides'}</button>
+          </article>)}</div> : !templatesLoading && !templatesError ? <p>No saved Design Canvas templates are available.</p> : null}
         </section>
         <section className="dcx-artifacts-section" aria-label="Saved work">
           {visible.length ? <div className={'dcx-artifact-grid' + (viewMode === 'list' ? ' is-list' : '')}>{visible.map((item) => <ArtifactCard key={item.id} artifact={item} onOpen={() => { setActiveId(item.id); setRoute('editor'); }} onRename={() => renameArtifact(item.id)} onDuplicate={() => duplicate(item)} onTogglePin={() => togglePin(item.id)} onDelete={() => requestDelete(item.id)}/>)}</div> : <EmptyState title={query ? 'No matching work' : tab === 'pinned' ? 'Nothing pinned yet' : tab === 'shared' ? 'Nothing shared with you yet' : 'Your work will appear here'} description={query ? 'Try another search or clear the type filter.' : tab === 'pinned' ? 'Pin a document from its actions menu to find it here.' : tab === 'shared' ? 'Documents shared with you will appear here.' : 'Create a presentation, design, design system or whiteboard, or open Code to work in an existing project.'}/>}

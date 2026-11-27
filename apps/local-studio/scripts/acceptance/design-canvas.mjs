@@ -5,8 +5,9 @@ import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-const frontendRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const root = resolve(frontendRoot, '../../..');
+const appRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const frontendRoot = resolve(appRoot, 'frontend');
+const root = resolve(appRoot, '../..');
 const previewScript = resolve(root, 'apps/design-canvas/bin/agentsam-design-canvas.mjs');
 
 async function freePort() {

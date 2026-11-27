@@ -168,7 +168,7 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
         title: stage.label,
         pluginId: stage.renderer === "builtin" ? undefined : stage.pluginId,
         stageId: stage.renderer === "builtin" ? undefined : stage.stageId,
-        ...(kind === "design" && !existing ? { url: "/canvas?library=sources" } : {}),
+        ...(kind === "design" && !existing ? { url: "/admin/design-canvas/" } : {}),
         parentChatId: kind === "goal" ? work.activeChatId : null,
         ephemeral: false,
       });

@@ -50,8 +50,8 @@ test('code and whiteboard copies retain workspace identity and re-key document n
 
 test('gallery exposes six distinct cover assets and functional library filters', async () => {
   const app = await readFile(appPath, 'utf8');
-  for (const name of ['slides.svg', 'brand-guidelines.svg', 'design.svg', 'design-in-code.svg', 'design-system.svg', 'whiteboard.svg']) {
-    assert.ok(app.includes(name), 'gallery should use the ' + name + ' cover');
+  for (const name of ['slides', 'brand-guidelines', 'design', 'design-in-code', 'design-system', 'whiteboard']) {
+    assert.ok(app.includes("CREATIVE_WIDGET_COVERS['" + name + "']") || app.includes('CREATIVE_WIDGET_COVERS.' + name.replaceAll('-', '')), 'gallery should use the shared ' + name + ' cover');
   }
   for (const label of ['All', 'Pinned', 'Yours', 'Shared with you', 'Search your work']) {
     assert.ok(app.includes(label), 'gallery should expose ' + label);
@@ -59,12 +59,39 @@ test('gallery exposes six distinct cover assets and functional library filters',
   assert.ok(app.includes("setViewMode(viewMode === 'grid' ? 'list' : 'grid')"));
 });
 
-test('Create in Code hands off to the existing Work IDE instead of bundling a second editor', async () => {
+test('Design gallery reads the shared studio_templates catalog and opens stored payloads', async () => {
+  const app = await readFile(appPath, 'utf8');
+  assert.ok(app.includes("fetch('/api/work/cad/catalog?app=design-canvas'"));
+  for (const kind of ['presentation_template', 'slide_template', 'image_generation_template']) assert.ok(app.includes(kind));
+  assert.ok(app.includes('fetch(template.payloadUrl'));
+  assert.ok(app.includes('Create editable slides'));
+  assert.ok(app.includes('Prompt: '));
+  assert.ok(app.includes('Add to current presentation'));
+  assert.ok(app.includes("create(makeArtifact('slides', template.title, { slides: cleanSlides }))"));
+});
+
+test('Code handoff keeps AgentSam in the selected repository and carries the artifact into the lead composer', async () => {
   const app = await readFile(appPath, 'utf8');
   const host = await readFile(new URL('../../local-studio/frontend/src/components/workbench/creative-workspace-stage.tsx', import.meta.url), 'utf8');
-  assert.ok(app.includes('onOpenCode?.()'), 'Create in Code should use the host handoff');
-  assert.ok(host.includes('setWorkSurface(\"code\")'), 'the host should open the existing Work Code surface');
-  await assert.rejects(readFile(new URL('../src/CodeEditor.tsx', import.meta.url), 'utf8'), { code: 'ENOENT' });
+  assert.ok(app.includes('onOpenCode?.({ artifactId: artifact.id'), 'the handoff must retain the selected artifact');
+  assert.ok(host.includes('item.id === store.activeProjectId && item.kind === "filesystem"'), 'the host must resolve the existing filesystem-backed Work project');
+  assert.ok(host.includes('tag: "design-code-handoff"'), 'the handoff must attach context to the shared AgentSam composer');
+  assert.ok(host.includes('store.setWorkSurface("chat")'), 'the handoff must keep the user in the AgentSam composer');
+  assert.ok(!host.includes('onOpenCode={() => useWorkStore.getState().setWorkSurface("code")}'), 'the canvas must not switch to a disconnected Code surface');
+  assert.ok(host.includes('Ask the user to open an existing repository before making code changes.'), 'missing repository context must be explicit');
+});
+
+test('document sharing and Save to Library use truthful host actions', async () => {
+  const host = await readFile(new URL('../../local-studio/frontend/src/components/workbench/creative-workspace-stage.tsx', import.meta.url), 'utf8');
+  assert.ok(host.includes('onShareArtifact={(artifact) => { void shareWorkspaceLink(artifact); }}'));
+  assert.ok(host.includes('navigator.share({ title: artifact.name'));
+  assert.ok(host.includes('Recipients need access to this AgentSam workspace.'));
+  const app = await readFile(appPath, 'utf8');
+  assert.ok(app.includes('onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined}'));
+  assert.ok(!app.includes('onPermissions={onManagePermissions ? () => onManagePermissions(active) : onShareArtifact'));
+  assert.ok(host.includes('onSaveToLibrary={(artifact) => { void saveArtifactToLibrary(artifact); }}'));
+  assert.ok(host.includes('JSON.stringify({ starred: true })'));
+  assert.ok(host.includes('Added to Library.'));
 });
 
 test('new Design Systems start with real empty collections', async () => {

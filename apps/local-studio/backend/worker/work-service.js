@@ -286,7 +286,7 @@ export async function handleWorkRequest(request, env, accountId, context = {}) {
     if (canvasCms) return handleCanvasCms(request, env, accountId, canvasCms[1], canvasCms[2]);
     if (isCanvasRequest(url.pathname)) return handleCanvasRequest(request, env, accountId, context);
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
-    if (isWorkCadCatalogRequest(url.pathname)) return handleWorkCadCatalogRequest(request, env);
+    if (isWorkCadCatalogRequest(url.pathname)) return handleWorkCadCatalogRequest(request, env, accountId);
     if (isSamSketchSceneRequest(url.pathname)) return handleSamSketchSceneRequest(request, env, accountId);
     const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);
     if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1', { accountId: url.searchParams.get('account') || '' });
