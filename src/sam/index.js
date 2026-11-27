@@ -93,3 +93,5 @@ export { createCadOperations, CAD_DONOR_OPERATOR_MAPPINGS } from './packs/cad/in
 export { createCadHttpPorts } from "./packs/cad/http-ports.js";
 export { createCadModelTools } from "./packs/cad/model-tools.js";
 export { CAD_RUN_MODES, executeCadRunMode } from "./packs/cad/modes.js";
+
+export { createPrimeTechCreativeOperations, PRIMETECH_CREATIVE_OPERATION_IDS, PRIMETECH_CREATIVE_INPUT_SCHEMAS } from './packs/primetech-creative.js';

@@ -1,0 +1,52 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-digital-publishing",
+  "name": "PrimeTech \u00b7 Digital publication production",
+  "description": "Prepare structured book content and produce validated EPUB 3 publications with navigation, preview and source provenance.",
+  "icon": "book-open",
+  "slash": {
+    "suggested": "/primetech-digital-publishing"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "imgx_generate_image",
+      "agentsam_terminal_local"
+    ],
+    "operations": [
+      "primetech.ebook.package",
+      "primetech.assets.package",
+      "primetech.visuals.compare"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "media.generate",
+      "media.export",
+      "design.write",
+      "terminal.execute"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "publishing",
+    "task_types": [
+      "ebook_production",
+      "epub_export",
+      "digital_publication"
+    ],
+    "route_keys": [
+      "primetech_digital_publishing",
+      "ebook_production",
+      "epub_export"
+    ]
+  }
+}

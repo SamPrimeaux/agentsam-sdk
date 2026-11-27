@@ -1,0 +1,61 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "primetech.typeface.package",
+  "version": "1.0.0",
+  "summary": "Validate Typeface Studio glyph geometry and produce a verified static TTF, source package and specimen.",
+  "effect": "project_write",
+  "capabilities": [
+    "primetech.typeface.package"
+  ],
+  "runtime": {
+    "kind": "sam_operation",
+    "operation": "primetech.typeface.package"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "sourcePath"
+    ],
+    "properties": {
+      "sourcePath": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "outputDir": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "licenseText": {
+        "type": "string",
+        "maxLength": 20000
+      },
+      "specimenText": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ],
+    "additionalProperties": true
+  },
+  "verification": {
+    "kind": "output_schema"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": true
+  }
+}

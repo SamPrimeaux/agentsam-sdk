@@ -126,18 +126,29 @@ export function buildUniversalSource({
   }));
   const skillCatalog=read(root,'skills/catalog.json');
   if (!Array.isArray(skillCatalog.skills)) throw new Error('skills_catalog_invalid');
-  const included=new Set(pkg.files||[]);
   const skills=skillCatalog.skills.map(row=>{
-    const dir='skills/'+row.id, src=dir+'/SKILL.md', manifest=dir+'/agentsam.skill.json';
+    const src=path.posix.normalize(path.posix.join('skills',row.entry || (row.id+'/SKILL.md')));
+    const dir=path.posix.dirname(src);
+    const manifest=dir+'/agentsam.skill.json';
     if (!fs.existsSync(path.join(root,src)) || !fs.existsSync(path.join(root,manifest)))
       throw new Error('skill_source_missing:'+row.id);
     const definition=read(root,manifest);
     if (definition.id !== row.id || definition.schema !== 'agentsam.skill.v1'
         || definition.instructions?.ref !== 'SKILL.md') throw new Error('skill_manifest_drift:'+row.id);
-    const packaged=[...included].some(f=>f === dir || f.startsWith(dir+'/'));
+    const packageRoot=row.package_root||'';
+    const packageName=row.package_name||pkg.name;
+    const packageVersion=row.package_version||pkg.version;
+    const packageManifest=packageRoot ? read(root,packageRoot+'/package.json') : pkg;
+    const packageFiles=new Set(packageManifest.files||[]);
+    const relativeDir=packageRoot ? path.posix.relative(packageRoot,dir) : dir;
+    const packaged=[...packageFiles].some(f=>{
+      const entry=String(f).replace(/\/$/,'');
+      return relativeDir===entry || relativeDir.startsWith(entry+'/') || entry.startsWith(relativeDir+'/');
+    });
+    if (definition.package && definition.package!==packageName) throw new Error('skill_package_owner_mismatch:'+row.id);
     return {
       id:row.id,name:definition.name,slash_trigger:definition.slash?.suggested||null,
-      npm_package_name:pkg.name,npm_source_version:pkg.version,
+      npm_package_name:packageName,npm_source_version:packageVersion,
       source:src,content_checksum:hex(fs.readFileSync(path.join(root,src))),
       content_markdown:fs.readFileSync(path.join(root,src),'utf8'),
       description:definition.description||'',

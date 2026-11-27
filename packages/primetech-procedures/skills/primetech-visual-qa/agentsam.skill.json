@@ -1,0 +1,56 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-visual-qa",
+  "name": "PrimeTech \u00b7 Visual quality assurance",
+  "description": "Compare approved references and rendered outputs with measurable image evidence and a separate semantic design review.",
+  "icon": "scan-eye",
+  "slash": {
+    "suggested": "/primetech-visual-qa"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "browser_screenshot",
+      "browser_run_snapshot",
+      "browser_content",
+      "agentsam_terminal_local"
+    ],
+    "operations": [
+      "primetech.visuals.compare",
+      "primetech.production-board.manage"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "design.read",
+      "design.write",
+      "browser.capture",
+      "browser.read",
+      "media.export",
+      "terminal.execute"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "design",
+    "task_types": [
+      "visual_qa",
+      "design_review",
+      "render_comparison",
+      "visual_regression"
+    ],
+    "route_keys": [
+      "primetech_visual_qa",
+      "visual_qa",
+      "design_review"
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "primetech.ebook.package",
+  "version": "1.0.0",
+  "summary": "Build and validate an EPUB 3 archive with navigation, preview and source provenance.",
+  "effect": "project_write",
+  "capabilities": [
+    "primetech.ebook.package"
+  ],
+  "runtime": {
+    "kind": "sam_operation",
+    "operation": "primetech.ebook.package"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "sourcePath"
+    ],
+    "properties": {
+      "sourcePath": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "outputDir": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ],
+    "additionalProperties": true
+  },
+  "verification": {
+    "kind": "output_schema"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": true
+  }
+}

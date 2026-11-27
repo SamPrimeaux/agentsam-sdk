@@ -39,8 +39,14 @@ test('every catalog skill resolves to real files and a matching frontmatter name
   for (const skill of listSkills()) {
     const entry = `${root}${skill.entry}`;
     assert.ok(fs.existsSync(entry), `${skill.id}: missing ${skill.entry}`);
-    const name = /^name:\s*(\S+)/m.exec(fs.readFileSync(entry, 'utf8'))?.[1];
-    assert.equal(name, skill.id, `${skill.id}: frontmatter name must equal id`);
+    const name = /^name:\s*(.+)$/m.exec(fs.readFileSync(entry, 'utf8'))?.[1]?.trim();
+    const manifestPath = entry.replace(/SKILL\.md$/, 'agentsam.skill.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (skill.id.startsWith('primetech-')) {
+      assert.equal(name, manifest.name, skill.id + ': package skill frontmatter must match its AgentSam skill manifest');
+    } else {
+      assert.equal(name, skill.id, skill.id + ': SDK builtin frontmatter name must equal id');
+    }
     for (const ref of skill.references ?? []) {
       assert.ok(fs.existsSync(`${root}${ref}`), `${skill.id}: missing reference ${ref}`);
     }

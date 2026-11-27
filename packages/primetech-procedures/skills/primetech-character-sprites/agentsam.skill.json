@@ -1,0 +1,64 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-character-sprites",
+  "name": "PrimeTech \u00b7 Character and sprite production",
+  "description": "Create consistent character and pet identities, 2D sprite sheets, 3D companion assets, rigging and animation deliverables.",
+  "icon": "smile",
+  "slash": {
+    "suggested": "/primetech-character-sprites"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "imgx_generate_image",
+      "illustration_create",
+      "meshy_text_to_3d",
+      "meshy_image_to_3d",
+      "meshy_multi_image_to_3d",
+      "meshy_rig",
+      "meshy_animate",
+      "meshy_get_task_status",
+      "moviemode_render",
+      "moviemode_export"
+    ],
+    "operations": [
+      "primetech.sprite-atlas.build",
+      "primetech.visuals.compare",
+      "primetech.assets.package",
+      "primetech.production-board.manage"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "media.generate",
+      "media.transform",
+      "media.status",
+      "media.render",
+      "media.export",
+      "workflow.execute"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "media",
+    "task_types": [
+      "character_design",
+      "pet_sprite_sheet",
+      "sprite_animation",
+      "companion_3d"
+    ],
+    "route_keys": [
+      "primetech_character_sprites",
+      "character_design",
+      "sprite_animation"
+    ]
+  }
+}

@@ -100,3 +100,68 @@ python3 -m unittest discover -s python/tests -v
 ```
 
 The npm package is configured as public in `package.json`, but release availability and clean-install portability must be verified separately. Publishing a PyPI API or npm wrapper is not evidence that host installation, cloud bindings, or deployed execution have been completed.
+
+## Creative production extension
+
+The package now includes a real creative-production runtime, not just category names. The new procedures are versioned, schema-validated, bound to the local project root, and invoked through the existing PrimeTech procedure runner.
+
+| Procedure | Production result |
+|---|---|
+| primetech.icon-family.build | 24 editable SVG variants across three shapes and eight named colorways, plus PNGs at requested raster sizes and a checksummed manifest |
+| primetech.typeface.package | Validated Typeface Studio source, reparsed static TTF, specimen HTML, and source package |
+| primetech.sprite-atlas.build | Transparent PNG atlas, ordered frame metadata, and a controllable HTML preview |
+| primetech.visuals.compare | PNG diff and overlay, pixel metrics, and a machine-readable evidence report |
+| primetech.design-system.package | Validated token source, CSS variables, contrast results, and documentation |
+| primetech.assets.package | ZIP handoff with source hashes, metadata, and a delivery manifest |
+| primetech.ebook.package | Validated EPUB 3 archive, navigation, HTML preview, and publication manifest |
+| primetech.production-board.manage | Revisioned production board with idempotent generation receipts, quality gates, retries, and resumable failures |
+
+## Packaged AgentSam skills
+
+Nine authored skills ship with the package. Each has an agentsam.skill.v1 manifest and a complete SKILL.md workflow with trigger conditions, inputs, prerequisites, production steps, artifact contract, quality gates, persistence, iteration, handoff and failure handling.
+
+| Skill | Slash trigger | Focus |
+|---|---|---|
+| PrimeTech Brand Kit Development | /primetech-brand-kit | Creative direction and complete identity systems from a focused brief |
+| PrimeTech Iconography | /primetech-iconography | Develop, refine, remaster and compare marks and icon families |
+| PrimeTech Type Design | /primetech-type-design | Custom letterforms, glyph systems and static font production |
+| PrimeTech Character and Sprites | /primetech-character-sprites | Pet and character identity sheets, 2D sprites, 3D companions and animation |
+| PrimeTech Design Systems | /primetech-design-systems | Semantic tokens, accessible palettes and reusable UI foundations |
+| PrimeTech UI/UX Prototypes | /primetech-ui-ux-prototypes | High-fidelity responsive flows and runnable demos in the actual codebase |
+| PrimeTech Visual QA | /primetech-visual-qa | Reference comparison, pixel evidence and semantic design review |
+| PrimeTech Creative Delivery | /primetech-creative-delivery | Source-preserving, checksummed creative handoff packages |
+| PrimeTech Digital Publishing | /primetech-digital-publishing | Structured content to validated EPUB 3 |
+
+The skills reference real existing AgentSam tools for image generation, illustration, Excalidraw, browser capture, Meshy and MovieMode. The local packaging procedures are registered as SAM operations and are called through the versioned primetech.procedure.run capability. Meshy remains the existing provider integration; this package does not create a second Meshy client.
+
+## Format and delivery matrix
+
+| Creation | Inputs | Verified outputs | Current boundary |
+|---|---|---|---|
+| Brand marks and icon families | Approved SVG master and named colorways | SVG family, PNG raster sizes, preview metadata, checksums | Raster concepts are not treated as vector masters |
+| Custom type | Typeface Studio source JSON and glyph contours | Static TTF, source JSON, specimen HTML, ZIP | Variable fonts are not produced by this exporter |
+| Character sprites | Ordered frame images and animation settings | Transparent PNG atlas, frame JSON, HTML preview | Atlas packaging does not itself generate or rig character frames |
+| Visual QA | Matching reference and rendered images | PNG diff, PNG overlay, pixel metrics, report | Pixel similarity is separate from semantic UX/accessibility review |
+| Design systems | Token JSON | CSS variables, contrast evidence, documentation and manifest | Tokens must still be adopted by the target product to count as implemented |
+| Creative delivery | Approved project-relative files | ZIP, source inventory, checksums and manifest | Remote upload is a separate approved storage step |
+| Digital publishing | Structured publication source | EPUB 3, navigation, HTML preview and manifest | PDF, DOCX, print layout and DRM are not claimed by this EPUB workflow |
+| UI/UX flows and demos | Actual repository, journey and acceptance criteria | Runnable application changes, routes, browser captures and tests | A flow diagram or static mockup alone is not accepted as a demo |
+| 3D characters and motion | Character references and provider-supported task inputs | Meshy model/rig/animation results and MovieMode renders/exports | Exact formats are reported from the provider task result, not guessed |
+
+## Runtime integration and authorization
+
+The local SDK shell installs the eight creative SAM operations. Write-capable operations are deliberately not listed as standalone model tools. The model calls the versioned procedure runner; the runner validates the manifest and input, requests the workflow.execute approval, then invokes the exact installed SAM operation through a private host path. The caller cannot choose a project root or submit arbitrary shell commands.
+
+The generic procedure capability is available in the local AgentSam CLI. The separate Cloudflare D1 tool row for primetech.procedure.run remains inactive because a Worker-native handler for Node filesystem and native image/font packaging has not been implemented. The active D1 skill records can guide AgentSam chat, and the existing cloud image, illustration, Meshy and MovieMode tools remain their own registered tools; this does not falsely claim that local filesystem packaging is already available to remote Work.
+
+The nine skill records are active in the account-scoped D1 skill registry with database-backed content and package manifests in metadata. They remain marked unpublished and have no npm package version attached until the package is released.
+
+## Build, validate and release
+
+- Run the complete package suite with npm test.
+- Regenerate packaged skills with npm run generate:skills.
+- Regenerate procedure manifests with npm run generate:procedures.
+- npm pack runs the test suite through prepack before creating a release archive.
+- The package is not published from a feature branch. Follow the manual release-from-main policy after merge and acceptance; then attach the published npm package name/version to the D1 skill records.
+
+The current package suite covers the original runtime plus creative builders, production-board persistence, AgentSam skill validation and the private SAM procedure invocation path. A successful local test run is not a claim that the package has been published or deployed to the remote Worker.

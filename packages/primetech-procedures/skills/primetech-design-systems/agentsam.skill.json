@@ -1,0 +1,57 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-design-systems",
+  "name": "PrimeTech \u00b7 Design system production",
+  "description": "Turn an approved visual direction into consistent design tokens, accessible palettes, typography rules and reusable UI foundations.",
+  "icon": "layers",
+  "slash": {
+    "suggested": "/primetech-design-systems"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "agentsam_excalidraw",
+      "excalidraw_export",
+      "excalidraw_load_library",
+      "imgx_generate_image",
+      "browser_screenshot"
+    ],
+    "operations": [
+      "primetech.design-system.package",
+      "primetech.visuals.compare",
+      "primetech.assets.package"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "design.read",
+      "design.write",
+      "media.generate",
+      "media.export",
+      "browser.capture"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "design",
+    "task_types": [
+      "design_system",
+      "design_tokens",
+      "brand_ui_system",
+      "component_foundation"
+    ],
+    "route_keys": [
+      "primetech_design_systems",
+      "design_system",
+      "design_tokens"
+    ]
+  }
+}

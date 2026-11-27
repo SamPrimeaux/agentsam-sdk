@@ -8,6 +8,7 @@ import { readAccountSession, isBrowserSessionExpired } from '../lib/account-sess
 import { resolveAccountAuthority } from '../lib/auth.js';
 import { getJson } from '../lib/core-client.js';
 import { createSamOS } from './os.js';
+import { AgentSamClient } from './client.js';
 import { createSamCapabilityAdapter } from './model-adapter.js';
 import { createLocalMediaStore } from './adapters/local-media-store.js';
 import { createObjectMediaStore } from './adapters/object-media-store.js';
@@ -16,6 +17,7 @@ import { createLocalScriptStore } from './adapters/local-script-store.js';
 import { createLocalScriptRuntime, isLocalBashAvailable } from './adapters/local-script-runtime.js';
 import { findOpenCvPython, createOpenCvVideoOperations } from './adapters/opencv-video.js';
 import { createWorkspaceMediaImportOperation, projectInstallationId } from './adapters/workspace-media.js';
+import { createPrimeTechCreativeOperations } from './packs/primetech-creative.js';
 
 import { createCloudflareR2InventoryHandler, R2_INVENTORY_OPERATION } from './adapters/cloudflare-r2-inventory.js';
 
@@ -107,6 +109,7 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
     },
     authorize: permit,
   }});
+  samOS.install(createPrimeTechCreativeOperations({projectRoot:root}));
   if (assetStore) {
     const resolvePrincipal = async () => {
       const principal = readTrustedIdentity();
@@ -122,11 +125,13 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
       pythonExecutable: opencvPython,
     }));
   }
-  return createSamCapabilityAdapter({
+  const procedureAllow = new Set(procedureOperationIds.filter(id => !!samOS.get(id)));
+  const procedureClient = new AgentSamClient({os:samOS,cwd:root});
+  const modelAdapter = createSamCapabilityAdapter({
     os:samOS,
-    // Additional core operations are exposed only when declared by a packaged
-    // procedure and independently installed as harmless read-only operations.
-    // An unbound procedure never creates a synthetic executor or permission.
+    // The model-facing adapter receives only installed local media/script tools
+    // and packaged read-only SAM operations. Write-capable procedure operations
+    // remain private and are invoked only after the procedure approval gate.
     expose:[...new Set([
       ...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS, R2_INVENTORY_OPERATION,
       ...procedureOperationIds.filter(id => {
@@ -134,8 +139,21 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
         return op?.risk === 'read_only' && op?.execution?.sideEffects === 'none';
       }),
     ])].filter(id => samOS.get(id)),
-    // Provider dispatch performs a separate allowlist check. The bound
-    // SAM handlers make the actual privileged auth decision above.
     authorize: async () => !!readTrustedIdentity(),
+  });
+  return Object.freeze({
+    ...modelAdapter,
+    canInvokeProcedureOperation: id => procedureAllow.has(id) && !!samOS.get(id),
+    invokeProcedureOperation: async (id,input={}) => {
+      if (!procedureAllow.has(id) || !samOS.get(id)) {
+        return {ok:false,error:{code:'sam_procedure_operation_unavailable',operation:id}};
+      }
+      if (!readTrustedIdentity()) {
+        return {ok:false,error:{code:'sam_authenticated_session_required'}};
+      }
+      // This private path is reached only from the versioned procedure handler,
+      // after its explicit workflow.execute approval. It is never model-listed.
+      return procedureClient.invoke(id,input);
+    },
   });
 }

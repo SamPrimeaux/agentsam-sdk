@@ -1,0 +1,58 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "primetech.design-system.package",
+  "version": "1.0.0",
+  "summary": "Validate design tokens, calculate contrast and package CSS variables and documentation.",
+  "effect": "project_write",
+  "capabilities": [
+    "primetech.design-system.package"
+  ],
+  "runtime": {
+    "kind": "sam_operation",
+    "operation": "primetech.design-system.package"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "tokensPath"
+    ],
+    "properties": {
+      "tokensPath": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "outputDir": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "projectName": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ],
+    "additionalProperties": true
+  },
+  "verification": {
+    "kind": "output_schema"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": true
+  }
+}
