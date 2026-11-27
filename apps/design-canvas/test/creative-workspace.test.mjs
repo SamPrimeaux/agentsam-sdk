@@ -86,6 +86,9 @@ test('document sharing and Save to Library use truthful host actions', async () 
   assert.ok(host.includes('onShareArtifact={(artifact) => { void shareWorkspaceLink(artifact); }}'));
   assert.ok(host.includes('navigator.share({ title: artifact.name'));
   assert.ok(host.includes('Recipients need access to this AgentSam workspace.'));
+  const app = await readFile(appPath, 'utf8');
+  assert.ok(app.includes('onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined}'));
+  assert.ok(!app.includes('onPermissions={onManagePermissions ? () => onManagePermissions(active) : onShareArtifact'));
   assert.ok(host.includes('onSaveToLibrary={(artifact) => { void saveArtifactToLibrary(artifact); }}'));
   assert.ok(host.includes('JSON.stringify({ starred: true })'));
   assert.ok(host.includes('Added to Library.'));
