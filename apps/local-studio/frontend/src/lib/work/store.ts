@@ -496,7 +496,7 @@ export const useWorkStore = create<WorkState>()(
       setActiveChat: (id) => set({ activeChatId: id, navView: "chats" }),
       startChat: () => {
         const current = get().chats.find((t) => t.id === get().activeChatId);
-        if (current && current.messages.length === 0 && (current.title === "New chat" || current.title === "New chat")) {
+        if (current && current.messages.length === 0 && (current.title === "New chat" || current.title === "New session")) {
           return current.id;
         }
         const chat = newChat({ projectId: get().activeProjectId });

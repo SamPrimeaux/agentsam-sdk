@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AudioLines, ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, FileText, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
+import { AudioLines, ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, FileText, Monitor, Palette, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -15,6 +15,8 @@ import { resolveChatImages, stageChatImage, stageChatFile, type ChatImagePayload
 import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 import { ComposerLibraryPicker } from "./composer-library-picker";
+import { isPackagedDesktop } from "@/lib/desktop/tauri";
+import { buildNavigateDeepLink } from "@/lib/desktop/open-deep-link";
 import { VoiceSession, startDictation, canDictate } from "./voice-session";
 import "./work-voice.css";
 
@@ -50,7 +52,7 @@ export function Composer({
   busy?: boolean;
   contextLabel?: string;
   workMode?: boolean;
-  /** Work landing view quick actions; the composer remains the canonical input. */
+  /** Work context actions and the web-to-desktop handoff below the canonical composer. */
   showWorkShortcuts?: boolean;
   artifactContext?: { id: string; title: string };
   /** Compact contextual composer; retains the canonical model and plugin picker. */
@@ -207,6 +209,15 @@ export function Composer({
   function openProject() {
     window.dispatchEvent(new Event('agentsam:open-project-picker:' + targetId));
   }
+  function openDesktopApp() {
+    const currentPath = window.location.pathname + window.location.search;
+    const deepLink = buildNavigateDeepLink(currentPath);
+    if (!deepLink) {
+      toast.error("This page cannot be handed off to AgentSam Desktop.");
+      return;
+    }
+    window.location.assign(deepLink);
+  }
   useEffect(() => {
     const fromMini = (event: Event) => {
       const requestedId = (event as CustomEvent<{ targetId: string }>).detail?.targetId;
@@ -260,7 +271,17 @@ export function Composer({
   const attachmentPreview = !contextual && (pendingAttachments.length || pendingAnnotations.length) ? (
     <div className="px-2 pt-2 pb-1" role="group" aria-label="Message context and attached files">
       <div className="flex max-h-[376px] flex-wrap items-start gap-3 overflow-y-auto pr-1">
-        {pendingAnnotations.map(annotation => (
+        {pendingAnnotations.map(annotation => annotation.tag === "design-code-handoff" ? (
+          <div key={annotation.id} className="as-composer-context-chip" title="Design Canvas context" data-composer-context="design">
+            <Palette size={14} aria-hidden="true" />
+            <span>Design</span>
+            <IconAction type="button" size="icon-sm" variant="ghost" className="as-composer-context-remove"
+              label="Remove Design context"
+              onClick={() => useWorkStore.getState().setPendingAnnotations(targetId, items => items.filter(item => item.id !== annotation.id))}>
+              <X className="size-3.5"/>
+            </IconAction>
+          </div>
+        ) : (
           <div key={annotation.id} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm" title={annotation.page}>
             <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted text-sm" aria-hidden="true">⌖</span>
             <div className="min-w-0">
@@ -437,9 +458,14 @@ export function Composer({
         }}
       />
         {!contextual && workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
-          <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
-          <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
-          <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
+          <div className="as-work-shortcuts-primary">
+            <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
+            <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
+            <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
+          </div>
+          {!isPackagedDesktop() ? <button type="button" className="as-work-open-desktop" onClick={openDesktopApp} title="Continue this AgentSam workspace in the desktop app">
+            <Monitor size={16} aria-hidden="true"/> Open in desktop app
+          </button> : null}
         </div>}
         {!contextual && targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
