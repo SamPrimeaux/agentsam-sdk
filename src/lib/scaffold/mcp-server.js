@@ -27,6 +27,7 @@ export async function createMcpServerProject(input = {}, options = {}) {
   }
 
   const files = mcpServerTemplates(config);
+  const manifest = JSON.parse(files['agentsam.mcp.json']);
   await writeFileTree(outputDir, files);
 
   return Object.freeze({
@@ -36,6 +37,10 @@ export async function createMcpServerProject(input = {}, options = {}) {
     display_name: config.displayName,
     output_dir: outputDir,
     file_count: Object.keys(files).length,
+    tool_count: manifest.tools.length,
+    tool_names: manifest.tools.map((tool) => tool.name),
+    auth_mode: config.authMode,
+    test_command: 'npm test',
     manifest_path: path.join(outputDir, 'agentsam.mcp.json'),
     transport: 'streamable_http',
     endpoint_path: '/mcp',

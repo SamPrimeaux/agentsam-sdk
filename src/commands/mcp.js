@@ -222,7 +222,10 @@ export async function runMcp(argv = [], options = {}) {
     write(`      preset:    ${result.preset}\n`);
     write(`      output:    ${result.output_dir}\n`);
     write(`      manifest:  ${result.manifest_path}\n`);
-    write(`      endpoint:  ${result.transport} ${result.endpoint_path}\n\n`);
+    write(`      endpoint:  ${result.transport} ${result.endpoint_path}\n`);
+    write(`      tools:     ${result.tool_count} executable tools\n`);
+    write(`      auth:      ${result.auth_mode}\n`);
+    write(`      verify:    ${result.test_command}\n\n`);
     return result;
   }
 

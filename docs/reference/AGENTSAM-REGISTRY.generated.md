@@ -64,7 +64,7 @@ Manifest status: 56 stable, 37 experimental, 17 explicitly non-deterministic. Ho
 | `agentsam login` | start | Sign in and persist machine-local session |
 | `agentsam logout` | start | Sign out locally |
 | `agentsam machine` | work | Machine inspection, evidence crawl, and read-only code reuse proposals |
-| `agentsam mcp` | runtime | MCP server catalog and client adapters |
+| `agentsam mcp` | runtime | Create MCP servers, connect remote servers, and inspect tools |
 | `agentsam memory` | work | Source-backed long-horizon memory via authorized remote MCP |
 | `agentsam merch` | work | Preflight designs against portable manufacturing profiles |
 | `agentsam merkle` | work | File integrity snapshots and explorer |
@@ -242,7 +242,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-connector-cloudflare` | `@inneranimalmedia/agentsam-connector-cloudflare` | needs-review | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not aff… |
 | `agentsam-content` | `@inneranimalmedia/agentsam-content` | needs-review | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContent… |
 | `agentsam-content-studio` | `@inneranimalmedia/agentsam-content-studio` | needs-review | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRu… |
-| `agentsam-contracts` | `@inneranimalmedia/agentsam-contracts` | needs-review | Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/r… |
+| `agentsam-contracts` | `@inneranimalmedia/agentsam-contracts` | needs-review | Portable AgentSam contracts for agents, runs, parent/child spawn orchestration, approvals, events, tools, authorit… |
 | `agentsam-database-editor` | `@inneranimalmedia/agentsam-database-editor` | active | Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashbo… |
 | `agentsam-desktop-shell` | `@inneranimalmedia/agentsam-desktop-shell` | needs-review | Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bu… |
 | `agentsam-docs-theme` | `@inneranimalmedia/agentsam-docs-theme` | needs-review | Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery). |
