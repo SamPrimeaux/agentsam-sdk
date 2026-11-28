@@ -616,8 +616,6 @@ async function spawnChildrenForJob(database, {
     status: 'running',
     child_run_id: childIds.length === 1 ? childIds[0] : undefined,
     child_run_ids: childIds,
-    dependency_status: 'pending',
-    pending_child_run_ids: childIds,
     queue: queuedJobs[0]?.plan?.physical_queue || null,
     queue_job: queuedJobs[0]?.job || null,
     queue_jobs: queuedJobs.map((item) => item.job),
