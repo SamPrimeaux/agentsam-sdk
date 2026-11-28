@@ -72,6 +72,23 @@ export class HttpAgentControlClient {
     });
   }
   receipt(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/receipt`); }
+
+  requestApproval(input = {}) {
+    return this.request('/v1/approvals', { method: 'POST', body: JSON.stringify(input) });
+  }
+  approvals(options = {}) {
+    const query = new URLSearchParams();
+    if (options.run_id || options.runId) query.set('run_id', options.run_id || options.runId);
+    if (options.status) query.set('status', options.status);
+    if (options.limit != null) query.set('limit', String(options.limit));
+    return this.request('/v1/approvals' + (query.size ? '?' + query.toString() : ''));
+  }
+  getApproval(id) { return this.request(`/v1/approvals/${encodeURIComponent(id)}`); }
+  decideApproval(id, input = {}) {
+    return this.request(`/v1/approvals/${encodeURIComponent(id)}/decision`, {
+      method: 'POST', body: JSON.stringify(input),
+    });
+  }
 }
 
 export function createAgentControlClient({
