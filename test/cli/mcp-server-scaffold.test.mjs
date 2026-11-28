@@ -24,7 +24,7 @@ async function removeFixture(directory) {
 }
 
 async function withMcpClient(worker, env, run, token = 'scaffold-test-token') {
-  const transport = new StreamableHTTPClientTransport(new URL('https://mcp.example.test/mcp'), {
+  const transport = new StreamableHTTPClientTransport(new URL(env.MCP_AUTH_MODE === 'public' ? 'http://127.0.0.1:8787/mcp' : 'https://mcp.example.test/mcp'), {
     requestInit: { headers: { authorization: 'Bearer ' + token } },
     fetch: (url, init) => worker.fetch(new Request(url, init), env),
   });
@@ -119,6 +119,7 @@ test('generated Worker enforces OAuth audience and tool-level scopes', async () 
   try {
     globalThis.fetch = async () => new Response(JSON.stringify({
       active: true,
+      iss: 'https://issuer.example.test',
       aud: 'https://mcp.example.test/mcp',
       scope: 'profile',
       sub: 'user-without-mcp-read',

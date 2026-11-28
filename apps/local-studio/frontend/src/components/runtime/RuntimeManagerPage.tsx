@@ -20,6 +20,7 @@ type RuntimeCard = {
   missing?: string[];
   icon: typeof Monitor;
   activeSession?: StudioTerminalSession;
+  machine?: NonNullable<LocalStudioConnectionsResponse["machines"]>["items"][number];
 };
 
 const BASE_RUNTIMES: RuntimeCard[] = [
@@ -69,31 +70,37 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
   // Machine-registry evidence is distinct from an attached PTY session. A
   // recently healthy, account-scoped machine may be selected for connection;
   // only the actual terminal handshake can mark it connected.
-  const availableLocalMachine = useMemo(() => machines?.items.find((machine) => {
-    const checkedAt = Number(machine.health_checked_at || machine.last_seen_at || 0);
-    return Boolean(machine.connection_id)
-      && /execos|agentsamd|local/i.test(machine.runtime_adapter || machine.provider || '')
-      && /healthy|ready|online|ok/i.test(machine.health_status || '')
+  const registeredMachine = (kind: RuntimeKind) => machines?.items.find((machine) => {
+    const provider = machine.provider.toLowerCase();
+    return Boolean(machine.connection_id) && (kind === "local" ? provider === "local" : kind === "gcp" ? /google_cloud|gcp/.test(provider) : false);
+  });
+  const healthyMachine = (machine: ReturnType<typeof registeredMachine>) => {
+    const checkedAt = Number(machine?.health_checked_at || machine?.last_seen_at || 0);
+    return Boolean(machine?.connection_id) && /healthy|ready|online|ok/i.test(machine?.health_status || "")
       && checkedAt > 0 && Math.abs(Date.now() / 1000 - checkedAt) < 600;
-  }), [machines]);
+  };
   const runtimes = useMemo(() => BASE_RUNTIMES.map((item): RuntimeCard => {
+    const machine = registeredMachine(item.id);
     const activeSession = sessions.find((session) => isConnectedRuntimeSession(item.id, session));
     const state: RuntimeState = activeSession ? "online"
       : item.id === "local" && nativeStatus ? (nativeStatus.online ? "available" : "offline")
-      : item.id === "local" && availableLocalMachine ? "available"
+      : healthyMachine(machine) ? "available"
       : item.id === "docker" && nativeStatus ? (nativeStatus.dockerAvailable ? "available" : "setup_required")
       : "unknown";
     return {
       ...item,
       state,
       activeSession,
+      machine,
+      adapter: machine?.runtime_adapter || item.adapter,
+      transport: machine?.transport || item.transport,
       detail: activeSession ? [activeSession.runtimeLabel || item.name, activeSession.cwd].filter(Boolean).join(" · ")
-        : item.id === "local" && availableLocalMachine
-          ? `${availableLocalMachine.name} · registered machine, connection not yet attached`
+        : machine
+          ? `${machine.name} · registered machine, PTY not attached`
           : item.detail,
       missing: state === "setup_required" && item.id === "docker" ? ["Docker is not installed"] : undefined,
     };
-  }), [sessions, nativeStatus, availableLocalMachine]);
+  }), [sessions, nativeStatus, machines]);
   const local = runtimes.find((item) => item.id === "local");
 
   return (
@@ -132,32 +139,32 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
       <div className="grid gap-3">
         {runtimes.map((runtime) => {
           const Icon = runtime.icon;
-          const usable = (runtime.state === "online" && (Boolean(runtime.activeSession) || runtime.id === "local"))
-            || (runtime.id === "local" && runtime.state !== "offline");
+          const usable = runtime.state === "online" || ((runtime.id === "local" || runtime.id === "gcp") && runtime.state === "available");
           return (
             <section key={runtime.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-muted"><Icon className="size-4" /></div>
+              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:flex sm:items-start">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Icon className="size-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-medium">{runtime.name}</h2>
-                    <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{runtime.state === "online" ? "Runtime connected" : runtime.state === "available" ? (runtime.id === "local" ? "Machine available · PTY not attached" : "Tool detected · not attached") : runtime.state === "setup_required" ? "Setup needed" : runtime.state === "offline" ? "Offline" : "Not verified"}</span>
+                    <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{runtime.state === "online" ? "Runtime connected" : runtime.state === "available" ? (runtime.machine || runtime.id === "local" ? "Machine available · PTY not attached" : "Tool detected · not attached") : runtime.state === "setup_required" ? "Setup needed" : runtime.state === "offline" ? "Offline" : "Not verified"}</span>
                   </div>
-                  <p className="mt-1 break-all text-xs text-muted-foreground">{runtime.detail}</p>
+                  <p className="mt-1 break-words text-xs text-muted-foreground">{runtime.detail}</p>
                   {runtime.missing?.length ? <p className="mt-2 text-xs text-muted-foreground">{runtime.missing.join(", ")}</p> : null}
                   {runtime.id === "docker" && runtime.state === "available" ? <p className="mt-2 text-xs text-muted-foreground">Docker CLI detected. Open Details to authorize a context, inspect containers and manage your workspace.</p> : null}
                   {runtime.id !== "local" && runtime.state === "unknown" ? <p className="mt-2 text-xs text-muted-foreground">Connect the provider and attach an authorized runtime before a terminal can start.</p> : null}
                 </div>
+                <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
                 <button type="button" className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-xs hover:bg-muted" aria-expanded={expandedRuntime === runtime.id} onClick={() => setExpandedRuntime(value => value === runtime.id ? null : runtime.id)}>
                   {expandedRuntime === runtime.id ? "Hide details" : "Details"}
                 </button>
                 {usable && runtime.capabilities.includes("pty") ? (
                   <Button type="button" size="sm" onClick={() => {
                     createSession({
-                      cwd: runtime.activeSession?.cwd || activeProject?.workspaceRoot || undefined,
-                      connectionId: runtime.activeSession?.connectionId,
-                      instanceId: runtime.activeSession?.instanceId,
-                      lane: runtime.activeSession?.lane || "local",
+                      cwd: runtime.activeSession?.cwd || (runtime.id === "local" ? activeProject?.workspaceRoot : undefined),
+                      connectionId: runtime.activeSession?.connectionId || runtime.machine?.connection_id || undefined,
+                      instanceId: runtime.activeSession?.instanceId || runtime.machine?.id,
+                      lane: runtime.activeSession?.lane || (runtime.id === "gcp" ? "remote" : "local"),
                       runtimeLabel: runtime.activeSession?.runtimeLabel || runtime.name,
                     });
                     useWorkStore.getState().setTerminalOpen(true);
@@ -174,6 +181,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                 ) : runtime.id === "gcp" || runtime.id.startsWith("cf-") ? (
                   <a className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-xs hover:bg-muted" href="/admin/settings/customize?view=plugins">Provider settings</a>
                 ) : null}
+                </div>
               </div>
               {expandedRuntime === runtime.id ? (
                 <div className="mt-4 grid gap-3 border-t border-border pt-4 text-xs sm:grid-cols-3">

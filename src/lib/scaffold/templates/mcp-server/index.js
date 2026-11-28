@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { getMcpServerPreset } from './presets.js';
+import { resolveMcpRuntime, applyRuntimeAdapter } from './runtime-adapters.js';
 
 const DEFAULT_TOOLS = Object.freeze([
   {
@@ -89,8 +91,8 @@ function buildManifest(config) {
     name: config.projectName,
     display_name: config.displayName,
     version: config.version,
-    runtime: { kind: 'cloudflare-worker', language: 'javascript' },
-    transport: { kind: 'streamable_http', path: '/mcp', stateless: true },
+    runtime: { kind: config.runtime, language: config.runtime === 'python' ? 'python' : 'javascript' },
+    transport: config.transport === 'stdio' ? { kind: 'stdio' } : { kind: config.transport, path: '/mcp', stateless: true },
     resource: {
       audience: config.audience,
       homepage_url: config.homepageUrl,
@@ -108,291 +110,15 @@ function buildManifest(config) {
   };
 }
 
+// Standalone projects use the same canonical SDK runtime source, not a separately maintained template.
+const runtimeFile = name => readFileSync(new URL('../../../../mcp/server/' + name, import.meta.url), 'utf8');
+
 function workerSource(manifest) {
-  return `import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { authorizeMcpRequest, protectedResourceMetadata } from './oauth.js';
-import { registerTools } from './tools/index.js';
-
-const manifest = ${JSON.stringify(manifest, null, 2)};
-
-function jsonResponse(value, status = 200) {
-  return new Response(JSON.stringify(value, null, 2), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-  });
+  return runtimeFile('index.js') + '\nexport const manifest = ' + JSON.stringify(manifest, null, 2) +
+    ';\nexport const createServer = principal => createMcpServer(manifest, principal);\nexport default createMcpHttpHandler(manifest);\n';
 }
-
-function createServer(principal) {
-  const server = new McpServer({ name: manifest.name, version: manifest.version });
-  registerTools(server, { manifest, principal });
-  return server;
-}
-
-export { manifest };
-
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-
-    if (url.pathname === '/health' && request.method === 'GET') {
-      const authMode = env.MCP_AUTH_MODE || manifest.auth.type;
-      const issuerConfigured = Boolean(String(env.MCP_AUTH_ISSUER || manifest.auth.issuer || '').trim());
-      const audienceConfigured = Boolean(String(env.MCP_RESOURCE_AUDIENCE || manifest.resource.audience || '').trim());
-      const verifierConfigured = Boolean(String(env.MCP_TOKEN_VERIFY_URL || '').trim());
-      const ready = authMode === 'public' || (authMode === 'oauth' && issuerConfigured && audienceConfigured && verifierConfigured);
-      return jsonResponse({
-        ok: ready,
-        name: manifest.name,
-        version: manifest.version,
-        transport: manifest.transport.kind,
-        auth: authMode,
-        auth_configured: ready,
-        issuer_configured: issuerConfigured,
-        audience_configured: audienceConfigured,
-        verifier_configured: authMode === 'public' || verifierConfigured,
-        tool_count: manifest.tools.length,
-      }, ready ? 200 : 503);
-    }
-
-    if (url.pathname === manifest.auth.protected_resource_metadata && request.method === 'GET') {
-      const metadata = protectedResourceMetadata(manifest, env);
-      if (!metadata.resource || !metadata.authorization_servers.length) {
-        return jsonResponse({ ok: false, error: 'oauth_resource_configuration_incomplete' }, 503);
-      }
-      return jsonResponse(metadata);
-    }
-
-    if (url.pathname !== manifest.transport.path) {
-      return new Response('Not found', { status: 404 });
-    }
-
-    const authorization = await authorizeMcpRequest(request, manifest, env);
-    if (!authorization.ok) return authorization.response;
-
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-    const server = createServer(authorization.principal);
-    await server.connect(transport);
-    return transport.handleRequest(request);
-  },
-};
-`;
-}
-
-function oauthSource() {
-  return String.raw`function clean(value) {
-  return value == null ? '' : String(value).trim();
-}
-
-function list(value) {
-  if (Array.isArray(value)) return value.map(clean).filter(Boolean);
-  return clean(value).split(/[\s,]+/).filter(Boolean);
-}
-
-function unique(values) {
-  return [...new Set(values)];
-}
-
-function bearer(request) {
-  const match = clean(request.headers.get('authorization')).match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : '';
-}
-
-function jsonResponse(value, status, headers = {}) {
-  return new Response(JSON.stringify(value), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
-  });
-}
-
-function unauthorized(request, error = 'invalid_token') {
-  const metadataUrl = new URL('/.well-known/oauth-protected-resource', request.url).toString();
-  return jsonResponse({ ok: false, error }, 401, {
-    'www-authenticate': 'Bearer resource_metadata="' + metadataUrl + '"',
-  });
-}
-
-function forbidden(error, details = {}) {
-  return jsonResponse({ ok: false, error, ...details }, 403);
-}
-
-export function protectedResourceMetadata(manifest, env = {}) {
-  const issuer = clean(env.MCP_AUTH_ISSUER) || clean(manifest.auth.issuer);
-  const audience = clean(env.MCP_RESOURCE_AUDIENCE) || clean(manifest.resource.audience);
-  return {
-    resource: audience || undefined,
-    authorization_servers: issuer ? [issuer] : [],
-    scopes_supported: (manifest.scopes || []).map((item) => item.scope),
-    bearer_methods_supported: ['header'],
-    resource_documentation: manifest.resource.homepage_url || undefined,
-  };
-}
-
-export async function authorizeMcpRequest(request, manifest, env = {}) {
-  const mode = clean(env.MCP_AUTH_MODE) || clean(manifest.auth.type) || 'oauth';
-  if (mode === 'public') {
-    return {
-      ok: true,
-      principal: { kind: 'public', subject: 'public', scopes: (manifest.scopes || []).map((item) => item.scope) },
-    };
-  }
-  if (mode !== 'oauth') {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'unsupported_auth_mode' }, 500) };
-  }
-
-  const issuer = clean(env.MCP_AUTH_ISSUER) || clean(manifest.auth.issuer);
-  const expectedAudience = clean(env.MCP_RESOURCE_AUDIENCE) || clean(manifest.resource.audience);
-  if (!issuer || !expectedAudience) {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'oauth_resource_configuration_incomplete' }, 503) };
-  }
-
-  const token = bearer(request);
-  if (!token) return { ok: false, response: unauthorized(request, 'bearer_token_required') };
-
-  const verifier = clean(env.MCP_TOKEN_VERIFY_URL);
-  if (!verifier) {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'oauth_verifier_not_configured' }, 503) };
-  }
-
-  let verifierUrl;
-  try { verifierUrl = new URL(verifier); } catch {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'oauth_verifier_url_invalid' }, 503) };
-  }
-  if (verifierUrl.protocol !== 'https:') {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'oauth_verifier_https_required' }, 503) };
-  }
-
-  let verified;
-  try {
-    const response = await fetch(verifierUrl.toString(), {
-      method: 'GET',
-      redirect: 'manual',
-      headers: { authorization: 'Bearer ' + token, accept: 'application/json' },
-      signal: AbortSignal.timeout(5000),
-    });
-    verified = await response.json().catch(() => ({}));
-    if (!response.ok || verified?.active !== true) {
-      return { ok: false, response: unauthorized(request) };
-    }
-  } catch {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'oauth_verifier_unreachable' }, 503) };
-  }
-
-  const audiences = unique([
-    ...list(verified?.aud),
-    ...list(verified?.audience),
-  ]);
-  if (!expectedAudience || !audiences.includes(expectedAudience)) {
-    return { ok: false, response: forbidden('token_audience_mismatch') };
-  }
-
-  const scopes = unique([
-    ...list(verified?.scope),
-    ...list(verified?.scopes),
-  ]);
-  const subject = clean(verified?.sub) || clean(verified?.user_id) || clean(verified?.account_id) || clean(verified?.client_id) || null;
-
-  return {
-    ok: true,
-    principal: {
-      kind: 'oauth',
-      subject,
-      account_id: clean(verified?.account_id) || null,
-      user_id: clean(verified?.user_id) || null,
-      client_id: clean(verified?.client_id) || null,
-      scopes,
-    },
-  };
-}
-`;
-}
-
-function toolsSource() {
-  return `import { z } from 'zod';
-
-function textResult(value, structuredContent) {
-  return {
-    content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }],
-    structuredContent,
-  };
-}
-
-function toolError(error, details = {}) {
-  return {
-    isError: true,
-    content: [{ type: 'text', text: error }],
-    structuredContent: { error, ...details },
-  };
-}
-
-function registerAuthorizedTool(server, manifest, principal, name, inputSchema, handler) {
-  const definition = manifest.tools.find((item) => item.name === name);
-  if (!definition) throw new Error('mcp_tool_manifest_entry_missing:' + name);
-
-  server.registerTool(name, {
-    title: definition.title,
-    description: definition.description,
-    inputSchema,
-    annotations: definition.annotations,
-  }, async (input) => {
-    const granted = new Set(principal?.scopes || []);
-    const required = definition.required_scopes || [];
-    const missing = principal?.kind === 'public' ? [] : required.filter((scope) => !granted.has(scope));
-    if (missing.length) return toolError('insufficient_scope', { missing_scopes: missing });
-    return handler(input);
-  });
-}
-
-export function registerTools(server, { manifest, principal }) {
-  registerAuthorizedTool(server, manifest, principal, 'system.health', {}, async () => {
-    const health = {
-      ok: true,
-      name: manifest.name,
-      version: manifest.version,
-      tool_count: manifest.tools.length,
-      checked_at: new Date().toISOString(),
-    };
-    return textResult(health, health);
-  });
-
-  registerAuthorizedTool(server, manifest, principal, 'system.info', {}, async () => {
-    const info = { manifest, tools: manifest.tools };
-    return textResult(info, info);
-  });
-
-  registerAuthorizedTool(server, manifest, principal, 'text.transform', {
-    text: z.string().max(10000),
-    operation: z.enum(['trim', 'uppercase', 'lowercase', 'slugify']),
-  }, async ({ text, operation }) => {
-    let result = text;
-    if (operation === 'trim') result = text.trim();
-    if (operation === 'uppercase') result = text.toUpperCase();
-    if (operation === 'lowercase') result = text.toLowerCase();
-    if (operation === 'slugify') {
-      result = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    }
-    return textResult(result, { operation, result });
-  });
-
-  registerAuthorizedTool(server, manifest, principal, 'math.calculate', {
-    left: z.number().finite(),
-    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
-    right: z.number().finite(),
-  }, async ({ left, operation, right }) => {
-    if (operation === 'divide' && right === 0) return toolError('division_by_zero');
-    const result = operation === 'add' ? left + right
-      : operation === 'subtract' ? left - right
-        : operation === 'multiply' ? left * right
-          : left / right;
-    if (!Number.isFinite(result)) return toolError('calculation_result_out_of_range');
-    return textResult(result, { left, operation, right, result });
-  });
-}
-`;
-}
+function oauthSource() { return runtimeFile('oauth.js'); }
+function toolsSource() { return runtimeFile('tools/index.js'); }
 
 function oauthTestSource() {
   return `import assert from 'node:assert/strict';
@@ -416,7 +142,7 @@ async function withVerifier(claims, run, status = 200) {
 }
 
 test('OAuth accepts a standard bearer header and requires an active matching audience', async () => {
-  await withVerifier({ active: true, aud: ['https://mcp.example.test/mcp'], scope: 'mcp:read', sub: 'user-1' }, async (authorization) => {
+  await withVerifier({ active: true, iss: 'https://issuer.example.test', aud: ['https://mcp.example.test/mcp'], scope: 'mcp:read', sub: 'user-1' }, async (authorization) => {
     const request = new Request('https://mcp.example.test/mcp', { headers: { authorization: 'Bearer test-token' } });
     const result = await authorizeMcpRequest(request, manifest, { MCP_AUTH_MODE: 'oauth', MCP_TOKEN_VERIFY_URL: 'https://issuer.example.test/introspect' });
     assert.equal(result.ok, true);
@@ -427,13 +153,23 @@ test('OAuth accepts a standard bearer header and requires an active matching aud
 });
 
 test('OAuth accepts string and array claim formats without weakening audience checks', async () => {
-  await withVerifier({ active: true, audience: 'https://mcp.example.test/mcp', scopes: ['mcp:read', 'profile'], client_id: 'client-1' }, async () => {
+  await withVerifier({ active: true, iss: 'https://issuer.example.test', audience: 'https://mcp.example.test/mcp', scopes: ['mcp:read', 'profile'], client_id: 'client-1' }, async () => {
     const request = new Request('https://mcp.example.test/mcp', { headers: { authorization: 'bEaReR token-2' } });
     const result = await authorizeMcpRequest(request, manifest, { MCP_TOKEN_VERIFY_URL: 'https://issuer.example.test/introspect' });
     assert.equal(result.ok, true);
     assert.equal(result.principal.subject, 'client-1');
     assert.deepEqual(result.principal.scopes, ['mcp:read', 'profile']);
   });
+});
+
+test('OAuth rejects missing or mismatched issuer claims', async () => {
+  for (const iss of [undefined, 'https://other.example.test']) {
+    await withVerifier({ active: true, iss, aud: 'https://mcp.example.test/mcp', scope: 'mcp:read' }, async () => {
+      const result = await authorizeMcpRequest(new Request('https://mcp.example.test/mcp', { headers: { authorization: 'Bearer test-token' } }), manifest, { MCP_TOKEN_VERIFY_URL: 'https://issuer.example.test/introspect' });
+      assert.equal(result.response.status, 403);
+      assert.match(await result.response.text(), /token_issuer_mismatch/);
+    });
+  }
 });
 
 test('OAuth rejects missing bearer tokens before calling the verifier', async () => {
@@ -486,7 +222,7 @@ test('OAuth rejects inactive tokens', async () => {
 });
 
 test('OAuth rejects tokens minted for another resource', async () => {
-  await withVerifier({ active: true, aud: 'https://other.example.test/mcp', scope: 'mcp:read' }, async () => {
+  await withVerifier({ active: true, iss: 'https://issuer.example.test', aud: 'https://other.example.test/mcp', scope: 'mcp:read' }, async () => {
     const request = new Request('https://mcp.example.test/mcp', { headers: { authorization: 'Bearer wrong-audience' } });
     const result = await authorizeMcpRequest(request, manifest, { MCP_TOKEN_VERIFY_URL: 'https://issuer.example.test/introspect' });
     assert.equal(result.ok, false);
@@ -508,10 +244,13 @@ test('OAuth verifier transport failures are reported as unavailable', async () =
 });
 
 test('public mode is explicit and protected-resource metadata is complete', async () => {
-  const request = new Request('https://mcp.example.test/mcp');
+  const request = new Request('http://127.0.0.1:8787/mcp');
   const result = await authorizeMcpRequest(request, manifest, { MCP_AUTH_MODE: 'public' });
   assert.equal(result.ok, true);
   assert.equal(result.principal.kind, 'public');
+  const remote = await authorizeMcpRequest(new Request('https://mcp.example.test/mcp'), manifest, { MCP_AUTH_MODE: 'public' });
+  assert.equal(remote.response.status, 403);
+  assert.match(await remote.response.text(), /public_mcp_loopback_only/);
   const metadata = protectedResourceMetadata(manifest, {});
   assert.equal(metadata.resource, 'https://mcp.example.test/mcp');
   assert.deepEqual(metadata.authorization_servers, ['https://issuer.example.test']);
@@ -528,7 +267,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import worker, { manifest } from '../src/index.js';
 
 async function connectClient(env, token = 'test-token') {
-  const transport = new StreamableHTTPClientTransport(new URL('https://mcp.example.test/mcp'), {
+  const transport = new StreamableHTTPClientTransport(new URL(env.MCP_AUTH_MODE === 'public' ? 'http://127.0.0.1:8787/mcp' : 'https://mcp.example.test/mcp'), {
     requestInit: { headers: { authorization: 'Bearer ' + token } },
     fetch: (url, init) => worker.fetch(new Request(url, init), env),
   });
@@ -589,6 +328,7 @@ test('OAuth-authenticated tools enforce their declared scopes', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({
     active: true,
+    iss: 'https://issuer.example.test',
     aud: 'https://mcp.example.test/mcp',
     scope: 'profile',
     sub: 'user-without-mcp-read',
@@ -645,13 +385,14 @@ The server uses a fail-closed token introspection adapter. Set \`MCP_TOKEN_VERIF
 \`\`\`json
 {
   "active": true,
+  "iss": "${config.issuer}",
   "aud": "${config.audience}",
   "scope": "mcp:read",
   "sub": "authenticated-subject"
 }
 \`\`\`
 
-The verifier receives the incoming token in the \`Authorization: Bearer\` header. The Worker requires an active token and an exact resource audience match. Individual tools enforce their own \`required_scopes\` from \`agentsam.mcp.json\`.
+The verifier receives the incoming token in the \`Authorization: Bearer\` header. The Worker requires an active token, an exact issuer claim and an exact resource audience match. Individual tools enforce their own \`required_scopes\` from \`agentsam.mcp.json\`.
 
 Configure the verifier as a Worker secret before deploying:
 
@@ -676,10 +417,15 @@ The generated test suite exercises OAuth failure paths, audience and scope enfor
 export function resolveMcpServerTemplateConfig(input = {}) {
   const projectName = slug(input.projectName || input.name || 'my-mcp-server');
   const preset = getMcpServerPreset(input.preset || 'heuristics');
-  const authMode = String(input.authMode || preset.authMode || 'oauth').trim().toLowerCase();
-  if (!['oauth', 'public'].includes(authMode)) throw new Error('mcp_auth_mode_invalid:' + authMode);
+  const target = resolveMcpRuntime(input);
+  const authMode = String(input.authMode || (target.transport === 'stdio' ? 'local' : preset.authMode) || 'oauth').trim().toLowerCase();
+  if (!(target.transport === 'stdio' ? ['local'] : ['oauth', 'public']).includes(authMode)) throw new Error('mcp_auth_mode_invalid:' + authMode);
+  if (target.transport === 'stdio' && (input.issuer || input.audience)) throw new Error('mcp_stdio_oauth_not_supported');
+  if (input.pythonSdkSource && target.runtime !== 'python') throw new Error('mcp_python_sdk_source_requires_python');
   const scopes = normalizeScopes(input.scopes || preset.scopes);
   return Object.freeze({
+    ...target,
+    pythonSdkSource: input.pythonSdkSource ? String(input.pythonSdkSource) : '',
     projectName,
     displayName: String(input.displayName || projectName.split('-').map((part) => {
       const word = part.toLowerCase();
@@ -716,7 +462,7 @@ export function mcpServerTemplates(input = {}) {
     devDependencies: { wrangler: '4.157.0' },
   };
 
-  return {
+  return applyRuntimeAdapter(config, {
     'package.json': JSON.stringify(packageJson, null, 2) + '\n',
     'agentsam.mcp.json': JSON.stringify(manifest, null, 2) + '\n',
     'wrangler.jsonc': JSON.stringify({
@@ -752,5 +498,5 @@ export function mcpServerTemplates(input = {}) {
     'test/oauth.test.js': oauthTestSource(),
     'test/transport.test.js': transportTestSource(),
     'README.md': readme(config),
-  };
+  });
 }

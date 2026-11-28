@@ -14,10 +14,8 @@ const cleanNpmEnv = Object.fromEntries(
 
 const root = process.cwd();
 const pkgPath = path.join(root, "packages/agentsam-workbench/package.json");
-const rootPkgPath = path.join(root, "package.json");
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, "utf8"));
 
 let failed = false;
 
@@ -36,11 +34,8 @@ if (pkg.name !== "@inneranimalmedia/agentsam-workbench") {
   pass("canonical workbench package identified");
 }
 
-if (pkg.version !== rootPkg.version) {
-  fail(`workbench ${pkg.version} != release train ${rootPkg.version}`);
-} else {
-  pass(`release train version aligned at ${pkg.version}`);
-}
+// Verify the workbench as its own distribution, not as a lockstep SDK release.
+pass(`workbench package version: ${pkg.version}`);
 
 const exportsMap = pkg.exports || {};
 

@@ -9,12 +9,9 @@
     "status",
     "terminal",
     "parentRunId",
-    "planId",
-    "todoId",
     "usage",
     "timing",
     "error",
-    "suspension",
     "eventCount",
     "childRunCount",
     "lastEvent"
@@ -31,7 +28,7 @@
       "enum": [
         "queued",
         "running",
-                "waiting_external",
+        "waiting_external",
         "waiting_child",
         "awaiting_input",
         "awaiting_approval",
@@ -48,18 +45,6 @@
       "type": "boolean"
     },
     "parentRunId": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "planId": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "todoId": {
       "type": [
         "string",
         "null"
@@ -173,16 +158,6 @@
         }
       ]
     },
-    "suspension": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/$defs/suspension"
-        }
-      ]
-    },
     "eventCount": {
       "type": "integer",
       "minimum": 0
@@ -203,70 +178,6 @@
     }
   },
   "$defs": {
-    "suspension": {
-      "type": "object",
-      "required": [
-        "runId",
-        "state",
-        "reason"
-      ],
-      "properties": {
-        "runId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "state": {
-          "enum": [
-            "waiting_external",
-            "waiting_child",
-            "awaiting_input",
-            "awaiting_approval",
-            "sleeping",
-            "retry_scheduled"
-          ]
-        },
-        "reason": {
-          "enum": [
-            "external",
-            "child_run",
-            "approval",
-            "input",
-            "retry",
-            "scheduled",
-            "rate_limit"
-          ]
-        },
-        "wakeAt": {
-          "type": "number"
-        },
-        "wakeEvent": {
-          "type": "string"
-        },
-        "dependencyRunIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "attempt": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "resumeStepId": {
-          "type": "string"
-        },
-        "checkpointRef": {
-          "type": "string"
-        },
-        "expiresAt": {
-          "type": "number"
-        },
-        "metadata": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
     "event": {
       "type": "object",
       "required": [
@@ -305,7 +216,7 @@
           "enum": [
             "queued",
             "running",
-                        "waiting_external",
+            "waiting_external",
             "waiting_child",
             "awaiting_input",
             "awaiting_approval",

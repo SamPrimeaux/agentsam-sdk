@@ -43,6 +43,7 @@
     "./oauth/goaude": "./src/oauth/goaude.js",
     "./server/mount-policy": "./src/server/mount-policy.js",
     "./server/worker-router": "./src/server/worker-router.js",
+    "./server/mcp-workspace-policy": "./src/server/mcp-workspace-policy.js",
     "./core/password-crypto": "./src/core/password-crypto.js",
     "./core/password-gate": "./src/core/password-gate.js",
     "./frontend/auth-portal/store-access": "./src/frontend/auth-portal/store-access.js"

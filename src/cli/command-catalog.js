@@ -91,7 +91,10 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
     topic: 'runtime',
     skill: 'agentsam-cloudflare-workers',
     usage: [
-      'agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public]',
+      'agentsam mcp create <name> [--preset <preset>] [--runtime <runtime>] [--python-sdk-source <dir>] [--transport <transport>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public]',
+      'agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]',
+      'agentsam mcp register <name> --url <https-url> [--write]',
+      'agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>',
       'agentsam mcp add <name> [--client <client>|all] [--url <url>]',
       'agentsam mcp connect inneranimalmedia [--write]',
       'agentsam mcp list [--catalog|--bundles] [--json]',

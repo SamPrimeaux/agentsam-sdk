@@ -74,7 +74,7 @@ export function McpManagementPage(){
     <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 pb-5">
       <div>
         <h2 className="text-lg font-semibold text-foreground">MCP servers</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Registered platform servers and your own MCP endpoints. Connection authorization, installed plugins and executable tools remain separate verified states.</p>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Register your MCP endpoints, then authorize connections and tools in Plugins. Local servers run on your registered machines; registration alone never grants tool or filesystem access.</p>
       </div>
       <div className="flex items-center gap-2">
         <button type="button" disabled={loading||busy} onClick={()=>void load()} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs hover:bg-muted disabled:opacity-40"><RefreshCw size={14}/> Refresh</button>
@@ -82,6 +82,12 @@ export function McpManagementPage(){
       </div>
     </header>
 
+    <div className="flex flex-wrap gap-2 text-xs"><a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/agents?view=policy">Execution policy</a><a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/storage">Storage &amp; device access</a></div>
+    <div className="rounded-lg border border-border p-3 text-xs leading-relaxed text-muted-foreground">
+      <p className="font-medium text-foreground">Local workspace access</p>
+      <p className="mt-1">Off by default. Local MCP reads require an enrolled machine, an account-authorized workspace and a live device folder capability. Browser folder permissions stay in your browser and are never transferred to a remote MCP server.</p>
+      <a href="/admin/settings/runtime" className="mt-2 inline-flex font-medium text-foreground underline underline-offset-2">Manage machines and runtimes</a>
+    </div>
     {error?<p role="alert" className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive">{error}</p>:null}
     {draft?<div className="space-y-4 rounded-lg border border-border bg-card p-5">
       <header className="flex items-center justify-between"><h3 className="font-semibold">{draft.id?"Edit MCP server":"Register MCP server"}</h3><IconAction label="Close editor" variant="ghost" onClick={()=>setDraft(null)}><X className="size-4"/></IconAction></header>
@@ -101,8 +107,8 @@ export function McpManagementPage(){
     <div className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border/80">
       {loading?<p className="p-5 text-sm text-muted-foreground">Checking MCP registry…</p>:null}
       {!loading&&!servers.length?<p className="p-5 text-sm text-muted-foreground">No MCP servers are registered. Add an HTTPS server to begin.</p>:null}
-      {!loading&&servers.map(server=><div key={server.id} className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+      {!loading&&servers.map(server=><div key={server.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex w-full min-w-0 flex-1 items-start gap-3">
           <Server size={16} className="mt-1 shrink-0 text-muted-foreground"/>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -114,11 +120,11 @@ export function McpManagementPage(){
             <div className="text-[11px] text-muted-foreground">Last recorded health: {server.health||"unknown"}{server.lastCheckedAt?" · "+new Date(server.lastCheckedAt*1000).toLocaleString():" · not checked"} · {server.authType||"none"} auth</div>
           </div>
         </div>
-        {server.managed?<div className="flex items-center gap-2">
+        {server.managed?<div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           <span className="text-[11px] text-muted-foreground">{server.enabled?"Active":"Not connected"}</span>
           <IconAction label={"Edit "+server.name} variant="ghost" disabled={busy} onClick={()=>setDraft({id:server.id,name:server.name,url:server.url||""})}><Pencil className="size-4"/></IconAction>
           {confirmDelete===server.id?<span className="flex items-center gap-1"><button type="button" disabled={busy} className="text-xs text-destructive" onClick={()=>void mutate("DELETE",server.id)}>Confirm delete</button><button type="button" className="text-xs" onClick={()=>setConfirmDelete(null)}>Cancel</button></span>:<IconAction label={"Delete "+server.name} variant="ghost" disabled={busy} onClick={()=>setConfirmDelete(server.id)}><Trash2 className="size-4"/></IconAction>}
-        </div>:<a href="/admin/settings/customize?view=plugins" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs hover:bg-muted">Plugins <ExternalLink size={12}/></a>}
+        </div>:<a href="/admin/settings/customize?view=plugins" className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs hover:bg-muted">Plugins <ExternalLink size={12}/></a>}
       </div>)}
     </div>
   </section>;

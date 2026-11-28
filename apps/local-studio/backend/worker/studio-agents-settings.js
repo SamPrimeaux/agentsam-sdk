@@ -105,13 +105,19 @@ async function profiles(request,env,accountId) {
    return response({ok:false,error:"agent_write_unavailable"},503);
  }
 }
-const POLICY_FIELDS=["allow_subagent_spawn","allow_fanout_execution","max_spawn_depth","require_allowlist_for_mcp"];
+const PROTECTION_FIELDS={externalFileProtection:"external_file_protection",fileDeletionProtection:"file_deletion_protection",mcpToolsProtection:"mcp_tools_protection",ignoreSymlinks:"ignore_symlinks",canRunPty:"can_run_pty"};
+const POLICY_FIELDS=["allow_subagent_spawn","allow_fanout_execution","max_spawn_depth","require_allowlist_for_mcp",...Object.values(PROTECTION_FIELDS)];
 function normalizePolicy(raw){
  return {
   allowSubagentSpawn:raw?.allow_subagent_spawn===1,
   allowFanoutExecution:raw?.allow_fanout_execution===1,
   maxSpawnDepth:raw?.max_spawn_depth??1,
   requireAllowlistForMcp:raw?.require_allowlist_for_mcp!==0,
+  externalFileProtection:raw?.external_file_protection!==0,
+  fileDeletionProtection:raw?.file_deletion_protection!==0,
+  mcpToolsProtection:raw?.mcp_tools_protection!==0,
+  ignoreSymlinks:raw?.ignore_symlinks===1,
+  canRunPty:raw?.can_run_pty===1,
  };
 }
 async function policy(request,env,accountId){
@@ -125,8 +131,10 @@ async function policy(request,env,accountId){
  const raw=await request.json().catch(()=>null);
  if(!raw||typeof raw!=="object"||typeof raw.allowSubagentSpawn!=="boolean"||
     typeof raw.allowFanoutExecution!=="boolean"||typeof raw.requireAllowlistForMcp!=="boolean"||
-    !Number.isInteger(raw.maxSpawnDepth)||raw.maxSpawnDepth<1||raw.maxSpawnDepth>5)
+    !Number.isInteger(raw.maxSpawnDepth)||raw.maxSpawnDepth<1||raw.maxSpawnDepth>5||
+    Object.keys(PROTECTION_FIELDS).some(k=>k in raw&&typeof raw[k]!=="boolean"))
      return response({ok:false,error:"agent_policy_invalid"},400);
+ const changes=Object.entries(PROTECTION_FIELDS).filter(([k])=>k in raw);
  await env.DB.prepare(`INSERT INTO agentsam_user_policy
    (user_id,workspace_id,allow_subagent_spawn,allow_fanout_execution,max_spawn_depth,require_allowlist_for_mcp)
    VALUES (?,'',?,?,?,?)
@@ -138,7 +146,10 @@ async function policy(request,env,accountId){
    updated_at=datetime('now')`)
   .bind(accountId,Number(raw.allowSubagentSpawn),Number(raw.allowFanoutExecution),
    raw.maxSpawnDepth,Number(raw.requireAllowlistForMcp)).run();
- return response({ok:true,policy:raw});
+ if(changes.length)await env.DB.prepare(`UPDATE agentsam_user_policy SET ${changes.map(([,column])=>column+"=?").join(",")},updated_at=datetime('now') WHERE user_id=? AND workspace_id=''`)
+   .bind(...changes.map(([key])=>Number(raw[key])),accountId).run();
+ const row=await env.DB.prepare(`SELECT ${POLICY_FIELDS.join(",")} FROM agentsam_user_policy WHERE user_id=? AND workspace_id='' LIMIT 1`).bind(accountId).first();
+ return response({ok:true,policy:normalizePolicy(row)});
 }
 export async function handleStudioAgentSettings(request,env,accountId){
  if(!accountId)return response({ok:false,error:"unauthorized"},401);

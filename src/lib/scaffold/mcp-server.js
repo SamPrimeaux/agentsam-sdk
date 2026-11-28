@@ -17,8 +17,14 @@ async function directoryHasEntries(dir) {
 }
 
 export async function createMcpServerProject(input = {}, options = {}) {
-  const config = resolveMcpServerTemplateConfig(input);
   const cwd = path.resolve(options.cwd || process.cwd());
+  const pythonSdkSource = input.pythonSdkSource ? path.resolve(cwd, input.pythonSdkSource) : '';
+  if (pythonSdkSource) {
+    const manifest = await fs.readFile(path.join(pythonSdkSource, 'pyproject.toml'), 'utf8');
+    if (!/^name\s*=\s*"agentsam-sdk"/m.test(manifest)) throw new Error('mcp_python_sdk_source_invalid');
+    await fs.access(path.join(pythonSdkSource, 'agentsam_sdk', 'mcp', '__init__.py'));
+  }
+  const config = resolveMcpServerTemplateConfig({...input, pythonSdkSource});
   const outputDir = path.resolve(cwd, input.outputDir || input.output || config.projectName);
   const force = Boolean(input.force || options.force);
 
@@ -40,9 +46,12 @@ export async function createMcpServerProject(input = {}, options = {}) {
     tool_count: manifest.tools.length,
     tool_names: manifest.tools.map((tool) => tool.name),
     auth_mode: config.authMode,
-    test_command: 'npm test',
+    install_command: config.runtime === 'python' ? 'uv sync' : 'npm install',
+    test_command: config.runtime === 'python' ? 'uv run python -m unittest discover -s tests' : 'npm test',
+    dev_command: config.runtime === 'python' ? 'uv run python server.py' : 'npm run dev',
     manifest_path: path.join(outputDir, 'agentsam.mcp.json'),
-    transport: 'streamable_http',
-    endpoint_path: '/mcp',
+    runtime: config.runtime,
+    transport: config.transport,
+    endpoint_path: config.transport === 'stdio' ? null : '/mcp',
   });
 }

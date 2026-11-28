@@ -24,6 +24,8 @@ import {
   IAM_MCP_RESOURCE, IAM_MCP_SCOPE, IAM_MCP_WRITE_SCOPE, IAM_MCP_SERVER, describeMcpServer, resolveMcpResourceServer, McpResourceError,
 } from '../mcp/oauth-connection.js';
 import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
+import { runMcpProject } from '../lib/scaffold/mcp-project.js';
+import { requestStudioMcp, serveNativeWorkspace } from '../mcp/server/studio-host.js';
 import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
 
 async function probeMcpServer(server, name, options) {
@@ -69,6 +71,11 @@ export function parseMcpArgs(argv = []) {
   let bundles = false;
   let pack = '';
   let preset = '';
+  let runtime = '';
+  let pythonSdkSource = '';
+  let workspaceId = '';
+  let connectionId = '';
+  let transport = '';
   let output = '';
   let issuer = '';
   let audience = '';
@@ -86,6 +93,11 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--token') token = argv[++i] || '';
     else if (arg === '--pack') pack = argv[++i] || '';
     else if (arg === '--preset') preset = argv[++i] || '';
+    else if (arg === '--runtime') runtime = argv[++i] || '';
+    else if (arg === '--python-sdk-source') pythonSdkSource = argv[++i] || '';
+    else if (arg === '--workspace-id') workspaceId = argv[++i] || '';
+    else if (arg === '--connection-id') connectionId = argv[++i] || '';
+    else if (arg === '--transport') transport = argv[++i] || '';
     else if (arg === '--output' || arg === '--out') output = argv[++i] || '';
     else if (arg === '--issuer') issuer = argv[++i] || '';
     else if (arg === '--audience') audience = argv[++i] || '';
@@ -110,6 +122,11 @@ export function parseMcpArgs(argv = []) {
     token,
     pack: pack.toLowerCase(),
     preset: preset.toLowerCase(),
+    runtime,
+    pythonSdkSource,
+    workspaceId,
+    connectionId,
+    transport,
     output,
     issuer,
     audience,
@@ -154,7 +171,10 @@ function renderHelp(options = {}) {
   AgentSam · MCP Factory + Client Management
 
   Usage:
-    agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
+    agentsam mcp create <name> [--preset <preset>] [--runtime cloudflare-worker|node|python] [--python-sdk-source <dir>] [--transport streamable_http|stdio] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
+    agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]
+    agentsam mcp register <name> --url <https-url> [--write]
+    agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
     agentsam mcp add browsermcp --client agentsam  Local Chrome extension MCP (Node 20+)
     agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
@@ -197,12 +217,37 @@ export async function runMcp(argv = [], options = {}) {
 
   const { subcommand, target } = args;
 
+  if (subcommand === 'register') {
+    if (!target || !args.url) throw new McpResourceError('mcp_register_name_and_url_required', 'agentsam mcp register <name> --url <https-url>');
+    if (args.writeAccess) await (options.authenticateImpl || authenticateViaBrowser)({
+      ...options, scope:'openid profile email offline_access iam:agent',
+    });
+    const result=await requestStudioMcp('',{...options,env:{...process.env,...options.env,AGENTSAM_API_KEY:''},method:'POST',body:{name:target,url:args.url}});
+    write(args.json?JSON.stringify(result,null,2)+'\n':'Registered (disabled): '+result.server.id+'; authorize in Settings → Customize → MCPs.\n');
+    return result;
+  }
+  if (subcommand === 'serve-workspace') {
+    if (!target || !args.workspaceId || !args.connectionId) throw new McpResourceError('mcp_workspace_root_and_ids_required', 'agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>');
+    await serveNativeWorkspace({...options,root:target,workspaceId:args.workspaceId,connectionId:args.connectionId});
+    return null;
+  }
+
+  if (['validate','inspect','install','test','build','dev','deploy'].includes(subcommand)) {
+    const result = await runMcpProject(subcommand, target || '.', options);
+    if (args.json || subcommand === 'inspect') write(JSON.stringify(result, null, 2) + '\n');
+    else if (subcommand === 'validate') write(`Valid MCP project: ${result.manifest.name} · ${result.runtime} · ${result.transport}\n`);
+    return result;
+  }
+
   if (subcommand === 'create') {
     if (!target) throw new Error('mcp_project_name_required');
     const preset = args.preset || 'heuristics';
     const result = await createMcpServerProject({
       projectName: target,
       preset,
+      runtime: args.runtime || undefined,
+      pythonSdkSource: args.pythonSdkSource || undefined,
+      transport: args.transport || undefined,
       output: args.output || target,
       issuer: args.issuer || undefined,
       audience: args.audience || undefined,
@@ -222,7 +267,8 @@ export async function runMcp(argv = [], options = {}) {
     write(`      preset:    ${result.preset}\n`);
     write(`      output:    ${result.output_dir}\n`);
     write(`      manifest:  ${result.manifest_path}\n`);
-    write(`      endpoint:  ${result.transport} ${result.endpoint_path}\n`);
+    write(`      runtime:   ${result.runtime}\n`);
+    write(`      endpoint:  ${result.transport} ${result.endpoint_path || ""}\n`);
     write(`      tools:     ${result.tool_count} executable tools\n`);
     write(`      auth:      ${result.auth_mode}\n`);
     write(`      verify:    ${result.test_command}\n\n`);

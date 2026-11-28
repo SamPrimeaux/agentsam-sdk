@@ -9,6 +9,7 @@ import { decideChatIdentity } from "./studio-chat-gate.js";
 import { resolveStudioSessionUser, resolveStudioAccountIdForUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
 import { serveStudioMerchantStart } from "./studio-merchant-start.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
+import { resolveMcpCliAccount, handleMcpWorkspacePolicy } from "./studio-mcp-authority.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "@inneranimalmedia/agentsam-connector-cloudflare/routes";
@@ -1587,7 +1588,14 @@ export default {
     }
     if (isStudioMcps) {
       try {
-        return await handleStudioMcps(request,env,await sessionUser());
+        if(url.pathname==="/api/settings/mcps/workspace-policy"){
+          const accountId=await resolveMcpCliAccount(request,env,"workspace");
+          return await handleMcpWorkspacePolicy(request,env,accountId);
+        }
+        const accountId=request.headers.has("authorization")
+          ? await resolveMcpCliAccount(request,env,"register")
+          : await sessionAccount();
+        return await handleStudioMcps(request,env,accountId);
       } catch(error) {
         console.warn('studio_mcps_error',String(error?.message||error).slice(0,150));
         return json({ok:false,error:'mcp_registry_unavailable'},503);

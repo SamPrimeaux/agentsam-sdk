@@ -162,7 +162,7 @@
       "description": "Add an explicit feature/capability selection",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "c2247e7e09f3c2701b1f2ecf41bb2e7e8a01979c5a3dbf00f10bbda378e8bd8e",
+      "source_sha256": "092a0ca430c12aa7b0de34ea3fead12aa4aee2f77bbaa5f4bbff6147a461a891",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -185,7 +185,7 @@
       "description": "Create/list/rotate AgentSam API keys (aak_*)",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "e354ac95072bd49a07c6479ae117125b2de19a2b0b9a110c7a2a0b67232d5161",
+      "source_sha256": "197887d4345b3fae727040e9674488bfa325462a1f7672458b3c199768d39f1a",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -207,7 +207,7 @@
       "description": "Bundled AgentSam apps launcher",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "b043c903f90d5f2fd4fa171fcd8d0221b7dab7292c5971c7437a8df76b7f1265",
+      "source_sha256": "e1429c35f9adb1e35b5667c09a593f18f545162f9fcd9b0cf53940b057827960",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -227,7 +227,7 @@
       "description": "Choose software architecture using deterministic questions",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "1bb86ff8ab18ef33da67769f78060ced4b4bb9282e7bb842da75b017feaafc2e",
+      "source_sha256": "3a7feacea78bd7c3cb025504f645e9c54a10d12012149914a9be898073e059c5",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -247,7 +247,7 @@
       "description": "Inspect live code AST and creative resource objects without an index",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "9424ed5db74bcc8422925fe3e3090ea79cddf7a39884afea59e9b633b36d79ed",
+      "source_sha256": "d94a78d8361b3442f298f1e0f6f317d9ed749f5dd1184851cc30310115cdb234",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -267,7 +267,7 @@
       "description": "AutoRAG configure/probe helpers",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "f52e481c79ef7a091f996cfe8f11eea9023548f39ca9f4287cd4d9f638e8a7b0",
+      "source_sha256": "a609812f55ed2ef489f39292a9e20ff65e6ba9cf40adcdba20f9ef51d1fef729",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -289,7 +289,7 @@
       "description": "Billing account relationships (not --billing-project)",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "2507682e16980aa9b4777ee7d36621809b806d7eecb2354d13c2d4c0478d746a",
+      "source_sha256": "8289f2c1f11bb10b747bc9c568716fa38bcaf98b3e8430b7233fe4e234dc976a",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -309,7 +309,7 @@
       "description": "Deterministic brand intelligence",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "e242a8d38766144016b3f51b2d3f81548d4447b132740b86d1fe7ca5823e6bd5",
+      "source_sha256": "6b6bd77426fa0df67876ab9ee456f42ebd2764b9961258aa0a350fc2af6b46d9",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -329,7 +329,7 @@
       "description": "CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "7b872626e4cf5de015a0cfd98cad6a675660c84677ad62c40637ba1a97d5bbec",
+      "source_sha256": "d1b44c78e4cb17b5d2ace8fb674a4e6c14cd4c6f5123fd9ead15d06cadf3f4ae",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -349,7 +349,7 @@
       "description": "Inspect capability contracts, including experimental and package-only APIs",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ff462ea04e3eb5efaae3d432c09010f47b1b04b539f97bf3de451ddec519a599",
+      "source_sha256": "741c51939399bea06375d13e09ac5eae62490e0d49b12ac15f1333a8ad6f2c03",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -371,7 +371,7 @@
       "description": "Organized command groups (gcloud-like)",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "b28267f8e405128d728f23efb1c3623ea799cc0adf9e1b32bbc61521c448594f",
+      "source_sha256": "47d4c3cbe6d34ba69ee351de94015d72c8b61e09973097e59648eac703305585",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -391,7 +391,7 @@
       "description": "Choose an execution runtime from explicit goals",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ed49d3797c82659556a6b9af0734ab0b15fe7c4d30be699dbca92d30c5c36c22",
+      "source_sha256": "07947fca16a4def87496d548b319d250e0fa08a04f258b0ff86fd99bf3cd4846",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -413,7 +413,7 @@
       "description": "Wrangler reads + Worker CPU profiles",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "950b8fa5f98cb1ff2d97b21319f0d713f40cb46750e9ea935722ba70ed2a5c95",
+      "source_sha256": "9be9c137a39e2205491513709b05a625ed4f2192703662204bb0ea470aec1d82",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -436,7 +436,7 @@
       "description": "Guided codebase ingest: materials, allowlist, embeddings, storage",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "0ade3685285ee06636614994171ff954c47550e961eca551b361bcc46115ecb7",
+      "source_sha256": "76bd1054f7117c4405392c1152b45e651600aa5b50d5c63a50a5e250874f6045",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -456,7 +456,7 @@
       "description": "Alias for google-cloud compute/iam helpers",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "4bfff6dce785c31a66fe381c1505156d3ef4c48677083ebb7df649f8bfb6e895",
+      "source_sha256": "76cb8336231a0b329cf58ed74d7e98582f9517d751a10c1b1ba9f50c07a19df8",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -478,7 +478,7 @@
       "description": "Inspect execution connections",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "e1b1eea0b5e3aaa9d729df5712a2e5840bffc27fdfdb69b92bbd496af3d2335c",
+      "source_sha256": "15db53443b9023290c754e50a9c1774c908fb22d317d6d5474ae05c132f00e74",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -498,7 +498,7 @@
       "description": "Git + bridge context from any repo",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "6c69b31d1b922811bad988d6360d901fde9e87d1e02643e5b6721f5647e5b80a",
+      "source_sha256": "6637d686f25f4e9596759b0029022880d0a4090198a33ad86eba999f086b9f58",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -518,7 +518,7 @@
       "description": "Scaffold a new AgentSam project from a preset",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "1d1c87077e495728133bef8d932d9460250be94ef00582088856bc016a0b3515",
+      "source_sha256": "5060daa9799dd1fabdc7829dcc895bcc6fbf23fa88838bce248e5757da14cc2c",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -540,7 +540,7 @@
       "description": "Audit credentials, drift, and failure remediation (never prints secrets)",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "8d0cfc1eb7710faa04d2476ad44e0de0e09296c4ff59470a1a0000bbf3e2803f",
+      "source_sha256": "ec2f95b089ff96c0a12ce485308e3c6f55606029a122f6ef26f4ed3cb52fb0d6",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -560,7 +560,7 @@
       "description": "Discover local and remote stores, inspect explicit remote D1 schemas, or manage local AgentSam SQLite",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "38b96bbc38b7997247792354c21b3273920c1884ff1faa985ee968c34c4c512e",
+      "source_sha256": "64fabdabe8118af06b600500dffa26f0f8da92fe1d2db474578165f19b83d4aa",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -580,7 +580,7 @@
       "description": "Graduate intentionally to cloud",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "c79dad3eb0e6540bb5a2aa87b4ee9bcefd64cfbecd6fdb1d03ffe3a9d451e8b2",
+      "source_sha256": "e810ac60cd26325fe5a9cad38d5a38903312a185ac72287aaee21bc769db929e",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -600,7 +600,7 @@
       "description": "Merkle deploy/checkpoint receipts",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "1460bacf08c2f4ff5010103b4fa8a0fd9f6e50966ebc74027c5e7a21ac86bca7",
+      "source_sha256": "033a7dd2de2eb1d2df33b854ff3c067870aa045c59abf4f0f1dddd92c60d82d4",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -620,7 +620,7 @@
       "description": "Run this project’s npm dev script",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "e7d1da903554c167fc32ba742c42b4d0025113612e72992afd67294adfc33e84",
+      "source_sha256": "1bfc0dbf7747b11aaa92dca0a6299052b4ec3f8d8d803914ffb7063f65283c7d",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -640,7 +640,7 @@
       "description": "Build/run supported containers",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "fec20544b9010c94af5806d76f7f96ef0a8a436531204efc4c8a411e1c8ad6b6",
+      "source_sha256": "0e418edb6c9a025394576a4042796272d7a565cbf1e9d41382c078bcd26c9451",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -660,7 +660,7 @@
       "description": "Offline toolchain diagnosis with repair commands",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "fbfe871b8cac082d2237d1f85aafdb33541a23bef1115511c997f80c7d67c8fd",
+      "source_sha256": "3080c8d707d4fbb3bf8502c47d7240135ac2d316f1a977d1ccfbfc6565cc37db",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -680,7 +680,7 @@
       "description": "Discover, audit, benchmark, and govern local AI engines",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "4e27152af0c597bbd2a9438ba2663fb9297b4a1700c089fe5949696b8f77e266",
+      "source_sha256": "4f079281e5948600a22546a3e82697ef8244022038fd7144604ccf53244b8a3e",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -700,7 +700,7 @@
       "description": "Provider profile / shell loader helpers",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "aeefffb39a15d6820eb6c049bbf4b474452d9f1c68bd6a8a418ec99955a8954a",
+      "source_sha256": "95f913c4973a934da7263fbd48db9af987e4ac7eb141ab5140f2fc5b99aabb5c",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -720,7 +720,7 @@
       "description": "Context fixtures and live eval telemetry",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "a5db3ef1d594197172e7febd7e89decaeb1d1a7e50d75a23bc718d69bb351d7d",
+      "source_sha256": "31d423caa92b74c6ca226f51bce35b7c5f0c10f1100596e66b470f795acd72b2",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -740,7 +740,7 @@
       "description": "Run the existing AgentSam coding agent noninteractively with scoped permissions",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "b42b0695801c95afebb462ed425a564cd8b0a319557341d8a35b1dcf8fd89348",
+      "source_sha256": "0637a2927a2f75518de0cccd606f181e253c9c4ae4fb350f3e72c85fe5f2a780",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -760,7 +760,7 @@
       "description": "Explain a runtime or package from the offline catalog",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "fab3be9b1f67ac1805f6083fea5a600458969dcf1aecd26ebaf62eb59e03083d",
+      "source_sha256": "2e15f787d93ab7c15fa64969797ec87d877e6df08248ed43f8c0015cec788e98",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -780,7 +780,7 @@
       "description": "Go product discover/build/deploy",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "07ea37850a40ad6a1fa28c085b773163164dcb4c64bf4002fb8d849a574edf1c",
+      "source_sha256": "e0f3a87e0fc77c02532d241b49f93171a10441376b9e1fd9d063c9a5ecb2cfab",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -802,7 +802,7 @@
       "description": "List and manage shared account goals",
       "topic": "inside",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "a278afa65faed8d3779bcc96c95d351ed8e6d4d38bd4a725f54da4c232cb4ffb",
+      "source_sha256": "24cb2530b497214c43a7047d93d44d32aecd506c5091748b2fa79d3735ed8027",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -822,7 +822,7 @@
       "description": "Inspect local GOAP and manage shared repository goals",
       "topic": "inside",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "875a9a44993c8e26fcba08e1c0145f93bd4091a8c61933840d4c218d1857e26e",
+      "source_sha256": "8555f4c32c7c7d8b46cfece09ac7db8d37883b8758382829ab01fcf8caca6999",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -845,7 +845,7 @@
       "description": "Google Cloud auth, projects, compute, IAM SAs, billing, doctor",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "b2e437f6f07d5866204b27a498dff9fbcecd689d6fa160ed3166601350ba8c14",
+      "source_sha256": "c1b173b2feb35504090b81e190e7006e3a86d634ca99fa05e2fa0df60b132b32",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -865,7 +865,7 @@
       "description": "Interactive or topic help from this catalog",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "7b73de9bf96be86b2b7d41a6e73f70beb3b36fdbb47261a293514b04fc2b7675",
+      "source_sha256": "47e2ca4e1b74c52e82622d90efb0965ded376c5832f31c892546c6f646f76637",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -887,7 +887,7 @@
       "description": "Inspect lifecycle hooks, sources, and execution receipts",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "b7c6dc38e24ab8a1c8072ffc7eb2df36917745f781c1fd0a3a50b72a97d81448",
+      "source_sha256": "2642c806ec9506a414993287b25c8bf915bc347a5ca7b9c9d03ea3d434bfa53e",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -907,7 +907,7 @@
       "description": "Identity portal, providers, protocol surfaces",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "80aab4cd12aa49af66d094d2a8e427b401f766f10f624a7780528468447092ec",
+      "source_sha256": "e8e04f37b4893df845e554cf0b4990a32ee6adab506e36fd49854077a68b42b3",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -927,7 +927,7 @@
       "description": "Plan/run incremental AST (+ optional embeddings)",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "904c9acc8908c42d8585dd7bfbc9d418b7dd8ff5ff141418d4038bfd82b6f3e8",
+      "source_sha256": "f5dc13ab7cdf6148385f630b1ce13cde85248d90c9e1147df3ba12488b2a8118",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -947,7 +947,7 @@
       "description": "Knowledge setup or local scaffold",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "6ad407d7505e921676e00c3bc29e6e41935a32356af21cabaae644c1a334fac6",
+      "source_sha256": "eb8192dba594757200ec8810642926039b1d30e27c43300220c5032726a8ac0d",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -967,7 +967,7 @@
       "description": "Bounded repository inspect / authority view",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "088439530365acd43270c7c3ff264f1bc5c124ccacd32e37b4f39ff8a89154b4",
+      "source_sha256": "396aec269d366ebf7c5abc30e18ab1837277a77bbee549f1c9ba2e1a9c62f4fd",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -987,7 +987,7 @@
       "description": "Install an explicitly selected plugin",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "2c8b9e751cf546b22f1f45573871f97049ce372d4b2db1be4b5cc4953dd5d93b",
+      "source_sha256": "3036f915b7dba1098a237be9fa8dfca44dc577b557fb99100a8dd5625d0b11fb",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1007,7 +1007,7 @@
       "description": "Sign in and persist machine-local session",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ef5101a98effd5ef6ec043a4f58ca9b0183bd9eaed995cdfa0e5799de449e0a2",
+      "source_sha256": "c42da6136e6f0e513b7ae5e3e15b6ddcf6bbe253128ae365077885b31fe62fc6",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1027,7 +1027,7 @@
       "description": "Sign out locally",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "978a64bb71c2c532eafa9675c35d5d71c26946faeb4aebe0ce82b235f62467da",
+      "source_sha256": "f0b4fb74fd54cf80b4d7e706efc7ea1ef3d8716cbbf470e0f643ed5eb929477f",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1047,7 +1047,7 @@
       "description": "Machine inspection, evidence crawl, and read-only code reuse proposals",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "7ada2246267e85584aa72a9025f7cf7d89b42fef87a83535cff9d096f45ce829",
+      "source_sha256": "5862843a195dca61c5e1b5b45278d66fb3d5600d2d99ddbb25625d6d396dcaa9",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1067,7 +1067,7 @@
       "description": "Create MCP servers, connect remote servers, and inspect tools",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "bc81d319cb0dc7e0b96595f64e219452cf298409d0304253399494f6a64ffda7",
+      "source_sha256": "5084768e88ec42edc4f935ac452e0b9c526271a3f2c87e8cc799c3291ca46049",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1087,7 +1087,7 @@
       "description": "Source-backed long-horizon memory via authorized remote MCP",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "adb0c0a74dfdbbe85d6516b9e1cd1e46ed1f76f61f62683c875d63194eab44d9",
+      "source_sha256": "7515559b3531c845382a4d20c162f392d93f3043e0485cfc2d955e1c86bd0024",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1107,7 +1107,7 @@
       "description": "Preflight designs against portable manufacturing profiles",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "43ec216818da3bcbe80f26447829cf1ecc7b1829729b10d831d254b5b1e86353",
+      "source_sha256": "9109666e9b6665d62a8b51e0ed4cd46bcfcb10a0be415b9c72b681490a503da3",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1127,7 +1127,7 @@
       "description": "File integrity snapshots and explorer",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "a2d3a6ca03f122b9590f47be3611ddc03e9bf681bb6ce63cb2174f98c5bf9fe9",
+      "source_sha256": "2662cbce9bc1dbdda6e3a29c3b4ca31e4a4122d3e79d85bd08425e28de27006b",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1147,7 +1147,7 @@
       "description": "Create a small local gadget",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "f5072d1fe8774c6cb80b35644171d60d930a461e2117fb101e589138468bdbdd",
+      "source_sha256": "6a4cbcdce8aba81024ea27c63d9bafdf85076a52ceed5d8abf4bfdcf53c11bfc",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1167,7 +1167,7 @@
       "description": "Probe hosted/local model availability",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ae98ae4d1add2c80769f35a4afb8fcbe96aed1c0c0438334d1fba0ffae555c3e",
+      "source_sha256": "d1c52f34cacc5278aea63d60436497a81315dde78d921e07823a38a49128ff9e",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1187,7 +1187,7 @@
       "description": "Local Ollama setup/status/models",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "f518840de07295e17e9cf923682ef8576e0a824fcce2a22cb231e0e9df697816",
+      "source_sha256": "f0a6e2eb89e07db8212c25881864b854823c2fdbf71e0a5fa5508e18d1887946",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1210,7 +1210,7 @@
       "description": "Open AgentSam Local Studio (desktop app) here or at a directory",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "11e7a7626740c84557a318523ecf2ff566a10bfc94af1fd741f4c4117ac0e8f2",
+      "source_sha256": "4a93f6fecfc311f8b188a6da9f244017fb0b9027173352566ecb20f417550584",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1230,7 +1230,7 @@
       "description": "Audit, verify, and plan publication of distributable packages",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "0284fbec3de0635430b62804bad3357a844106e4480ab063fc7260f7635514df",
+      "source_sha256": "6a727ebe1200d3b76f18ae47cbef93d48b6ba4b1ad8db8da047d30d41d14278f",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1250,7 +1250,7 @@
       "description": "Durable project-local work plans + domain plans",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "d770cfae9fdd9dd44f1ca6e58e333710aaf163b97defbad48fe99b9064ba4c18",
+      "source_sha256": "af531c45b6370fa1311e1a365ebeb124489cab76b052f758bf44f749ea4208c3",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1270,7 +1270,7 @@
       "description": "Inspect and verify governed plugin products",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "a68cee0dc501dd5f9e0c2cefb4454aa68f9ca65757187606ce76d8abde72b05e",
+      "source_sha256": "ee992cf5310b1898122b6a30981bb43f5be9f600d8768e4e5cf032b974c1785c",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1290,7 +1290,7 @@
       "description": "Install and manage AgentSam plugins",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "559577ea13b571bb4edd58f9b983b93aedf04746c3ed806c61f56a70b64d5af7",
+      "source_sha256": "a3eeb9e59a038e7978c11206595d092f89004e00c3181b8528b2631213b54059",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1310,7 +1310,7 @@
       "description": "Configure machine provider credentials",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "8d0b6395b050687e743eb82e319588cec5b73802bf41949d923ef04cdf813dad",
+      "source_sha256": "dd31d5e853c6e1bf9834f6f18ccabf564330ae73bbe16f84efa539c578e0df59",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1330,7 +1330,7 @@
       "description": "Inspect receipt proofs and prune ephemeral AgentSam workdirs",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "9549ace35fe73871f3df0faaa1a85316d5ea726e25bca0d5f8c875f58548687e",
+      "source_sha256": "03fc5228e52f952846c7f3cc31140e3acd7492acf7804cdd6433e2d255ed66ac",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1350,7 +1350,7 @@
       "description": "Bounded-worker packets + finding reports",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "203cd4e0792edfa7436d1e926c98b2a417e24cfe12787f2214157b6b16618b93",
+      "source_sha256": "9de46dfd34966d5011468d52df10b7b199c148e1fda94fc6b96f8b5308983146",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1370,7 +1370,7 @@
       "description": "Repository snapshot / observations",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "6648828871ceb6ae161e4f492bc072de43af36328b32fdddc2365213c0affab4",
+      "source_sha256": "7b783828d7bee0b851e01a1f93959e3419fab7bbd91c5b51261f4e8fcdbc4bcb",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1390,7 +1390,7 @@
       "description": "Resume a saved AgentSam session",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "c1ff1d53251740019a699494e498aa6de9a05c86273aadc538930d07777634e5",
+      "source_sha256": "ad4c5e786f14289a4fb387b35e5afadc39d9ccd352b4e0ad851532bdc82d021a",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1410,7 +1410,7 @@
       "description": "SAM Robotics: robotics.scene.inspect/object.locate/grasp.plan/motion.plan/validate/simulate/execute/verify, robot.home, execution.cancel (model: never)",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "d379da84db8ef78f6747a87b347889eb948adaa18aa6209a1804f87c1598d362",
+      "source_sha256": "7282bc9b372cff2aa7037616274c92acaeebf03d20c4b6af47714059b06e1c1e",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1432,7 +1432,7 @@
       "description": "Inspect and control AgentSam runs across local or hosted control planes",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "1b075c15003dd3ccfa12e77179c249a4d6a543b047e519efcb791afcb1bf1f64",
+      "source_sha256": "eb0ea01c326f4cfbd7f958ac63689b3b1191614cce37875d031bfe5dc0275cf2",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1454,7 +1454,7 @@
       "description": "Manage the local agentsamd runtime and daemon",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "0350c0c261423a0ee16fea8d30e49617cac313637b71f960e2ebded3ac19ad46",
+      "source_sha256": "fc7eb6d809263b6099fd5b87f0da2b03edc77ebd5d7f5b42349b6d0196f64bfc",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1477,7 +1477,7 @@
       "description": "Rust/Wasm scaffold, doctor, check, build, dev, explicit deploy",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ea75e9e0715198fa8cfc441024c45c20e52835119b6135379ff000be99d14cdd",
+      "source_sha256": "8f6029208e3ffc6484ea9784ed601e571d5c706785e3632c8d6c1bd73491ee4a",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1499,7 +1499,7 @@
       "description": "Inspect the SAM operations runtime, installed handlers and availability",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "5a07e8ffe690554f7c89c91f561758e09dab477e277d33f49096cf688a4eb094",
+      "source_sha256": "405fbd38d0eb187091f287900473b16af59b193947d604747f809ea225eb3b27",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1519,7 +1519,7 @@
       "description": "Generate CMS or worker-api starter",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "8e9b327248ac70c1061d231fd0d03ad0001ff3fa3f616ee44980eeec814aac22",
+      "source_sha256": "d12ed024a0bcda7e89e7b709d85037e9fc8ceeb122c6d6d6e9d1df629bd54d82",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1539,7 +1539,7 @@
       "description": "Retrieve indexed code/text",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "037a4c9eb89e085e117287d5e8faddd7c4604af0b18369856751954b7613389a",
+      "source_sha256": "2310b47786ebdeaf85d4296de639e49da954db4cead4a7cdad4d08d63e90b466",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1561,7 +1561,7 @@
       "description": "Dependency + trust-boundary scan",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "4444137b5af5b54823073c16ae373cd371042a878d69f683ad847a88cd60c744",
+      "source_sha256": "0c4c808a057fd0458243bd066a1d56387d3d4f937a4923eccfb46735ff62c478",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1581,7 +1581,7 @@
       "description": "Discover → plan → approve → install capabilities (Homebrew-style)",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "18c7082ce0e39eafb49af597b150a24601c23cb0df3fc2977154968d40715277",
+      "source_sha256": "c666f36283044cf82469049aa518c07415e2e2f0c19417414646add136e08d05",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1601,7 +1601,7 @@
       "description": "Interactive slash-command shell",
       "topic": "inside",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "2e284c5acfc7311a97800202cbf243c7e926ba5a069e1ef1d30535270b239e77",
+      "source_sha256": "5b4432c9ef8065d339b1ef2cc22cb7b2f0d1e3859fcaa302657c70bdb3320cd9",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1621,7 +1621,7 @@
       "description": "Project-scoped site.scrape crawl and evidence",
       "topic": "work",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "c184f8067d114b104bef3ff1da33015ed32d0d53436d45b12c0deec9bb5c8db9",
+      "source_sha256": "fc6fbb971170d3a00bb3d7aacf421301d7cf5166d32bc9d5babf9956c6e22794",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1641,7 +1641,7 @@
       "description": "Create, inspect, and install a specific skill",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "962245a00383d587a1df9e536f292ce1fa797b300909eb160ae69af5d58cd7d3",
+      "source_sha256": "48ce9f6aa607aae9f99fc5570268c7ac5c88e38e1ee6d8286453270df40e2267",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1663,7 +1663,7 @@
       "description": "List or load portable skill instructions",
       "topic": "create",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "296ef90b8444c27ec9c1a9dc7fc5bfe39a75f857d53936e5d8429e6b76cc5149",
+      "source_sha256": "bc01d18b381ec71092e189e2f0ed23bcd3e328a21fb58484bb1ffc7e5f651347",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1683,7 +1683,7 @@
       "description": "Local PTY WebSocket service",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "3139ab3c353e3919dc22a10780518fb8467db943727ae883a44b8388af5e40d0",
+      "source_sha256": "bed039118814ad61543fc4260b827e1f7af12981f844c5b00b43dcdb15a68ea5",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1703,7 +1703,7 @@
       "description": "Account, models, terminal, and live deploy awareness",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "61092cf9d5f1cd629344e5001eb939945949fa46b600d5fa303f5c7df4ccc94c",
+      "source_sha256": "bb8172f72d2a339b292fa08107db58169fe60d2320cc08d77a10b7307f9f4d61",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1723,7 +1723,7 @@
       "description": "Manage terminal identity and enrollment, distinct from PTY sessions",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "a0db51795b053c7504014d7b5cf81657da9b0d1a00133a13325abe024a72d4d9",
+      "source_sha256": "9bdbaf2e065bf1ebdbb6d4caecd0e10b5d6e8c44830d21f15e06625df779154a",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1743,7 +1743,7 @@
       "description": "Cloudflare Tunnel via Wrangler",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "ed440fcb38a893c68d9de77702e3e2b1085e234c5a0dec3d1031ba1024853b7f",
+      "source_sha256": "ae574ab8ab1ba3b5159f92ea1ef3632cbaa8827b973ee876d46067d8bea71b22",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1763,7 +1763,7 @@
       "description": "Component update preview (gcloud-like)",
       "topic": "runtime",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "940a295e5ba7c095ebef465f7f5e6a293854636313137c23867081a157e7013c",
+      "source_sha256": "8d86322ee2c6dc6dbd31702628d29631983da2a4f60060f3b597275d959052c9",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1783,7 +1783,7 @@
       "description": "Authenticated account + tokenPermissions",
       "topic": "start",
       "source_path": "src/cli/command-catalog.js",
-      "source_sha256": "9bcf6f8e59b8b4a63b21510dd5b0b2698a9bbebc5b390f01c88a75d82615083c",
+      "source_sha256": "bb40711a0538298477138ccf3c34d1d18f87406600ba9d20183c0ba2f4950343",
       "release_state": "source_only",
       "is_active": false,
       "verification": null

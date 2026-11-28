@@ -2135,6 +2135,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   const [error,setError]=useState("");
   const [policy,setPolicy]=useState<SettingsAgentPolicy>(snapshot.agentPolicy||{
     allowSubagentSpawn:false,allowFanoutExecution:false,maxSpawnDepth:1,requireAllowlistForMcp:true,
+    externalFileProtection:true,fileDeletionProtection:true,mcpToolsProtection:true,ignoreSymlinks:false,canRunPty:false,
   });
   useEffect(()=>{
     if(snapshot.agentPolicy)setPolicy(snapshot.agentPolicy);
@@ -2294,11 +2295,16 @@ function AgentsView({snapshot,view,host,onChanged}:{
           ["allowSubagentSpawn","Allow subagent spawning","Permit approved agent profiles to delegate work."],
           ["allowFanoutExecution","Allow parallel agent execution","Enable authorized fanout across eligible agent profiles."],
           ["requireAllowlistForMcp","Require MCP allowlist","Only permit MCP tool calls through explicit registration/allowlist."],
+          ["externalFileProtection","Protect external files","Account policy for files outside the selected workspace; does not grant access."],
+          ["fileDeletionProtection","Protect file deletion","Require protection for destructive file operations."],
+          ["mcpToolsProtection","Protect MCP tools","Require MCP tool protection at the execution host."],
+          ["ignoreSymlinks","Ignore symbolic links","Exclude symlinks when traversing a workspace."],
+          ["canRunPty","Allow terminal sessions","Allow eligible terminal hosts to request PTY execution; device authentication is still required."],
         ] as const).map(([key,title,desc])=>(
           <label key={key} className="flex cursor-pointer items-center justify-between gap-3 border-b border-border/60 py-2">
             <span><span className="block text-[12px] font-medium">{title}</span>
             <span className="block text-[10px] text-muted-foreground">{desc}</span></span>
-            <input type="checkbox" checked={policy[key]}
+            <input type="checkbox" checked={policy[key]===true}
               onChange={event=>setPolicy(current=>({...current,[key]:event.target.checked}))}
               className="size-4 accent-primary"/>
           </label>
@@ -2312,7 +2318,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
         </label>
         {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
         <button type="button" onClick={()=>void savePolicy()} disabled={busy||!host.updateAgentPolicy||!!snapshot.agentError}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-medium text-white disabled:opacity-50">
+          className="rounded-lg bg-primary px-4 py-2 text-[12px] font-medium text-primary-foreground disabled:opacity-50">
           Save execution policy
         </button>
       </div>

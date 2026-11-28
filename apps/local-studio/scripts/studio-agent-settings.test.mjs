@@ -24,6 +24,8 @@ function fixture(){
  allow_fanout_execution INTEGER NOT NULL DEFAULT 0,
  max_spawn_depth INTEGER NOT NULL DEFAULT 1,
  require_allowlist_for_mcp INTEGER NOT NULL DEFAULT 1,
+ external_file_protection INTEGER NOT NULL DEFAULT 1,file_deletion_protection INTEGER NOT NULL DEFAULT 1,
+ mcp_tools_protection INTEGER NOT NULL DEFAULT 1,ignore_symlinks INTEGER NOT NULL DEFAULT 0,can_run_pty INTEGER NOT NULL DEFAULT 0,
  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
  PRIMARY KEY (user_id,workspace_id)
  );`);
@@ -99,7 +101,7 @@ test("reject malformed agent writes and cross-site mutation attempts",async()=>{
 });
 test("policy is an existing account record, not a simulated UI toggle",async()=>{
  const {env}=fixture();
- const policy={allowSubagentSpawn:true,allowFanoutExecution:false,maxSpawnDepth:2,requireAllowlistForMcp:true};
+ const policy={allowSubagentSpawn:true,allowFanoutExecution:false,maxSpawnDepth:2,requireAllowlistForMcp:true,externalFileProtection:true,fileDeletionProtection:true,mcpToolsProtection:true,ignoreSymlinks:true,canRunPty:true};
  assert.equal((await request(env,"au_owner","/policy","PUT",policy)).status,200);
  assert.deepEqual((await (await request(env,"au_owner","/policy")).json()).policy,policy);
  assert.equal((await (await request(env,"au_other","/policy")).json()).policy.allowSubagentSpawn,false);

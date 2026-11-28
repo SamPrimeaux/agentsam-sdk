@@ -2,7 +2,7 @@ export const MCP_SERVER_PRESETS = Object.freeze({
   heuristics: Object.freeze({
     key: 'heuristics',
     displayName: 'MCP Server',
-    description: 'Runnable Streamable HTTP MCP with scoped tools, fail-closed OAuth, and protocol tests.',
+    description: 'Runnable MCP with scoped tools, runtime-specific transport and protocol tests.',
     homepageUrl: '',
     audience: '',
     issuer: '',

@@ -97,37 +97,26 @@ function pack(cwd) {
 const sdkPack = pack(ROOT);
 const servicePack = pack(SERVICE);
 
-// A release candidate must remain clean-room installable before its first-party
-// dependency reaches npm. Exercise that dependency as a real local tarball;
-// published releases must instead resolve it from the public registry.
-const authority = fs.readFileSync(path.join(ROOT, 'agentsam.yaml'), 'utf8');
-const releaseBlock = authority.split('\nrelease:\n')[1];
-assert.ok(releaseBlock, 'canonical release authority is required');
-const releaseState = releaseBlock.match(/^    state:\s*(candidate|published)\s*$/m)?.[1];
-const targetVersion = releaseBlock.match(/^    target_version:\s*"([^"]+)"\s*$/m)?.[1];
-assert.ok(releaseState, 'release state must be candidate or published');
-assert.equal(targetVersion, sdkPack.version, 'distribution test must target the canonical release version');
+// Verify source packages in isolation using the actual dependency pins.
+// Independent packages need not share the SDK version. Use local tarballs
+// only when their name/version matches the SDK's declared dependency;
+// otherwise npm must resolve the declared version from the registry.
 const sdkManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-const errorsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-errors'];
-const contractsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-contracts'];
-const proceduresVersion = sdkManifest.dependencies?.['@inneranimalmedia/primetech-procedures'];
-assert.equal(errorsVersion, sdkPack.version, 'the SDK must declare its exact release-train error contract');
-assert.equal(contractsVersion, sdkPack.version, 'the SDK must declare its exact release-train portable contracts');
-assert.equal(proceduresVersion, sdkPack.version, 'the SDK must declare its exact release-train PrimeTech procedures package');
-const candidatePacks = releaseState === 'candidate'
-  ? [
-      ['@inneranimalmedia/agentsam-errors', errorsVersion, 'agentsam-errors'],
-      ['@inneranimalmedia/agentsam-contracts', contractsVersion, 'agentsam-contracts'],
-      ['@inneranimalmedia/primetech-procedures', proceduresVersion, 'primetech-procedures'],
-    ].map(([expectedName, expectedVersion, folder]) => {
-      const candidate = pack(path.join(ROOT, 'packages', folder));
-      assert.equal(candidate.name, expectedName);
-      assert.equal(candidate.version, expectedVersion);
-      return candidate;
-    })
-  : [];
-// Install real local tarballs while the approved train is still a candidate.
-// Published releases must instead resolve exact versions from the npm registry.
+const candidatePacks = [
+  'agentsam-errors', 'agentsam-contracts', 'primetech-procedures',
+].flatMap(folder => {
+  const directory = path.join(ROOT, 'packages', folder);
+  const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8'));
+  const expectedName = '@inneranimalmedia/' + folder;
+  const declared = sdkManifest.dependencies?.[expectedName];
+  assert.equal(manifest.name, expectedName);
+  assert.ok(declared, 'missing SDK dependency: ' + expectedName);
+  if (process.argv.includes('--published-dependencies') || declared !== manifest.version) return [];
+  const candidate = pack(directory);
+  assert.equal(candidate.name, expectedName);
+  assert.equal(candidate.version, declared);
+  return [candidate];
+});
 const installTarballs = [sdkPack, servicePack, ...candidatePacks]
   .map((item) => path.join(artifacts, item.filename));
 
@@ -205,14 +194,18 @@ assert.equal(globalInspect.productRoot.includes(ROOT), false, 'global install mu
 assert.equal(globalInspect.stateRoot.includes('node_modules'), false, 'global install state root must not be package source');
 assert.equal(path.resolve(globalInspect.stateRoot), fs.realpathSync(globalProject));
 
+const packedDependency = name => {
+  const item = candidatePacks.find(pack => pack.name === name);
+  return item ? {name: item.name, version: item.version} : null;
+};
 const receipt = {
   schema: 'agentsam.go-distribution-proof.v1',
   ok: true,
   temp_root: temp,
-  release_phase: releaseState,
-  candidate_error_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-errors') ? {name: '@inneranimalmedia/agentsam-errors', version: errorsVersion} : null,
-  candidate_contracts_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-contracts') ? {name: '@inneranimalmedia/agentsam-contracts', version: contractsVersion} : null,
-  candidate_procedures_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/primetech-procedures') ? {name: '@inneranimalmedia/primetech-procedures', version: proceduresVersion} : null,
+  release_phase: process.argv.includes('--published-dependencies') ? 'published-dependencies' : 'source-verification',
+  candidate_error_tarball: packedDependency('@inneranimalmedia/agentsam-errors'),
+  candidate_contracts_tarball: packedDependency('@inneranimalmedia/agentsam-contracts'),
+  candidate_procedures_tarball: packedDependency('@inneranimalmedia/primetech-procedures'),
   sdk: {
     name: sdkPack.name,
     version: sdkPack.version,
