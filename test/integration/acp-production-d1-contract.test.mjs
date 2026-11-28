@@ -8,6 +8,8 @@ import { createLocalSqliteDatabase } from '../../src/local/sqlite.js';
 import { DatabaseAgentControlClient } from '../../src/acp/database-client.js';
 import { createD1QueueControl, reconcileParentAfterChildTerminal } from '../../src/acp/dependencies.js';
 
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
 test('ACP spawn and approval lifecycle runs against the strict production D1 table contract', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-production-d1-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -37,7 +39,7 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     const storedRoot = await db.prepare(
       'SELECT selected_by, routing_arm_id, status FROM agentsam_agent_run WHERE id = ?'
     ).bind(rootRun.run_id).first();
-    assert.deepEqual(storedRoot, {
+    assert.deepEqual(plain(storedRoot), {
       selected_by: 'thompson',
       routing_arm_id: 'arm_automatic_1',
       status: 'queued',
@@ -85,7 +87,7 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     const pendingSpawn = await db.prepare(
       'SELECT status, master_run_id, subagents_spawned FROM agentsam_spawn_job WHERE id = ?'
     ).bind(gatedSpawn.spawn_job_id).first();
-    assert.deepEqual(pendingSpawn, {
+    assert.deepEqual(plain(pendingSpawn), {
       status: 'awaiting_approval',
       master_run_id: rootRun.run_id,
       subagents_spawned: 0,
@@ -107,7 +109,7 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     const storedChild = await db.prepare(
       'SELECT parent_run_id, selected_by, routing_arm_id, status FROM agentsam_agent_run WHERE id = ?'
     ).bind('arun_production_child').first();
-    assert.deepEqual(storedChild, {
+    assert.deepEqual(plain(storedChild), {
       parent_run_id: rootRun.run_id,
       selected_by: 'thompson',
       routing_arm_id: 'arm_child_automatic',
@@ -134,7 +136,7 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     const completedSpawn = await db.prepare(
       'SELECT status, subagents_spawned, subagents_succeeded, subagents_failed, total_input_tokens, total_output_tokens FROM agentsam_spawn_job WHERE id = ?'
     ).bind('spawn_production_1').first();
-    assert.deepEqual(completedSpawn, {
+    assert.deepEqual(plain(completedSpawn), {
       status: 'completed',
       subagents_spawned: 1,
       subagents_succeeded: 1,
