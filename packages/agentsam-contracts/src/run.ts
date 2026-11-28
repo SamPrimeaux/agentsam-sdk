@@ -35,6 +35,84 @@ export interface AgentRunStartV1 {
   published: boolean;
 }
 
+export const AGENT_SPAWN_JOB_STATUSES = [
+  'pending', 'awaiting_approval', 'running', 'merging', 'completed', 'failed', 'partial',
+] as const;
+export type AgentSpawnJobStatus = typeof AGENT_SPAWN_JOB_STATUSES[number];
+
+/** A durable spawn orchestration backed by agentsam_spawn_job and parent_run_id. */
+export interface AgentRunSpawnV1 {
+  schema: 'agentsam.child-run-spawn.v1';
+  parent_run_id: string;
+  spawn_job_id: string;
+  status: AgentSpawnJobStatus;
+  child_run_id?: string;
+  child_run_ids: string[];
+  approval_id?: string;
+  queue?: string | null;
+  queue_job?: Record<string, unknown> | null;
+  queue_jobs?: Array<Record<string, unknown>>;
+  published: boolean;
+}
+
+export const AGENT_APPROVAL_STATUSES = ['pending', 'approved', 'denied', 'expired'] as const;
+export type AgentApprovalStatus = typeof AGENT_APPROVAL_STATUSES[number];
+
+export const AGENT_APPROVAL_TYPES = [
+  'tool', 'workflow', 'command', 'script', 'deploy', 'db_write', 'r2_write',
+  'github_write', 'terminal', 'hook', 'spawn', 'escalation', 'route_upgrade',
+] as const;
+export type AgentApprovalType = typeof AGENT_APPROVAL_TYPES[number];
+
+export const AGENT_APPROVAL_RISK_LEVELS = ['low', 'medium', 'high', 'critical'] as const;
+export type AgentApprovalRiskLevel = typeof AGENT_APPROVAL_RISK_LEVELS[number];
+
+/** Durable approval row projected from agentsam_approval_queue. */
+export interface AgentApprovalV1 {
+  id: string;
+  accountId: string;
+  sessionId?: string;
+  conversationId?: string;
+  runId?: string;
+  toolCallId?: string;
+  terminalJobId?: string;
+  executionStepId?: string;
+  capabilityKey?: string;
+  workflowKey?: string;
+  toolName?: string;
+  toolId?: string;
+  toolKey?: string;
+  handlerKey?: string;
+  routeKey?: string;
+  actionSummary: string;
+  sanitizedInput: Record<string, unknown>;
+  response: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  riskLevel: AgentApprovalRiskLevel;
+  approvalType: AgentApprovalType;
+  status: AgentApprovalStatus;
+  approvedBy?: string;
+  decidedAt?: number;
+  expiresAt?: number;
+  notifiedAt?: number;
+  haltedAt?: number;
+  createdAt?: number;
+}
+
+export interface AgentRunResumeV1 {
+  woke: boolean;
+  reason?: string;
+  resume_job?: Record<string, unknown>;
+  queue?: string | null;
+}
+
+export interface AgentApprovalDecisionV1 {
+  approval: AgentApprovalV1;
+  spawn: AgentRunSpawnV1 | null;
+  resume?: AgentRunResumeV1 | null;
+  idempotent?: boolean;
+}
+
 export type AgentRunRetryClass = 'transient' | 'wait' | 'replan' | 'terminal';
 
 export interface AgentRunRetryClassificationInput {
