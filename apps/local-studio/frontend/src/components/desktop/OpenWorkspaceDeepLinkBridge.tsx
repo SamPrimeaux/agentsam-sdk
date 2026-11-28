@@ -22,9 +22,9 @@ export function OpenWorkspaceDeepLinkBridge() {
         window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: route } }));
         return;
       }
-      const path = parseOpenDeepLink(value);
-      if (!path) return;
-      openDesktopWorkspace(path)
+      const handoffToken = parseOpenDeepLink(value);
+      if (!handoffToken) return;
+      openDesktopWorkspace(handoffToken)
         .then((context) => window.dispatchEvent(new CustomEvent(OPEN_WORKSPACE_EVENT, { detail: context })))
         .catch((error) => {
           const reason = String(error?.message ?? error);

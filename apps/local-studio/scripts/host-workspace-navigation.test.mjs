@@ -104,15 +104,17 @@ test('both shell hosts expose the same workspace rename and pin actions', () => 
 });
 
 
-test('packaged Ecommerce Console routes authenticated Work and project reads through the native session bridge', () => {
+test('packaged Ecommerce Console sends all same-origin Worker APIs through the shared authenticated transport', () => {
   const adapter = readFileSync(new URL('../frontend/src/lib/apps/desktop-console-host.ts', import.meta.url), 'utf8');
-  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/admin\/'\)/);
-  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/work\/'\)/);
-  assert.match(hostConfig, /url\.pathname === '\/api\/projects'/);
-  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/projects\/'\)/);
-  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/admin\/'\) \? 'commerce'/);
-  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/work\/'\).*'work'/s);
-  assert.match(adapter, /invokeStudioService\(\{ operation,/);
+  const fetchBridge = readFileSync(new URL('../frontend/public/desktop-api-fetch.js', import.meta.url), 'utf8');
+  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/'\)/);
+  assert.match(adapter, /return fetch\(request\)/);
+  assert.match(hostConfig, /url\.pathname\.startsWith\(['"]\/api\/['"]\)/);
+  assert.doesNotMatch(hostConfig, /url\.pathname\.startsWith\(['"]\/api\/(?:admin|work)\//);
+  assert.doesNotMatch(adapter, /invokeStudioService|operation:\s*['"](?:commerce|work)['"]/);
+  assert.match(fetchBridge, /url\.pathname\.startsWith\(["']\/api\/["']\)/);
+  assert.match(fetchBridge, /operation:\s*["']api["']/);
+  assert.doesNotMatch(fetchBridge, /account_id\s*:/);
 });
 
 test('packaged Console navigation search invokes its existing authorized dialog', () => {

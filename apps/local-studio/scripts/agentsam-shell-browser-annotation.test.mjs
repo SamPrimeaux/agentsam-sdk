@@ -17,7 +17,8 @@ test('new browser tab actions live in the global trailing header and offer full 
   assert.match(page, /className="agentsam-topbar-browser-actions"/);
   assert.match(page, /New browser tab in full view/);
   assert.match(page, /openBrowserTab\(true\)/);
-  assert.match(page, /createPortal\(headerActions, hostActionsSlot\)/);
+  assert.match(page, /createPortal\(headerActions/);
+  assert.match(page, /hostActionsSlot\)/);
   const stage = read('../frontend/src/components/workbench/side-stage.tsx');
   assert.match(stage, /item\.kind === 'browser' && item\.id === activeId && <AnnotationToggle\s*\/>/);
 });

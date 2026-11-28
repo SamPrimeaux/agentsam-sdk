@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADMIN_ROUTE_MANIFEST, adminRouteForPath } from '../../ecommerce-cms-agentsam/backend/lib/route-manifest.js';
+import { LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES, resolveLocalStudioEcommerceAdminRoute } from '../shared/ecommerce-admin-routes.mjs';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repo = path.resolve(studio, '../..');
@@ -47,12 +48,15 @@ test('complete Ecommerce app registers beside CAD in existing Local Studio Apps'
   assert.equal(manifest.surfaces.admin.mount, '/admin');
 });
 
-test('requested real admin routes belong to the existing product route authority', () => {
-  const templates = ADMIN_ROUTE_MANIFEST.map(x => x.path);
+test('standalone and hosted route authorities both recognize supported Ecommerce admin paths', () => {
+  const standalone = ADMIN_ROUTE_MANIFEST.map(x => x.path);
+  const hosted = LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES.map(x => x.path);
   for (const href of paths) {
     const pathname = href.split('?')[0];
-    assert.ok(templates.includes(pathname) || adminRouteForPath(pathname),
-      'missing canonical admin route: ' + href);
+    assert.ok(standalone.includes(pathname) || adminRouteForPath(pathname),
+      'missing standalone admin route: ' + href);
+    assert.ok(hosted.includes(pathname) || resolveLocalStudioEcommerceAdminRoute(pathname),
+      'missing Local Studio hosted admin route: ' + href);
   }
 });
 

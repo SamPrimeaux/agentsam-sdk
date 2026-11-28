@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  DesktopLaunchError, buildOpenUrl, findDesktopApp, isDirectoryArg, launchDesktop, resolveProjectDir,
+  DesktopLaunchError, buildOpenUrl, findDesktopApp, isDirectoryArg, launchDesktop, resolveProjectDir, writeWorkspaceHandoff,
 } from '../../src/cli/desktop-launch.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-launch-'));
@@ -33,38 +33,82 @@ test('symlinks resolve to their real target', () => {
   assert.equal(resolveProjectDir(link), fs.realpathSync(weird));
 });
 
-test('buildOpenUrl encodes and round-trips hostile characters', () => {
-  const real = fs.realpathSync(weird);
-  const url = buildOpenUrl(real);
-  assert.ok(url.startsWith('agentsamstudio://open?path='));
-  assert.equal(new URL(url).searchParams.get('path'), real);
-  assert.ok(!/[ #]/.test(url));
-  assert.equal(new URL(url).searchParams.get('t')?.length, 12);
-  assert.notEqual(buildOpenUrl(real), buildOpenUrl(real), 'every launch must be a distinct URL');
+test('buildOpenUrl carries only a 256-bit handoff token, never a filesystem path', () => {
+  const token = 'a'.repeat(64);
+  const url = buildOpenUrl(token);
+  const parsed = new URL(url);
+  assert.equal(parsed.protocol, 'agentsamstudio:');
+  assert.equal(parsed.hostname, 'open');
+  assert.equal(parsed.searchParams.get('handoff'), token);
+  assert.equal(parsed.searchParams.has('path'), false);
+  assert.throws(() => buildOpenUrl('abc'), (error) => error.code === 'invalid_handoff_token');
 });
 
-test('findDesktopApp ignores backups/installers and prefers /Applications', () => {
+test('workspace handoffs are random, short-lived, private files in the desktop app-data directory', () => {
+  const home = path.join(tmp, 'handoff-home');
+  const real = fs.realpathSync(weird);
+  const first = writeWorkspaceHandoff(real, { home, now: 10_000 });
+  const second = writeWorkspaceHandoff(real, { home, now: 10_000 });
+  assert.notEqual(first.token, second.token);
+  assert.equal(first.token.length, 64);
+  assert.equal(first.expiresAt, 70_000);
+  const record = JSON.parse(fs.readFileSync(first.filePath, 'utf8'));
+  assert.deepEqual(record, { workspace_path: real, expires_at_ms: 70_000 });
+  assert.equal(fs.statSync(first.filePath).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(path.dirname(first.filePath)).mode & 0o777, 0o700);
+});
+
+test('workspace handoff creation prunes expired unredeemed token files', () => {
+  const home = path.join(tmp, 'handoff-prune-home');
+  const first = writeWorkspaceHandoff('/tmp/old', { home, now: 1_000 });
+  const staleTime = new Date(1_000);
+  fs.utimesSync(first.filePath, staleTime, staleTime);
+  const next = writeWorkspaceHandoff('/tmp/new', { home, now: 200_000 });
+  assert.equal(fs.existsSync(first.filePath), false);
+  assert.equal(fs.existsSync(next.filePath), true);
+});
+
+test('findDesktopApp prefers canonical installs and ignores versioned/build/backup copies', () => {
+  const versioned = '/Users/u/Applications/AgentSam Local Studio 2.6.18.app';
   const out = [
-    '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio-pre.app',
+    '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio.app',
     '/Users/u/iam-workspaces/x/installers/AgentSam Local Studio.app',
+    versioned,
+    '/Users/u/worktrees/sdk/packages/agentsam-desktop-shell/target/release/bundle/macos/AgentSam Local Studio.app',
     '/Applications/AgentSam Local Studio.app',
   ].join('\n');
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => out, exists: () => false }), '/Applications/AgentSam Local Studio.app');
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => out.split('\n').slice(0, 2).join('\n'), exists: () => false }), null);
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => { throw new Error('no spotlight'); }, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => out, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => [versioned, '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio.app'].join('\n'), exists: () => false }), null);
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => '/Users/u/Tools/AgentSam Local Studio.app', exists: (p) => p === '/Users/u/Tools/AgentSam Local Studio.app' }), '/Users/u/Tools/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => { throw new Error('no spotlight'); }, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
   assert.equal(findDesktopApp({ platform: 'linux' }), null);
 });
 
-test('launchDesktop uses argv (no shell) pinned to the discovered app', () => {
+test('launchDesktop uses argv and passes only the one-time token to the discovered app', () => {
   const calls = [];
   const run = (cmd, args, opts) => calls.push({ cmd, args, opts });
   const find = () => '/Applications/AgentSam Local Studio.app';
+  const home = path.join(tmp, 'launch-home');
+  const token = 'b'.repeat(64);
   launchDesktop({ platform: 'darwin', find, run });
-  launchDesktop({ platform: 'darwin', find, run, projectDir: '/tmp/a b', token: 'abc123' });
+  launchDesktop({ platform: 'darwin', find, run, home, projectDir: '/tmp/a b', token });
   assert.deepEqual(calls[0].args, ['-a', '/Applications/AgentSam Local Studio.app']);
-  assert.deepEqual(calls[1].args, ['-a', '/Applications/AgentSam Local Studio.app', 'agentsamstudio://open?path=%2Ftmp%2Fa%20b&t=abc123']);
+  assert.deepEqual(calls[1].args, ['-a', '/Applications/AgentSam Local Studio.app', `agentsamstudio://open?handoff=${token}`]);
   assert.equal(calls[1].cmd, 'open');
   assert.ok(!calls[1].opts.shell);
+  const handoffFile = path.join(home, 'Library', 'Application Support', 'com.inneranimalmedia.local-studio', 'handoffs', `${token}.json`);
+  assert.equal(JSON.parse(fs.readFileSync(handoffFile, 'utf8')).workspace_path, '/tmp/a b');
+});
+
+test('launchDesktop removes an unredeemed handoff when LaunchServices fails', () => {
+  const home = path.join(tmp, 'failed-launch-home');
+  const token = 'c'.repeat(64);
+  assert.throws(() => launchDesktop({
+    platform: 'darwin', find: () => '/Applications/AgentSam Local Studio.app', home,
+    projectDir: weird, token, run: () => { throw new Error('open failed'); },
+  }), (error) => error.code === 'launch_failed');
+  const handoffFile = path.join(home, 'Library', 'Application Support', 'com.inneranimalmedia.local-studio', 'handoffs', `${token}.json`);
+  assert.equal(fs.existsSync(handoffFile), false);
 });
 
 test('launchDesktop reports missing app and unsupported platform actionably', () => {

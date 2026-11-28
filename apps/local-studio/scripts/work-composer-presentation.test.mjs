@@ -40,7 +40,7 @@ test('plugins and connected services are available from the plus/@ menu, not per
   assert.match(picker, /--agentsam-plugin-menu-max-height.*menuMaxHeight/);
   assert.match(picker, /resolveComposerPopoverLayout/);
   assert.match(picker, /visualViewport\?\.addEventListener\('resize', updatePlacement\)/);
-  assert.match(picker, /title="Plugins and tools"/);
+  assert.match(picker, /hint="Add tools and plugins"/);
   assert.match(picker, /match \? match\[1\] : query/);
   assert.match(picker, /className="agentsam-plugin-results" role="listbox"/);
   assert.match(styles, /max-block-size: var\(--agentsam-plugin-menu-max-height, 0px\)/);
@@ -91,9 +91,10 @@ test('picker placement respects visual viewport including software keyboard', ()
   assert.equal(noRoom.maxHeight, 0);
 });
 
-test('Work preserves an expanded two-row composer while Chat stays compact', () => {
-  assert.match(styles, /Work keeps its expanded, two-row input/);
-  assert.match(styles, /data-composer-mode="work"\] \.as-work-composer-surface/);
+test('Work keeps the shared composer in its expanded two-row layout while Chat stays compact', () => {
+  assert.match(composer, /containerClassName=\{cn\('agentsam-composer-surface[^\n]*flex-col/);
+  assert.match(composer, /workMode && 'as-work-composer-surface'/);
+  assert.match(styles, /data-composer-mode="work"\] \.agentsam-composer-shell/);
   assert.match(styles, /data-composer-mode="chat"\] \.agentsam-composer-surface\s*\{[^}]*flex-direction: row/s);
   assert.match(composer, /toolbarStart=\{<>\{trigger\}/);
   assert.doesNotMatch(composer, /<RunModeSelect/);
@@ -105,7 +106,7 @@ test('Work preserves an expanded two-row composer while Chat stays compact', () 
   assert.match(composer, /onClick=\{openProject\}/);
   assert.match(composer, /onClick=\{openPlugins\}/);
   assert.match(composer, /fileRef\.current\?\.click\(\)/);
-  assert.match(page, /showWorkShortcuts=\{data\.mode === 'work' && \(workFocused \|\| \(empty && !leadComposerDetached\)\)\}/);
+  assert.match(page, /showWorkShortcuts=\{data\.mode === 'work' && \(workFocused \|\| !leadComposerDetached\)\}/);
 });
 
 
@@ -113,7 +114,7 @@ test('Side Stage opens from one header toggle, then offers its own full-view con
   const stage=read('frontend/src/components/workbench/side-stage.tsx');
   assert.match(page, /label=\{state\.sideOpen \? 'Close side workspace' : 'Open side workspace'\}/);
   assert.match(page, /onClick=\{toggleSideWorkspace\}/);
-  assert.match(page, /<SideStage workFocused=\{workFocused\} onFocusToggle=/);
+  assert.match(page, /<SideStage\s+workFocused=\{workFocused\}[\s\S]*?onFocusToggle=/);
   assert.match(stage, /\{onFocusToggle && <IconAction/);
   assert.doesNotMatch(page, /hint="Toggle focused Side Stage"/);
 });
@@ -128,11 +129,12 @@ test('Full view retains the lead composer and shared plus menu in a movable chat
   assert.match(styles, /\.agentsam-floating-lead-chat \.as-work-shortcuts/);
 });
 
-test('Work split puts the stage before chat and preserves resize direction', () => {
-  assert.match(page, /const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout/);
-  assert.match(page, /workSplit \? " is-work-stage-first"/);
-  assert.match(page, /workSplit \? delta : -delta/);
-  assert.match(styles, /\.agentsam-workspace.is-work-stage-first \{\s*flex-direction:row-reverse/s);
+test('Side Stage dock preference controls visual order and preserves resize direction', () => {
+  assert.match(page, /const sideStageDock = state\.sideDock === 'auto'/);
+  assert.match(page, /const sideStageFirst = sideStageDock === 'left'/);
+  assert.match(page, /sideStageFirst \? " is-side-stage-first"/);
+  assert.match(page, /sideStageFirst \? delta : -delta/);
+  assert.match(styles, /\.agentsam-workspace\.is-side-stage-first \{\s*flex-direction:row-reverse/s);
 });
 
 test('Unsent attachment cards survive composer relocation without persisting browser object URLs', () => {

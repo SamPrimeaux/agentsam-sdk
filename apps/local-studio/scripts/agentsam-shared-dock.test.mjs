@@ -23,7 +23,7 @@ test('GoalGuru, Home and AgentSam share one packaged bottom dock', () => {
 
 test('compact tablet work uses one active stage and reserves bottom dock clearance', () => {
   assert.match(page, /matchMedia\('\(max-width: 1099px\)'\)/);
-  assert.match(page, /compactWorkLayout && workSurface !== 'chat'/);
+  assert.match(page, /compactWorkLayout && \(state\.sideOpen \|\| workSurface !== ['"]chat['"]\)/);
   assert.match(layout, /max-width: 1099px/);
   assert.match(navCss, /min-width: 768px/);
   assert.match(navCss, /as-nav-launch-dock\[data-nav-dock-coverage="tablet"\]/);

@@ -1,6 +1,6 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type DragEvent as ReactDragEvent } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid, ArrowLeft, LoaderCircle, CheckCircle2 } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid, ArrowLeft, ArrowLeftRight, GripVertical, LoaderCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SplitHandle } from "@/components/shell/split-handle";
 import { IconAction } from "@/components/ui/icon-action";
@@ -51,8 +51,12 @@ function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
   return <FileCode className="size-3.5" />;
 }
 
-export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }: {
-  workFocused?: boolean; onFocusToggle?: () => void; onSplitChange?: (enabled: boolean) => void;
+export function SideStage({ workFocused = false, onFocusToggle, onSplitChange, sideDock, onDockChange }: {
+  workFocused?: boolean;
+  onFocusToggle?: () => void;
+  onSplitChange?: (enabled: boolean) => void;
+  sideDock?: "left" | "right";
+  onDockChange?: (dock: "left" | "right") => void;
 }) {
   const tabs = useWorkStore((s) => s.sideTabs);
   const [splitCoworkerId, setSplitCoworkerId] = useState<string | null>(null);
@@ -63,6 +67,9 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const convertSideTab = useWorkStore((s) => s.convertSideTab);
   const setSideOpen = useWorkStore((s) => s.setSideOpen);
+  const reorderSideTab = useWorkStore((s) => s.reorderSideTab);
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
+  const [dropTargetTabId, setDropTargetTabId] = useState<string | null>(null);
   const confirmId = useWorkStore((s) => s.confirmDiscardId);
   const setConfirmDiscard = useWorkStore((s) => s.setConfirmDiscard);
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
@@ -94,6 +101,19 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
     // Opening a new co-worker normally selects its tab; leave Files mounted instead.
     if (tab) setActiveSideTab(tab.id);
     onSplitChange?.(true);
+  };
+  const handleTabDragStart = (event: ReactDragEvent<HTMLButtonElement>, id: string) => {
+    if (visibleTabs.length < 2) { event.preventDefault(); return; }
+    setDraggedTabId(id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
+  };
+  const handleTabDrop = (event: ReactDragEvent<HTMLDivElement>, targetId: string) => {
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData("text/plain") || draggedTabId;
+    if (sourceId && sourceId !== targetId) reorderSideTab(sourceId, targetId);
+    setDraggedTabId(null);
+    setDropTargetTabId(null);
   };
 
   // Persisted plugin tabs can outlive a registry migration. When an installed
@@ -134,18 +154,49 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
           {visibleTabs.map((item) => (
             <div
               key={item.id}
+              data-side-tab-id={item.id}
+              data-dragging={draggedTabId === item.id ? "true" : undefined}
+              data-drop-target={dropTargetTabId === item.id ? "true" : undefined}
+              onDragOver={(event) => {
+                const sourceId = draggedTabId || event.dataTransfer.getData("text/plain");
+                if (!sourceId || sourceId === item.id) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropTargetTabId(item.id);
+              }}
+              onDrop={(event) => handleTabDrop(event, item.id)}
+              onDragLeave={(event) => {
+                const related = event.relatedTarget;
+                if (!(related instanceof Node) || !event.currentTarget.contains(related)) setDropTargetTabId(null);
+              }}
               className={cn(
                 "flex h-8 shrink-0 items-center rounded-[7px] border pl-2.5 backdrop-blur-md transition-colors",
                 item.id === activeId
                   ? "border-border bg-muted/80 text-foreground shadow-sm"
                   : "border-transparent bg-background/30 text-muted-foreground hover:border-border/60 hover:bg-muted/40",
+                draggedTabId === item.id && "opacity-45",
+                dropTargetTabId === item.id && "ring-1 ring-primary/70",
               )}
             >
               <button
                 type="button"
+                draggable={visibleTabs.length > 1}
+                onDragStart={(event) => handleTabDragStart(event, item.id)}
+                onDragEnd={() => { setDraggedTabId(null); setDropTargetTabId(null); }}
+                onKeyDown={(event) => {
+                  if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+                  const index = visibleTabs.findIndex((candidate) => candidate.id === item.id);
+                  const target = visibleTabs[index + (event.key === "ArrowLeft" ? -1 : 1)];
+                  if (!target) return;
+                  event.preventDefault();
+                  reorderSideTab(item.id, target.id);
+                }}
                 onClick={() => setActiveSideTab(item.id)}
-                className="flex items-center gap-1.5 py-1 text-xs"
+                aria-label={`Activate ${item.title} tab. Drag to reorder or use Alt plus arrow keys.`}
+                title={`${item.title} · Drag to reorder · Alt + ←/→ to move`}
+                className="group flex cursor-grab items-center gap-1.5 py-1 text-xs active:cursor-grabbing"
               >
+                <GripVertical className="size-3 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-muted-foreground" aria-hidden="true" />
                 <TabIcon kind={item.kind} icon={item.icon} />
                 <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
@@ -249,6 +300,14 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
             <Users className="size-4"/>
           </IconAction>
         </>}
+        {onDockChange && <IconAction
+          type="button"
+          variant="ghost"
+          label={`Move Side Stage to ${sideDock === "left" ? "right" : "left"}`}
+          hint="Change which side of the conversation the Side Stage occupies"
+          className="hidden md:inline-flex"
+          onClick={() => onDockChange(sideDock === "left" ? "right" : "left")}
+        ><ArrowLeftRight className="size-4" /></IconAction>}
         {tab?.kind === "media" && <IconAction
           type="button"
           variant="ghost"
