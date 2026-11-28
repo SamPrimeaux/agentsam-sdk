@@ -403,8 +403,8 @@ export async function getAgentApproval(database, id, accountId = null) {
   if (!row) return null;
   if (row.status === 'pending' && row.expires_at != null && Number(row.expires_at) <= Math.floor(Date.now() / 1000)) {
     await database.prepare(
-      "UPDATE agentsam_approval_queue SET status = 'expired' WHERE id = ? AND status = 'pending'"
-    ).bind(row.id).run();
+      "UPDATE agentsam_approval_queue SET status = 'expired', decided_at = ? WHERE id = ? AND status = 'pending'"
+    ).bind(Math.floor(Date.now() / 1000), row.id).run();
     const metadata = parseJson(row.metadata_json, {});
     const spawnJobId = clean(metadata.spawn_job_id);
     if (spawnJobId) {
@@ -412,6 +412,7 @@ export async function getAgentApproval(database, id, accountId = null) {
         "UPDATE agentsam_spawn_job SET status = 'failed', error_message = 'Spawn approval expired', completed_at = datetime('now') WHERE id = ? AND account_id = ? AND status = 'awaiting_approval'"
       ).bind(spawnJobId, row.account_id).run();
     }
+    await wakeRunAfterApproval(database, row, { decision: 'expired' });
     return mapApproval(await readApproval(database, row.id, accountId));
   }
   return mapApproval(row);
@@ -432,11 +433,17 @@ export async function listAgentApprovals(database, {
   }
   const now = Math.floor(Date.now() / 1000);
   await database.prepare(
-    "UPDATE agentsam_approval_queue SET status = 'expired' WHERE account_id = ? AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?"
-  ).bind(owner, now).run();
+    "UPDATE agentsam_approval_queue SET status = 'expired', decided_at = ? WHERE account_id = ? AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?"
+  ).bind(now, owner, now).run();
   await database.prepare(
     "UPDATE agentsam_spawn_job SET status = 'failed', error_message = 'Spawn approval expired', completed_at = datetime('now') WHERE account_id = ? AND status = 'awaiting_approval' AND id IN (SELECT json_extract(metadata_json, '$.spawn_job_id') FROM agentsam_approval_queue WHERE account_id = ? AND approval_type = 'spawn' AND status = 'expired')"
   ).bind(owner, owner).run();
+  const expiredApprovals = await database.prepare(
+    'SELECT * FROM agentsam_approval_queue WHERE account_id = ? AND status = \'expired\' AND decided_at = ? AND agent_run_id IS NOT NULL'
+  ).bind(owner, now).all();
+  for (const expired of expiredApprovals.results || []) {
+    await wakeRunAfterApproval(database, expired, { decision: 'expired' });
+  }
   const params = [owner];
   let where = 'account_id = ?';
   if (clean(runId)) { where += ' AND agent_run_id = ?'; params.push(clean(runId)); }
@@ -738,6 +745,69 @@ export async function spawnChildRun(database, {
   });
 }
 
+
+async function wakeRunAfterApproval(database, row, {
+  decision,
+  queueControl = null,
+} = {}) {
+  const runId = clean(row?.agent_run_id);
+  const accountId = clean(row?.account_id);
+  if (!runId || !accountId) return null;
+  const now = Math.floor(Date.now() / 1000);
+  const counts = await database.prepare(
+    "SELECT (SELECT COUNT(*) FROM agentsam_approval_queue WHERE agent_run_id = ? AND account_id = ? AND status = 'pending' AND (expires_at IS NULL OR expires_at > ?)) AS pending_approvals, (SELECT COUNT(*) FROM agentsam_agent_run WHERE parent_run_id = ? AND account_id = ? AND status IN ('queued','running')) AS active_children"
+  ).bind(runId, accountId, now, runId, accountId).first();
+  if (Number(counts?.pending_approvals || 0) > 0 || Number(counts?.active_children || 0) > 0) {
+    return { woke: false, reason: 'other_work_still_pending' };
+  }
+  const run = await database.prepare(
+    'SELECT * FROM agentsam_agent_run WHERE id = ? AND account_id = ? LIMIT 1'
+  ).bind(runId, accountId).first();
+  if (!run || ['completed', 'failed', 'cancelled'].includes(run.status)) {
+    return { woke: false, reason: 'run_terminal' };
+  }
+  await database.prepare(
+    "UPDATE agentsam_agent_run SET status = 'queued', updated_at_unix = ? WHERE id = ? AND account_id = ? AND status IN ('running','queued')"
+  ).bind(now, runId, accountId).run();
+  await appendAgentRunEvent(database, {
+    runId,
+    eventType: 'run.woken',
+    phase: 'recover',
+    label: 'Approval decision received',
+    evidence: {
+      approval_id: row.id,
+      approval_type: row.approval_type,
+      approval_decision: decision,
+      tool_call_id: row.tool_call_id || null,
+    },
+    dedupeKey: 'wake-approval:' + row.id,
+    createdAt: now,
+  });
+  const queue = queueControl || createLocalQueueControl(database);
+  const queued = await queue.enqueue(
+    {
+      kind: 'agent.resume',
+      account_id: accountId,
+      payload: {
+        run_id: runId,
+        wake_reason: 'approval',
+        approval_id: row.id,
+        approval_type: row.approval_type,
+        decision,
+        tool_call_id: row.tool_call_id || null,
+      },
+    },
+    {
+      id: 'job_agent_resume_' + runId + '_approval_' + row.id,
+      account_id: accountId,
+      source_run_id: runId,
+      idempotency_key: 'agent-resume:' + runId + ':approval:' + row.id,
+      priority: decision === 'denied' || decision === 'expired' ? 'high' : 'normal',
+    },
+  );
+  return { woke: true, resume_job: queued.job, queue: queued.plan?.physical_queue || null };
+}
+
 export async function decideAgentApproval(database, {
   id, accountId, actorId = null, decision, reason = '', queueControl = null,
 } = {}) {
@@ -779,7 +849,8 @@ export async function decideAgentApproval(database, {
           });
         }
       }
-      return { approval: mapApproval(row), spawn: recoveredSpawn, idempotent: true };
+      const resumed = recoveredSpawn ? null : await wakeRunAfterApproval(database, row, { decision: choice, queueControl });
+      return { approval: mapApproval(row), spawn: recoveredSpawn, resume: resumed, idempotent: true };
     }
     const error = new Error('approval_already_decided:' + row.status);
     error.code = 'approval_already_decided';
@@ -868,9 +939,11 @@ export async function decideAgentApproval(database, {
       ).bind(response.reason || 'Spawn approval denied', spawnJobId, owner).run();
     }
   }
+  const resume = spawn ? null : await wakeRunAfterApproval(database, row, { decision: choice, queueControl });
   return {
     approval: mapApproval(await readApproval(database, approvalId, owner)),
     spawn,
+    resume,
     idempotent: false,
   };
 }
