@@ -4169,12 +4169,18 @@
         "runtime_proof": "sam-superbash-integration-fixture",
         "tests": [
           "packages/primetech-procedures/test/procedure.test.mjs",
-          "packages/primetech-procedures/test/test_inventory.py"
+          "packages/primetech-procedures/test/test_inventory.py",
+          "packages/primetech-procedures/test/creative-tools.test.mjs",
+          "packages/primetech-procedures/test/production-board.test.mjs"
         ]
       },
       "execution_domains": [
         "workflow-orchestration",
         "local-runtime",
+        "creative-production",
+        "brand-systems",
+        "media-production",
+        "digital-publishing",
         "engineering"
       ],
       "id": "primetech-procedures",
@@ -4191,7 +4197,7 @@
         "bash"
       ],
       "name": "@inneranimalmedia/primetech-procedures",
-      "purpose": "Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry.",
+      "purpose": "Versioned PrimeTech production procedures, packaged AgentSam skills, authorized SAM operation orchestration, creative asset builders, production boards, quality gates, source hashes and run evidence without creating a second runtime or global registry.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/primetech-procedures",
@@ -4207,15 +4213,26 @@
         "python",
         "bash",
         "cad",
-        "bim"
+        "bim",
+        "brand-identity",
+        "iconography",
+        "type-design",
+        "sprite-production",
+        "design-systems",
+        "visual-qa",
+        "digital-publishing",
+        "agentsam-skills"
       ],
       "use_when": [
         "Turning a successful multi-step engineering or repository task into a versioned, repeatable procedure",
         "Composing existing SAM operations with pinned Bash, Python, and native-tool steps",
         "Capturing procedure, entrypoint, input, output and artifact hashes with verification receipts",
+        "Developing brand identity systems, icon families, custom typefaces and character sprite production",
+        "Packaging creative assets, design systems and EPUB 3 publications with verified outputs",
+        "Mapping, implementing and visually validating responsive UI/UX flows and demos",
         "Run one exact, versioned PrimeTech procedure through an existing authorized SAM operation; validates inputs and output and records run evidence. Does not accept arbitrary shell commands or caller-selected project roots."
       ],
-      "version": "2.6.17",
+      "version": "2.6.18",
       "review_required": [],
       "readiness": "unverified"
     },

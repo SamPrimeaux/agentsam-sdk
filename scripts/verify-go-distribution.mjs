@@ -110,12 +110,15 @@ assert.equal(targetVersion, sdkPack.version, 'distribution test must target the 
 const sdkManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const errorsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-errors'];
 const contractsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-contracts'];
+const proceduresVersion = sdkManifest.dependencies?.['@inneranimalmedia/primetech-procedures'];
 assert.equal(errorsVersion, sdkPack.version, 'the SDK must declare its exact release-train error contract');
 assert.equal(contractsVersion, sdkPack.version, 'the SDK must declare its exact release-train portable contracts');
+assert.equal(proceduresVersion, sdkPack.version, 'the SDK must declare its exact release-train PrimeTech procedures package');
 const candidatePacks = releaseState === 'candidate'
   ? [
       ['@inneranimalmedia/agentsam-errors', errorsVersion, 'agentsam-errors'],
       ['@inneranimalmedia/agentsam-contracts', contractsVersion, 'agentsam-contracts'],
+      ['@inneranimalmedia/primetech-procedures', proceduresVersion, 'primetech-procedures'],
     ].map(([expectedName, expectedVersion, folder]) => {
       const candidate = pack(path.join(ROOT, 'packages', folder));
       assert.equal(candidate.name, expectedName);
@@ -209,6 +212,7 @@ const receipt = {
   release_phase: releaseState,
   candidate_error_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-errors') ? {name: '@inneranimalmedia/agentsam-errors', version: errorsVersion} : null,
   candidate_contracts_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-contracts') ? {name: '@inneranimalmedia/agentsam-contracts', version: contractsVersion} : null,
+  candidate_procedures_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/primetech-procedures') ? {name: '@inneranimalmedia/primetech-procedures', version: proceduresVersion} : null,
   sdk: {
     name: sdkPack.name,
     version: sdkPack.version,

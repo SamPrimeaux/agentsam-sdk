@@ -35,7 +35,7 @@ export const FORMAT_CAPABILITIES = Object.freeze({
   mp4: { family: 'video', resize_ladder: false, poster_frame: true, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
   mov: { family: 'video', resize_ladder: false, poster_frame: true, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
   webm: { family: 'video', resize_ladder: false, poster_frame: true, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
-  mkv: { family: 'video', resize_ladder: false, poster_frame: true, recolorable: false, ingest: true, edit: false, export: true, preserve: true, preserve: true },
+  mkv: { family: 'video', resize_ladder: false, poster_frame: true, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
 
   // Motion graphics
   lottie: { family: 'motion-graphics', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true, ext_alias: 'json' },
@@ -45,8 +45,8 @@ export const FORMAT_CAPABILITIES = Object.freeze({
   glb: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
   gltf: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
   usdz: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
-  obj: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true, preserve: true },
-  fbx: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true, preserve: true },
+  obj: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
+  fbx: { family: 'model', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },
 
   // Textures
   ktx2: { family: 'texture', resize_ladder: false, poster_frame: false, recolorable: false, ingest: true, edit: false, export: true, preserve: true },

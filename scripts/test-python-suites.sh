@@ -13,6 +13,14 @@ if [ -z "$PYTHON" ]; then
   printf '%s\n' 'Python 3.10 or newer is required for the SDK test suites.' >&2
   exit 2
 fi
+# Keep release verification reproducible without relying on globally installed
+# developer or runner packages. The Python CLI's only runtime test dependency
+# outside the standard library is the declared Rich terminal UI dependency.
+PYTHON_ENV="$(mktemp -d "${TMPDIR:-/tmp}/agentsam-python-tests.XXXXXX")"
+trap 'rm -rf "$PYTHON_ENV"' EXIT
+"$PYTHON" -m venv "$PYTHON_ENV"
+TEST_PYTHON="$PYTHON_ENV/bin/python"
+"$TEST_PYTHON" -m pip install --disable-pip-version-check --quiet -r "$ROOT/python/requirements-tui.txt"
 export PYTHONPATH="$ROOT/python"
-"$PYTHON" -m unittest discover -s python/tests -v
-"$PYTHON" -m unittest discover -s packages/primetech-procedures/test -v
+"$TEST_PYTHON" -m unittest discover -s python/tests -v
+"$TEST_PYTHON" -m unittest discover -s packages/primetech-procedures/test -v

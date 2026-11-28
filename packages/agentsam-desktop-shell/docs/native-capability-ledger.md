@@ -7,7 +7,7 @@ packaged build (hand-maintained `LIVE` map; "not verified" is the default and is
 
 | Command | Implementation | Frontend consumer | Tests | Live |
 |---|---|---|---|---|
-| `identity_session_exists` | `src-tauri/src/commands/keychain.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
+| `identity_session_exists` | `src-tauri/src/commands/keychain.rs` | **none (unwired)** | Rust tests in module (not per-command)<br>`apps/local-studio/scripts/settings-shell-route-contract.test.mjs` | not verified |
 | `identity_pending_set` | `src-tauri/src/commands/keychain.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command)<br>`apps/local-studio/scripts/smoke-desktop-auth.mjs` | not verified |
 | `identity_pending_get` | `src-tauri/src/commands/keychain.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command)<br>`apps/local-studio/scripts/smoke-desktop-auth.mjs` | not verified |
 | `identity_pending_delete` | `src-tauri/src/commands/keychain.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command)<br>`apps/local-studio/scripts/smoke-desktop-auth.mjs` | not verified |
@@ -27,14 +27,15 @@ packaged build (hand-maintained `LIVE` map; "not verified" is the default and is
 | `agentsamd_health` | `src-tauri/src/commands/agentsamd.rs` | `apps/local-studio/frontend/src/lib/content/localContentHost.ts` | none | user-verified (terminal PTY) |
 | `agentsamd_language_packs` | `src-tauri/src/commands/agentsamd.rs` | `apps/local-studio/frontend/src/components/workbench/LspLanguageSetup.tsx` | none | not verified |
 | `agentsamd_install_language_pack` | `src-tauri/src/commands/agentsamd.rs` | `apps/local-studio/frontend/src/components/workbench/LspLanguageSetup.tsx` | none | not verified |
-| `agentsamd_pairing_token` | `src-tauri/src/commands/agentsamd.rs` | `apps/local-studio/frontend/src/lib/work/terminal-runtime.ts` | none | user-verified (terminal PTY) |
+| `agentsamd_pairing_token` | `src-tauri/src/commands/agentsamd.rs` | `apps/local-studio/frontend/src/lib/work/agentsamd-client.ts`<br>`apps/local-studio/frontend/src/lib/work/terminal-runtime.ts` | none | user-verified (terminal PTY) |
 | `local_sqlite_bridge` | `src-tauri/src/commands/local_sqlite.rs` | `apps/local-studio/frontend/src/lib/database/localHost.ts`<br>`apps/local-studio/frontend/src/routes/api/database.local.bridge.ts` | none | not verified |
 | `local_lsp_bridge` | `src-tauri/src/commands/local_lsp.rs` | `apps/local-studio/frontend/src/lib/desktop/native-lsp.ts` | none | not verified |
 | `local_provider_bridge` | `src-tauri/src/commands/local_provider.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
 | `local_identity_bridge` | `src-tauri/src/commands/local_identity.rs` | **none (unwired)** | Rust tests in module (not per-command) | not verified |
 | `identity_runtime_config` | `src-tauri/src/commands/local_identity.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
 | `identity_bridge` | `src-tauri/src/commands/local_identity.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts`<br>`packages/identity/src/frontend/auth-portal/shared/desktop-identity-bridge.js` | Rust tests in module (not per-command) | not verified |
-| `studio_service_bridge` | `src-tauri/src/commands/local_identity.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
+| `studio_service_bridge` | `src-tauri/src/commands/local_identity.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command)<br>`packages/agentsam-desktop-shell/scripts/desktop-api-fetch.test.mjs` | not verified |
+| `desktop_app_package` | `src-tauri/src/commands/local_identity.rs` | `apps/local-studio/frontend/src/lib/apps-account.ts` | Rust tests in module (not per-command) | not verified |
 | `local_sqlite_pick_database` | `src-tauri/src/commands/local_sqlite.rs` | `apps/local-studio/frontend/src/lib/database/localHost.ts` | none | not verified |
 | `local_sqlite_pick_directory` | `src-tauri/src/commands/local_sqlite.rs` | `apps/local-studio/frontend/src/components/desktop/NativeCommandBridge.tsx`<br>`apps/local-studio/frontend/src/lib/database/localHost.ts` | none | not verified |
 | `local_content_bridge` | `src-tauri/src/commands/local_content.rs` | `apps/local-studio/frontend/src/components/desktop/DesktopStartupOverlay.tsx`<br>`apps/local-studio/frontend/src/lib/content/localContentHost.ts` | none | not verified |
@@ -46,7 +47,7 @@ packaged build (hand-maintained `LIVE` map; "not verified" is the default and is
 | `embedded_browser_resize` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx` | Rust tests in module (not per-command) | not verified |
 | `embedded_browser_hide` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx` | Rust tests in module (not per-command) | not verified |
 | `embedded_browser_action` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/browser.tsx` | Rust tests in module (not per-command) | not verified |
-| `embedded_browser_close` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/side-stage.tsx` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_close` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx`<br>`apps/local-studio/frontend/src/components/workbench/side-stage.tsx` | Rust tests in module (not per-command) | not verified |
 | `desktop_workspace_context` | `src-tauri/src/commands/system.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
 | `desktop_open_workspace` | `src-tauri/src/commands/system.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
 | `autorag_workflow_bridge` | `src-tauri/src/commands/autorag.rs` | `apps/local-studio/frontend/src/lib/knowledge/autorag-host.ts` | Rust tests in module (not per-command) | not verified |

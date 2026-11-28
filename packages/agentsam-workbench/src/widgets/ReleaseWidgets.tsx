@@ -76,7 +76,7 @@ function LiveError({status,error,data}: {status: string; error: string | null; d
 export function PullRequestSummaryWidget({dataHost}: Props) {
   const live = useLiveData<LivePullRequest>('pull-request-summary',dataHost);
   const s = live.data;
-  if (!s) return <WidgetFrame title="Pull Request Summary" size="medium" state={{status:live.status === 'loading' ? 'empty' : 'error', ...(live.status === 'loading' ? {} : {error:{code:live.error || 'widget_data_unavailable',message:friendlyError(live.error)}})}}>
+  if (!s) return <WidgetFrame title="Pull Request Summary" size="medium" state={live.status === 'loading' ? {status: 'empty'} : undefined}>
     <LiveError status={live.status} error={live.error} data={s}/>
   </WidgetFrame>;
   const stateLabel = s.state === 'merged' ? 'Merged' : s.state === 'closed' ? 'Closed' : s.draft ? 'Draft · Open' : 'Open';
@@ -104,7 +104,7 @@ export function PullRequestSummaryWidget({dataHost}: Props) {
 export function ReleaseReadinessWidget({dataHost}: Props) {
   const live = useLiveData<LiveReadiness>('release-readiness',dataHost);
   const s = live.data;
-  if (!s) return <WidgetFrame title="Verification & Release Readiness" size="medium" state={{status:live.status === 'loading' ? 'empty' : 'error', ...(live.status === 'loading' ? {} : {error:{code:live.error || 'widget_data_unavailable',message:friendlyError(live.error)}})}}>
+  if (!s) return <WidgetFrame title="Verification & Release Readiness" size="medium" state={live.status === 'loading' ? {status: 'empty'} : undefined}>
     <LiveError status={live.status} error={live.error} data={s}/>
   </WidgetFrame>;
   const icons = {passed:CheckCircle2,failed:XCircle,pending:Clock,unknown:Circle};

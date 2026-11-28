@@ -217,7 +217,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | APP ID | Manifest name | Package | CLI binary |
 | --- | --- | --- | --- |
 | `cad-creator` | AgentSam CAD Creator | `@inneranimalmedia/agentsam-cad-creator` | `bin/agentsam-cad-creator.mjs` |
-| `design-canvas` | AgentSam Design | `@inneranimalmedia/agentsam-design-canvas` | `bin/agentsam-design-canvas.mjs` |
+| `design-canvas` | AgentSam Design | `@inneranimalmedia/agentsam-design-canvas` | `./bin/agentsam-design-canvas.mjs` |
 | `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | `@inneranimalmedia/ecommerce-cms-agentsam` | `bin/ecommerce.mjs` |
 | `goalguru` | AgentSam GoalGuru | `@inneranimalmedia/agentsam-goalguru` | — |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
@@ -281,7 +281,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `copro-timeline` | `@inneranimalmedia/copro-timeline` | needs-review | Headless CoPro timeline projection, ordering, duration, and viewport math. |
 | `copro-ui` | `@inneranimalmedia/copro-ui` | needs-review | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, … |
 | `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Portable scene v1 runtime and verified file interchange; experimental IAMScene v2 multi-scene authoring model, ind… |
-| `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
+| `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech production procedures, packaged AgentSam skills, authorized SAM operation orchestration, creat… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
 | `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Legacy editorial journal and photography reference; not the canonical CMS starter or default theme. |
 | `theme-scenes` | `@inneranimalmedia/theme-scenes` | classified | Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable rendere… |

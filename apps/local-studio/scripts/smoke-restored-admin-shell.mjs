@@ -6,10 +6,12 @@ import { chromium } from "playwright";
 
 const assets = resolve(import.meta.dirname, "../.output/public");
 const origin = "http://127.0.0.1:4501";
-const routes = new Map([
-  ["/admin/store", "Online Store"],
-  ["/admin/media/images", "Media Library"],
-]);
+const shellRoutes = new Set(["/admin/store", "/admin/media/images"]);
+const routes = [
+  { pathname: "/admin/store", search: "", heading: "Online Store", themesView: false },
+  { pathname: "/admin/store", search: "?view=themes", heading: "Themes", themesView: true },
+  { pathname: "/admin/media/images", search: "", heading: "Media Library", themesView: false },
+];
 const types = new Map([
   [".html", "text/html"], [".js", "text/javascript"], [".mjs", "text/javascript"],
   [".css", "text/css"], [".json", "application/json"], [".svg", "image/svg+xml"],
@@ -18,7 +20,7 @@ const executablePath = process.env.CHROME_BIN || (process.platform === "darwin"
   ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : undefined);
 const browser = await chromium.launch({ executablePath, headless: true });
 try {
-  for (const [pathname, heading] of routes) {
+  for (const { pathname, search, heading, themesView } of routes) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const reactErrors = [];
     function checkError(message) {
@@ -83,7 +85,7 @@ try {
         } });
       }
       let asset = url.pathname;
-      if (routes.has(asset)) asset = "/studio-app-shell/" + asset.slice("/admin/".length) + "/index.html";
+      if (shellRoutes.has(asset)) asset = "/studio-app-shell/" + asset.slice("/admin/".length) + "/index.html";
       if (asset.startsWith("/ecommerce-cms-agentsam/admin/") && !extname(asset)) asset += ".html";
       for (const candidate of [asset, "/ecommerce-cms-agentsam" + asset]) {
         const file = resolve(assets, "." + candidate);
@@ -96,12 +98,12 @@ try {
       }
       return route.fulfill({ status: 404, body: "" });
     });
-    await page.goto(origin + pathname, { waitUntil: "domcontentloaded" });
+    await page.goto(origin + pathname + search, { waitUntil: "domcontentloaded" });
     try {
       await page.locator("[data-aux-chat]").getByPlaceholder("Ask AgentSam").waitFor({ timeout: 12000 });
       await page.getByText("Saved co-worker conversation", { exact: true }).waitFor({ timeout: 12000 });
       await page.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
-      if (pathname === "/admin/store") {
+      if (themesView) {
         await page.getByRole("heading", { name: "Draft themes", exact: true }).waitFor();
         await page.getByRole("button", { name: "Add", exact: true }).waitFor();
       }

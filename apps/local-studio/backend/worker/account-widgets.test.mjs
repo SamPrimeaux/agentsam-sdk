@@ -23,10 +23,13 @@ function fixture() {
   insert.run('release-readiness','Verification','glance','ReleaseReadinessWidget','medium','["medium","large"]','github.commit-readiness');
   insert.run('quick-controls','Quick Controls','utility','quick-controls','small','["small"]',null);
   insert.run('store-chat','Store chat','inbox','agentsam-store-chat','small','["small"]',null);
-  const db={prepare(query){const stmt=sqlite.prepare(query); return {bind(...args){return {
-    first:async()=>stmt.get(...args),all:async()=>({results:stmt.all(...args)}),
-    run:async()=>({meta:{changes:Number(stmt.run(...args).changes)}}),
-  };}};}};
+  const db={prepare(query){const stmt=sqlite.prepare(query); return {
+    run:async()=>({meta:{changes:Number(stmt.run().changes)}}),
+    bind(...args){return {
+      first:async()=>stmt.get(...args),all:async()=>({results:stmt.all(...args)}),
+      run:async()=>({meta:{changes:Number(stmt.run(...args).changes)}}),
+    };}
+  };}};
   const count=(table)=>sqlite.prepare('SELECT count(*) n FROM '+table).get().n;
   return {sqlite,db,count};
 }
@@ -96,7 +99,7 @@ test('HTTP widget endpoints enforce authorization, origin, request schema, and r
   assert.equal((await handleAccountWidgetsRequest(req('GET'),db,null)).status,401);
   const get=await handleAccountWidgetsRequest(req('GET'),db,'alice');
   assert.equal(get.status,200);
-  assert.equal((await get.json()).widgets.filter(w=>w.available).length,4);
+  assert.equal((await get.json()).widgets.filter(w=>w.available).length,5);
   assert.equal((await handleAccountWidgetsRequest(req('POST',body('countdown')),db,'alice')).status,201);
   assert.equal((await handleAccountWidgetsRequest(req('POST',body('quick-controls')),db,'alice')).status,409);
   assert.equal((await handleAccountWidgetsRequest(req('POST',{...body('clock'),extra:true}),db,'alice')).status,400);

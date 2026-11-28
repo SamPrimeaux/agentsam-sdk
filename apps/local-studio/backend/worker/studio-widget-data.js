@@ -71,8 +71,8 @@ async function githubJson(path,token,fetchImpl) {
 }
 function repoPath(repo) { return repo.split('/').map(encodeURIComponent).join('/'); }
 async function loadPullRequest(env,userId,configuration,options) {
-  const repo=repositoryValue(configuration.repository||configuration.snapshot?.repository);
-  const number=Number(configuration.pullNumber??configuration.snapshot?.number);
+  const repo=repositoryValue(configuration.repository);
+  const number=Number(configuration.pullNumber);
   if(!repo||!Number.isSafeInteger(number)||number<1) throw fail('widget_configuration_required',409);
   const token=await githubToken(env,userId,configuration,options);
   const pull=await githubJson('/repos/'+repoPath(repo)+'/pulls/'+number,token,options.fetchImpl||fetch);
@@ -103,7 +103,7 @@ function checkStatus(status,conclusion) {
   return 'unknown';
 }
 async function loadReleaseReadiness(env,userId,configuration,options) {
-  const repo=repositoryValue(configuration.repository||configuration.snapshot?.repository);
+  const repo=repositoryValue(configuration.repository);
   const ref=safeRef(configuration.ref||'main');
   if(!repo||!ref) throw fail('widget_configuration_required',409);
   const token=await githubToken(env,userId,configuration,options);

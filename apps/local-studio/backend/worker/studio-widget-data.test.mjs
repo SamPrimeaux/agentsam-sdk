@@ -48,6 +48,19 @@ test('pull request widget reads live GitHub state and does not trust its former 
   assert.equal(payload.data.url,'https://github.com/owner/repo/pull/42');
 });
 
+test('legacy presentation snapshots cannot supply live repository or pull-request configuration',async()=>{
+  const {db}=fixture('pull-request-summary',{snapshot:{repository:'owner/repo',number:42,title:'Fixture only'}});
+  let connectorLookups=0;
+  const response=await handleStudioWidgetData(request('pull-request-summary'),{DB:db},'alice','user-1',{
+    connectorStatusImpl:async()=>{connectorLookups++;return connections;},
+    resolveGithubConnectorAccessImpl:resolve,
+    fetchImpl:async()=>{throw new Error('must not fetch');},
+  });
+  assert.equal(response.status,409);
+  assert.equal((await response.json()).error,'widget_configuration_required');
+  assert.equal(connectorLookups,0);
+});
+
 test('release readiness is scoped to the resolved commit and combines only matching SDK receipts',async()=>{
   const {db,sqlite}=fixture('release-readiness',{repository:'owner/repo',ref:'main'});
   const sha='b'.repeat(40);
