@@ -6,29 +6,6 @@ export const AGENT_RUN_STORAGE_STATUSES = [
 ] as const;
 export type AgentRunStorageStatus = typeof AGENT_RUN_STORAGE_STATUSES[number];
 
-export const AGENT_RUN_SUSPENSION_STATES = [
-  'waiting_external', 'waiting_child', 'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
-] as const;
-export const AGENT_RUN_SUSPENSION_REASONS = [
-  'external', 'child_run', 'approval', 'input', 'retry', 'scheduled', 'rate_limit',
-] as const;
-export type AgentRunSuspensionReason = typeof AGENT_RUN_SUSPENSION_REASONS[number];
-export type AgentRunSuspensionState = typeof AGENT_RUN_SUSPENSION_STATES[number];
-
-export interface AgentRunSuspension {
-  runId: string;
-  state: AgentRunSuspensionState;
-  reason: AgentRunSuspensionReason;
-  wakeAt?: number;
-  wakeEvent?: string;
-  dependencyRunIds?: string[];
-  attempt?: number;
-  resumeStepId?: string;
-  checkpointRef?: string;
-  expiresAt?: number;
-  metadata?: Record<string, unknown>;
-}
-
 /**
  * Public ACP projection. status is the lifecycle view; storageStatus is the
  * narrower status persisted by the runtime. A timeout is recorded as a
@@ -46,7 +23,6 @@ export interface AgentRunV1 extends AgentRun {
   outputTokens: number;
   reasoningTokens: number;
   costUsd: number;
-  suspension: AgentRunSuspension | null;
 }
 
 /** Control-plane acknowledgement; scheduling is not model execution. */
@@ -57,19 +33,6 @@ export interface AgentRunStartV1 {
   queue: string | null;
   queue_job: Record<string, unknown>;
   published: boolean;
-}
-
-export type AgentRunWakeKind = 'event' | 'dependency' | 'scheduled' | 'manual';
-
-export interface AgentRunWakeSignal {
-  id: string;
-  runId: string;
-  kind: AgentRunWakeKind;
-  occurredAt: number;
-  dedupeKey: string;
-  eventKey?: string;
-  dependencyRunId?: string;
-  metadata?: Record<string, unknown>;
 }
 
 export type AgentRunRetryClass = 'transient' | 'wait' | 'replan' | 'terminal';
@@ -184,7 +147,6 @@ export function wakeMatchesSuspension(
 
 export type AgentRunLifecycleAction =
   | { type: 'start' }
-  | { type: 'suspend'; status: AgentRunSuspension['state'] }
   | { type: 'wake' }
   | { type: 'complete' }
   | { type: 'fail' }
@@ -199,7 +161,6 @@ export function transitionAgentRunStatus(status: AgentRunStatus, action: AgentRu
   if (action.type === 'timeout') return 'timed_out';
   if (action.type === 'complete') return 'completed';
   if (action.type === 'fail') return 'failed';
-  if (action.type === 'suspend') return action.status;
   if (action.type === 'wake') return 'queued';
   if (action.type === 'start') return 'running';
   return status;
@@ -299,8 +260,6 @@ export interface AgentRunReceiptV1 {
   status: AgentRunStatus;
   terminal: boolean;
   parentRunId: string | null;
-  planId: string | null;
-  todoId: string | null;
   usage: {
     modelCalls: number;
     toolCalls: number;
@@ -317,7 +276,6 @@ export interface AgentRunReceiptV1 {
     latencyMs: number | null;
   };
   error: { code: string | null; message: string | null } | null;
-  suspension: AgentRunSuspension | null;
   eventCount: number;
   childRunCount: number;
   lastEvent: AgentRunEventReceiptV1 | null;
