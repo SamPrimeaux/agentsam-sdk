@@ -70,6 +70,34 @@ test('Page, Document and Spreadsheet templates create independent native documen
   assert.equal(model.artifactHasImages(spreadsheet), false);
 });
 
+test('copying populated spreadsheet templates preserves cell references, formulas and active sheet', async () => {
+  const model = await loadModel();
+  const source = {
+    activeSheetId: 'sheet_2',
+    sheets: [
+      { id: 'sheet_1', name: 'Overview', columns: [{ id: 'col_label', label: 'Label' }], rows: [{ id: 'row_1', cells: { col_label: 'Summary' } }] },
+      { id: 'sheet_2', name: 'Budget', columns: [{ id: 'col_item', label: 'Item' }, { id: 'col_amount', label: 'Amount', type: 'number' }], rows: [
+        { id: 'row_2', cells: { col_item: 'Design', col_amount: '1200' }, cellStyles: { col_amount: { bold: true, align: 'right' } } },
+        { id: 'row_3', cells: { col_item: 'Total', col_amount: '=SUM(B1:B1)' } },
+      ] },
+    ],
+  };
+  const cloned = model.reidentifyCreativeData(source);
+  const copy = model.duplicateArtifact(model.makeArtifact('spreadsheet', 'Budget', source)).data;
+  for (const result of [cloned, copy]) {
+    assert.equal(model.isSpreadsheetDocument(result), true);
+    assert.equal(result.activeSheetId, result.sheets[1].id);
+    for (const [i, sheet] of result.sheets.entries()) {
+      assert.notEqual(sheet.id, source.sheets[i].id);
+      assert.deepEqual(sheet.rows.map(row => sheet.columns.map(col => row.cells[col.id])), source.sheets[i].rows.map(row => source.sheets[i].columns.map(col => row.cells[col.id])));
+      assert.ok(sheet.columns.every((col, j) => col.id !== source.sheets[i].columns[j].id));
+      assert.ok(sheet.rows.every((row, j) => row.id !== source.sheets[i].rows[j].id));
+      for (const [j, row] of sheet.rows.entries()) for (const [k, column] of sheet.columns.entries()) assert.deepEqual(row.cellStyles?.[column.id], source.sheets[i].rows[j].cellStyles?.[source.sheets[i].columns[k].id]);
+    }
+  }
+  assert.equal(source.sheets[1].rows[1].cells.col_amount, '=SUM(B1:B1)');
+});
+
 test('first Page, Document and Spreadsheet template payloads satisfy their native document contracts', async () => {
   const model = await loadModel();
   const base = new URL('../templates/creative/design-canvas/', import.meta.url);
@@ -310,9 +338,9 @@ test('creative app uses the shared workspace frame and host-owned integration bo
   assert.match(source, /Code workspaces run in AgentSam Work/);
   assert.match(source, /onOpenCode \? <button/);
   assert.match(source, /Open Design Canvas inside Work to continue this saved code workspace/);
-  assert.match(source, /if \(!embedded\)/, 'standalone preview must not call host-only APIs');
+  assert.match(source, /remoteStore = embedded && !onArtifactsChange/, 'standalone preview does not invoke host-owned persistence');
   const templateBrowser = await readFile(new URL('../src/components/TemplateBrowserDialog.tsx', import.meta.url), 'utf8');
-  assert.match(templateBrowser, /Open Design Canvas in AgentSam Work/);
+  assert.doesNotMatch(templateBrowser, /Open Design Canvas in AgentSam Work/, 'standalone and embedded use the same catalog');
   assert.doesNotMatch(source, /An eight-slide starting deck for your identity/);
   assert.doesNotMatch(source, /brandGuidelinesSlides/);
   assert.doesNotMatch(source, /disabled=\{!onAsk\}/, 'standalone mode must not show dead host-integration controls');
@@ -373,7 +401,7 @@ test('editor dropdowns portal above clipped toolbars while staying inside the em
   const menus = await readFile(new URL('../src/components/EditorMenus.tsx', import.meta.url), 'utf8');
   const css = await readFile(new URL('../src/design-canvas.css', import.meta.url), 'utf8');
   assert.match(menus, /useLayoutEffect/);
-  assert.match(menus, /createPortal\(popover, document\.body\)/);
+  assert.match(menus, /createPortal\([\s\S]*?\{popover\}[\s\S]*?document\.body\)/);
   assert.match(menus, /closest\('\.dcx-root'\)/);
   assert.match(menus, /'--dcx-menu-left'/);
   assert.match(menus, /menuRef\.current\?\.contains\(target\)/);

@@ -89,6 +89,15 @@ function validSpreadsheetDocument(data){
   }
   for(const row of sheet.rows){
    if(!obj(row)||!validCreativeId(row.id,ids)||!obj(row.cells)||Object.keys(row.cells).length>100)return false;
+   if(row.cellStyles!==undefined){
+    if(!obj(row.cellStyles)||Object.keys(row.cellStyles).length>100)return false;
+    for(const [key,style] of Object.entries(row.cellStyles)){
+     if(!columns.has(key)||!obj(style)||Object.keys(style).some(k=>!['bold','italic','underline','strike','align','fill','color','border'].includes(k)))return false;
+     for(const k of ['bold','italic','underline','strike','border'])if(style[k]!==undefined&&typeof style[k]!=='boolean')return false;
+     if(style.align!==undefined&&!['left','center','right'].includes(style.align))return false;
+     for(const k of ['fill','color'])if(style[k]!==undefined&&(typeof style[k]!=='string'||!/^#[0-9a-f]{6}$/i.test(style[k])))return false;
+    }
+   }
    for(const [key,value] of Object.entries(row.cells)){
     if(!columns.has(key)||typeof value!=='string'||value.length>20000)return false;
     if(++totalCells>500000)return false;

@@ -4,7 +4,7 @@ export const MIN_ZOOM = 4;
 export const MAX_ZOOM = 400;
 export const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(value)));
 export function fitZoom(viewWidth: number, viewHeight: number, width: number, height: number) {
-  return clampZoom(Math.floor(100 * Math.min(Math.max(1, viewWidth - 64) / width, Math.max(1, viewHeight - 64) / height, 1)));
+  return clampZoom(Math.floor(100 * Math.min(Math.max(1, viewWidth - (viewWidth < 768 ? 24 : 64)) / width, Math.max(1, viewHeight - (viewWidth < 768 ? 24 : 64)) / height, 1)));
 }
 export function wheelZoom(zoom: number, delta: number) {
   const next = clampZoom(zoom * Math.exp(-Math.max(-240, Math.min(240, delta)) * 0.0025));

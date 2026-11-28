@@ -432,7 +432,7 @@ export function Composer({
         streaming={streaming}
         queueWhileStreaming={!onSubmit && !pendingAttachments.length}
         hasPendingContent={pendingAnnotations.length > 0}
-        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Follow up' : artifactContext ? "Ask about these slides…" : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Follow up' : artifactContext ? "Ask about these slides…" : targetKind === "side" ? placeholder : !workMode ? "Ask AgentSam" : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
         toolbarEnd={<><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></>}
         attachmentPreview={attachmentPreview}
