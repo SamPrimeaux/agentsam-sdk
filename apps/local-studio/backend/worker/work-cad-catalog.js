@@ -8,13 +8,21 @@ import { readOauthR2Artifact } from './work-r2-read.js';
  */
 const BASE = /^\/api\/work\/cad\/catalog(?:\/([A-Za-z0-9_-]{3,100})\/(preview|payload|asset))?$/;
 const TABS = ['templates', 'objects', 'scenes'];
+const TEMPLATE_KINDS = new Set([
+  'cad_project_template',
+  'page_template', 'page',
+  'document_template',
+  'spreadsheet_template', 'sheet_template',
+  'presentation_template', 'slide_template',
+  'image_generation_template', 'image_template',
+]);
 const SLUG = /^[a-z0-9][a-z0-9_.-]{0,63}$/i;
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, max-age=60' } });
 
 export const tabFor = (kind, specs = {}) => {
   const resourceKind = String(kind || '');
-  if (resourceKind === 'cad_project_template') return 'templates';
   if (TABS.includes(specs?.tab)) return specs.tab;
+  if (TEMPLATE_KINDS.has(resourceKind)) return 'templates';
   if (resourceKind === 'model_3d') return 'scenes';
   return /(composition|scene|bim_project|bim_starter)/.test(resourceKind) ? 'scenes' : 'objects';
 };

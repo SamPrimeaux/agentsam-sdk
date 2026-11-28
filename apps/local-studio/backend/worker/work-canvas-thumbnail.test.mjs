@@ -27,3 +27,19 @@ test('rendering remains bounded for many artboards or deeply nested nodes',()=>{
  assert.ok(svg.length<100_000);
  assert.match(svg,/\+60/);
 });
+
+
+test('native creative Page, Document and Spreadsheet artifacts receive inert thumbnails',()=>{
+ const artifacts=[
+  {type:'page',name:'To-do List',data:{title:'To-do List',blocks:[{type:'task_list',items:[{text:'A task',checked:false}]}]}},
+  {type:'document',name:'Project Brief',data:{title:'Project Brief',blocks:[{type:'heading',text:'Overview'},{type:'paragraph',text:'Describe the project.'}]}},
+  {type:'spreadsheet',name:'Project Tracker',data:{activeSheetId:'sheet_a',sheets:[{id:'sheet_a',name:'Tracker',columns:[{label:'Task'},{label:'Status'}],rows:[{cells:{}}]}]}},
+ ];
+ for(const artifact of artifacts){
+  const svg=renderCanvasThumbnailSvg({name:artifact.name,artboards:[],creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact}});
+  assert.ok(svg);
+  assert.match(svg,/width="512" height="320"/);
+  assert.ok(svg.includes(artifact.data.title||artifact.name)||svg.includes('Tracker'));
+  assert.doesNotMatch(svg,/<script|<iframe|onerror=|onload=/);
+ }
+});

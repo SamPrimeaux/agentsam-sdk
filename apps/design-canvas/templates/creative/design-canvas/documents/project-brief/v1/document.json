@@ -1,0 +1,21 @@
+{
+  "type": "document",
+  "data": {
+    "title": "Project Brief",
+    "subtitle": "A working brief for a project, product or initiative.",
+    "blocks": [
+      { "id": "docblock_overview_heading", "type": "heading", "text": "Overview", "level": 2 },
+      { "id": "docblock_overview_body", "type": "paragraph", "text": "Describe the project, the problem it addresses and why it matters." },
+      { "id": "docblock_goals_heading", "type": "heading", "text": "Goals and success measures", "level": 2 },
+      { "id": "docblock_goals_list", "type": "bullet_list", "items": ["Add an objective", "Define how success will be measured"] },
+      { "id": "docblock_audience_heading", "type": "heading", "text": "Audience", "level": 2 },
+      { "id": "docblock_audience_body", "type": "paragraph", "text": "Describe who this is for and what they need." },
+      { "id": "docblock_scope_heading", "type": "heading", "text": "Scope and deliverables", "level": 2 },
+      { "id": "docblock_scope_list", "type": "bullet_list", "items": ["In scope", "Out of scope", "Deliverables"] },
+      { "id": "docblock_constraints_heading", "type": "heading", "text": "Constraints and decisions", "level": 2 },
+      { "id": "docblock_constraints_list", "type": "bullet_list", "items": ["Constraints", "Decisions made"] },
+      { "id": "docblock_questions_heading", "type": "heading", "text": "Open questions", "level": 2 },
+      { "id": "docblock_questions_list", "type": "bullet_list", "items": ["Add an unresolved question"] }
+    ]
+  }
+}

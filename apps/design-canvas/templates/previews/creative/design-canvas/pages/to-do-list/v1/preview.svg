@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="22" fill="#e9edf3"/>
+  <rect x="54" y="34" width="532" height="352" rx="15" fill="#fff" stroke="#d6dce5"/>
+  <text x="92" y="105" fill="#172033" font-family="Arial,sans-serif" font-size="34" font-weight="700">To-do List</text>
+  <text x="92" y="135" fill="#667085" font-family="Arial,sans-serif" font-size="14">A living list of work and next actions</text>
+  <rect x="92" y="172" width="456" height="154" rx="12" fill="#f8fafc" stroke="#e4e7ec"/>
+  <text x="118" y="207" fill="#344054" font-family="Arial,sans-serif" font-size="16" font-weight="700">To do</text>
+  <g fill="none" stroke="#98a2b3" stroke-width="2">
+    <rect x="120" y="232" width="16" height="16" rx="4"/><rect x="120" y="268" width="16" height="16" rx="4"/><rect x="120" y="304" width="16" height="16" rx="4"/>
+  </g>
+  <g stroke="#d0d5dd" stroke-width="6" stroke-linecap="round">
+    <path d="M154 240 H490"/><path d="M154 276 H452"/><path d="M154 312 H470"/>
+  </g>
+  <text x="92" y="356" fill="#667085" font-family="Arial,sans-serif" font-size="11" letter-spacing="1.5">EDITABLE PAGE · CHECKLIST BLOCKS</text>
+</svg>

@@ -32,9 +32,13 @@
     "whiteboard",
     "code-workspace",
     "whiteboard-workspace",
-    "code-import",
-    "code-export",
-    "sandboxed-code-preview"
+    "page-editor",
+    "document-editor",
+    "spreadsheet-editor",
+    "task-checklists",
+    "spreadsheet-formulas",
+    "creative-template-browser",
+    "shared-creative-artifact-persistence"
   ],
   "provides": [
     "workspace.panel",
@@ -46,8 +50,12 @@
     "artifact.export",
     "document.favorites",
     "presentation.mode",
-    "code.editor",
-    "whiteboard.editor"
+    "whiteboard.editor",
+    "page.editor",
+    "document.editor",
+    "spreadsheet.editor",
+    "creative.templates",
+    "artifact.persistence"
   ],
   "surfaces": [
     "desktop",
@@ -58,7 +66,10 @@
     "design-system",
     "source",
     "code",
-    "whiteboard"
+    "whiteboard",
+    "pages",
+    "documents",
+    "spreadsheets"
   ],
   "auth": {
     "required": false,
@@ -97,7 +108,7 @@
     "doctor": "agentsam-design-canvas doctor",
     "info": "agentsam-design-canvas info"
   },
-  "bin": "bin/agentsam-design-canvas.mjs",
+  "bin": "./bin/agentsam-design-canvas.mjs",
   "install": {
     "command": "npm install @inneranimalmedia/agentsam-design-canvas",
     "selector": "design-canvas"
@@ -140,5 +151,5 @@
       }
     }
   ],
-  "description": "Creative workspace for presentations, visual design, code creation, reusable design systems, and whiteboarding."
+  "description": "Creative workspace for Pages, Documents, Spreadsheets, presentations, visual design, reusable design systems and whiteboarding, with native editable artifacts and a direct handoff to AgentSam Work for code implementation."
 }

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="22" fill="#e9edf3"/>
+  <rect x="54" y="34" width="532" height="352" rx="15" fill="#fff" stroke="#d6dce5"/>
+  <text x="92" y="82" fill="#667085" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">PROJECT DOCUMENT</text>
+  <text x="92" y="128" fill="#172033" font-family="Arial,sans-serif" font-size="34" font-weight="700">Project Brief</text>
+  <text x="92" y="153" fill="#667085" font-family="Arial,sans-serif" font-size="14">A working brief for a project, product or initiative</text>
+  <g fill="#344054" font-family="Arial,sans-serif" font-size="15" font-weight="700">
+    <text x="92" y="202">Overview</text><text x="92" y="254">Goals and success measures</text><text x="92" y="306">Audience</text>
+  </g>
+  <g stroke="#d0d5dd" stroke-width="5" stroke-linecap="round">
+    <path d="M92 220 H530"/><path d="M92 237 H480"/><path d="M92 272 H520"/><path d="M92 289 H430"/><path d="M92 326 H500"/><path d="M92 343 H450"/>
+  </g>
+  <text x="92" y="366" fill="#667085" font-family="Arial,sans-serif" font-size="11" letter-spacing="1.5">EDITABLE BLOCK DOCUMENT</text>
+</svg>

@@ -23,6 +23,17 @@ test('standalone package declares a real build contract',async()=>{
  assert.equal(app.embed.stage,'design-canvas');
  assert.equal(app.runtime.hosted_install,'requires-deployment-and-account-install');
 });
+test('Page, Document and Spreadsheet editors are declared as first-class app capabilities',async()=>{
+ const app=await json('agentsam.app.json');
+ for(const capability of ['page-editor','document-editor','spreadsheet-editor','task-checklists','spreadsheet-formulas','creative-template-browser','shared-creative-artifact-persistence']) assert.ok(app.capabilities.includes(capability));
+ for(const provided of ['page.editor','document.editor','spreadsheet.editor','creative.templates','artifact.persistence']) assert.ok(app.provides.includes(provided));
+ for(const path of ['schemas/page-document/v1.schema.json','schemas/document/v1.schema.json','schemas/spreadsheet/v1.schema.json']) {
+  const schema=await json(path);
+  assert.equal(schema.$schema,'https://json-schema.org/draft/2020-12/schema');
+  assert.ok(schema.$id.includes('/design-canvas/'));
+ }
+});
+
 test('built app includes preview and all sources',async()=>{
  const entry=await readFile(new URL('dist/index.html',base),'utf8');
  assert.match(entry,/app.js/);
@@ -40,6 +51,7 @@ test('published APP stays independently versioned and outside the SDK root works
  assert.equal(pkg.releaseTrain,'independent');
  assert.equal(pkg.publishConfig.access,'public');
  assert.equal(pkg.license,'FSL-1.1-MIT');
+ assert.equal(app.bin,pkg.bin['agentsam-design-canvas']);
  assert.equal(app.version,pkg.version);
  assert.equal(lock.packages[''].version,pkg.version);
  assert.equal(sdk.workspaces.some(name=>name.startsWith('apps/')),false);

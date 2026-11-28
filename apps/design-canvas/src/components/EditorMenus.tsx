@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BarChart3, Check, ChevronDown, Circle, Code2, Copy, Diamond, Download, FileJson,
   Grid3X3, Image, Library, Maximize2, MoreHorizontal, Pin, Play, Plus,
@@ -64,7 +65,7 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
         const score = overflow * 10000 + overlapArea * 10 + index;
         if (score < bestScore) { bestScore = score; best = candidate; }
       });
-      setPlacement(best);
+      setPlacement(best || { side: 'bottom', align: 'start' });
     };
     place();
     window.addEventListener('resize', place);
@@ -131,23 +132,25 @@ export function DocumentActionsMenu({ name, pinned, currentType, onRename, onDup
   return <MenuPopover label="Document menu" trigger={<><span className="dcx-document-title-label">{name}</span><ChevronDown size={13}/></>} triggerClassName="dcx-document-title-trigger">
     {(close) => <>
       <div className="dcx-menu-document-heading">{name}</div>
-      <MenuAction label="Share" icon={<Share2 size={15}/>} detail={onShare ? 'Share a private workspace link' : 'Sharing is not connected'} onClick={() => onShare?.()} close={close} disabled={!onShare}/>
-      <MenuAction label="Export" icon={<FileText size={15}/>} detail="Download editable AgentSam source" onClick={onExport} close={close}/>
-      <MenuAction label="Handoff to AgentSam" icon={<Sparkles size={15}/>} detail={onHandoff ? 'Continue in the shared AgentSam composer' : 'Code handoff is not connected'} onClick={() => onHandoff?.()} close={close} disabled={!onHandoff}/>
+      {onShare ? <MenuAction label="Share" icon={<Share2 size={15}/>} detail="Share a private workspace link" onClick={onShare} close={close}/> : null}
+      <MenuAction label="Export" icon={<FileText size={15}/>} detail="Download editable AgentSam JSON" onClick={onExport} close={close}/>
+      {onHandoff ? <MenuAction label="Handoff to AgentSam" icon={<Sparkles size={15}/>} detail="Continue in a new design-aware Work conversation" onClick={onHandoff} close={close}/> : null}
       <MenuDivider/>
       <MenuAction label={pinned ? 'Unpin' : 'Pin'} icon={<Pin size={15}/>} onClick={onTogglePin} close={close}/>
       <MenuAction label="Rename" icon={<Pencil size={15}/>} onClick={onRename} close={close}/>
       <MenuAction label="Duplicate" icon={<Copy size={15}/>} onClick={onDuplicate} close={close}/>
-      <div className="dcx-menu-section-label">Turn into</div>
-      <MenuAction label="Slides" icon={<Presentation size={15}/>} detail="Presentation workspace" onClick={() => onTurnInto?.('slides')} close={close} disabled={!onTurnInto || currentType === 'slides'}/>
-      <MenuAction label="Design" icon={<Shapes size={15}/>} detail="Artboard workspace" onClick={() => onTurnInto?.('design')} close={close} disabled={!onTurnInto || currentType === 'design'}/>
-      <MenuAction label="Whiteboard" icon={<StickyNote size={15}/>} detail="Visual whiteboard workspace" onClick={() => onTurnInto?.('whiteboard')} close={close} disabled={!onTurnInto || currentType === 'whiteboard'}/>
-      <MenuDivider/>
-      <MenuAction label="Move to" icon={<Folder size={15}/>} detail={onMoveTo ? 'Choose a destination' : 'Collections are not connected'} onClick={() => onMoveTo?.()} close={close} disabled={!onMoveTo}/>
-      <MenuAction label="Refresh" icon={<RefreshCw size={15}/>} detail="Reload the saved document" onClick={() => onRefresh?.()} close={close} disabled={!onRefresh}/>
-      <MenuAction label="Storage" icon={<HardDrive size={15}/>} detail="View where this document is stored" onClick={() => onStorage?.()} close={close} disabled={!onStorage}/>
-      <MenuAction label="Permissions" icon={<Shield size={15}/>} detail={onPermissions ? 'Review document access' : 'Permissions are not connected'} onClick={() => onPermissions?.()} close={close} disabled={!onPermissions}/>
-      <MenuAction label="Give feedback" icon={<MessageSquare size={15}/>} detail={onFeedback ? 'Send product feedback' : 'Feedback destination is not connected'} onClick={() => onFeedback?.()} close={close} disabled={!onFeedback}/>
+      {onTurnInto ? <>
+        <div className="dcx-menu-section-label">Turn into</div>
+        <MenuAction label="Slides" icon={<Presentation size={15}/>} detail="Presentation workspace" onClick={() => onTurnInto('slides')} close={close} disabled={currentType === 'slides'}/>
+        <MenuAction label="Design" icon={<Shapes size={15}/>} detail="Artboard workspace" onClick={() => onTurnInto('design')} close={close} disabled={currentType === 'design'}/>
+        <MenuAction label="Whiteboard" icon={<StickyNote size={15}/>} detail="Visual whiteboard workspace" onClick={() => onTurnInto('whiteboard')} close={close} disabled={currentType === 'whiteboard'}/>
+      </> : null}
+      {onMoveTo || onRefresh || onStorage || onPermissions || onFeedback ? <MenuDivider/> : null}
+      {onMoveTo ? <MenuAction label="Move to" icon={<Folder size={15}/>} detail="Choose a destination" onClick={onMoveTo} close={close}/> : null}
+      {onRefresh ? <MenuAction label="Refresh" icon={<RefreshCw size={15}/>} detail="Reload the saved document" onClick={onRefresh} close={close}/> : null}
+      {onStorage ? <MenuAction label="Storage" icon={<HardDrive size={15}/>} detail="View where this document is stored" onClick={onStorage} close={close}/> : null}
+      {onPermissions ? <MenuAction label="Permissions" icon={<Shield size={15}/>} detail="Review document access" onClick={onPermissions} close={close}/> : null}
+      {onFeedback ? <MenuAction label="Give feedback" icon={<MessageSquare size={15}/>} detail="Send product feedback" onClick={onFeedback} close={close}/> : null}
       {onSaveToLibrary ? <><MenuDivider/><MenuAction label="Save to Library" icon={<Library size={15}/>} onClick={onSaveToLibrary} close={close}/></> : null}
       <MenuDivider/>
       <MenuAction label="Close tab" icon={<X size={15}/>} onClick={() => onClose?.()} close={close}/>
@@ -179,15 +182,10 @@ export function ArtifactKindLabel({ type }: { type: CreativeType }) {
   return <span className="dcx-artifact-kind-label">{type === 'slides' ? 'Slides' : type === 'system' ? 'Design System' : 'Design'}</span>;
 }
 
-export function CreationMenu({ onCreate, onCreateBrandGuidelines }: { onCreate: (type: CreativeType) => void; onCreateBrandGuidelines?: () => void }) {
-  return <MenuPopover label="Create new document" trigger={<><Plus size={15}/><span>New</span><ChevronDown size={13}/></>} triggerClassName="dcx-command-button">{(close) => <>
-    <MenuAction label="Presentation" icon={<Presentation size={15}/>} onClick={() => onCreate('slides')} close={close}/>
-    {onCreateBrandGuidelines ? <MenuAction label="Brand Guidelines" icon={<FileJson size={15}/>} onClick={onCreateBrandGuidelines} close={close}/> : null}
-    <MenuAction label="Design" icon={<Shapes size={15}/>} onClick={() => onCreate('design')} close={close}/>
-    <MenuAction label="Create in Code" icon={<Code2 size={15}/>} onClick={() => onCreate('code')} close={close}/>
-    <MenuAction label="Design System" icon={<Diamond size={15}/>} onClick={() => onCreate('system')} close={close}/>
-    <MenuAction label="Whiteboard" icon={<StickyNote size={15}/>} onClick={() => onCreate('whiteboard')} close={close}/>
-  </>}</MenuPopover>;
+export function CreationMenu({ onOpenTemplates }: { onOpenTemplates: () => void }) {
+  return <button type="button" className="dcx-command-button dcx-create-command" onClick={onOpenTemplates} aria-label="Create a new document">
+    <Plus size={15}/><span>Create</span>
+  </button>;
 }
 export function InsertMenu({ onText, onImage, onMedia, onShape, onChart, onTable }: { onText: () => void; onImage: () => void; onMedia?: () => void; onShape: (kind: ShapeKind) => void; onChart?: (type: ChartType) => void; onTable?: () => void }) {
   const shapes: {label: string; kind: ShapeKind; icon: ReactNode}[] = [
@@ -210,18 +208,68 @@ export function ZoomControls({ zoom, onChange, onFit, grid, onToggleGrid, showGr
 
 
 export function SlideLayoutMenu({ onAdd, label = 'Add slide' }: { onAdd: (kind: string) => void; label?: string }) {
-  const layouts: [string,string,ReactNode][] = [
-    ['Blank','Start with an empty slide',<Square size={15}/>],
-    ['Title','A strong opening title',<Type size={15}/>],
-    ['Section','Introduce a new section',<Presentation size={15}/>],
-    ['Title + body','Title with supporting copy',<FileText size={15}/>],
-    ['Bullets','A clear list of key points',<List size={15}/>],
-    ['Two columns','Compare two ideas side by side',<Columns2 size={15}/>],
-    ['Summary','Three concise takeaways',<Grid3X3 size={15}/>],
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 16, left: 16, width: 336 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const layouts: Array<{ kind: string; detail: string; icon: ReactNode; preview: string }> = [
+    { kind: 'Blank', detail: 'Start with an empty slide', icon: <Square size={15}/>, preview: 'blank' },
+    { kind: 'Title', detail: 'A strong opening title', icon: <Type size={15}/>, preview: 'title' },
+    { kind: 'Section', detail: 'Introduce a new section', icon: <Presentation size={15}/>, preview: 'section' },
+    { kind: 'Title + body', detail: 'Title with supporting copy', icon: <FileText size={15}/>, preview: 'body' },
+    { kind: 'Bullets', detail: 'A clear list of key points', icon: <List size={15}/>, preview: 'bullets' },
+    { kind: 'Two columns', detail: 'Compare two ideas side by side', icon: <Columns2 size={15}/>, preview: 'columns' },
+    { kind: 'Summary', detail: 'Three concise takeaways', icon: <Grid3X3 size={15}/>, preview: 'summary' },
   ];
-  return <MenuPopover label="Add slide layout" className="dcx-slide-layout-menu" trigger={<><Plus size={15}/><span>{label}</span><ChevronDown size={12}/></>} triggerClassName="dcx-command-button">
-    {(close) => <><div className="dcx-menu-section-label">Slide layouts</div>{layouts.map(([kind,detail,icon]) => <MenuAction key={kind} label={kind} detail={detail} icon={icon} onClick={() => onAdd(kind)} close={close}/>)}</>}
-  </MenuPopover>;
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const themeRoot = triggerRef.current?.closest<HTMLElement>('.dcx-root');
+      const theme = getComputedStyle(themeRoot || document.documentElement);
+      for (const token of ['bg', 'panel', 'raised', 'hover', 'line', 'text', 'muted', 'blue']) {
+        const value = theme.getPropertyValue('--dcx-' + token).trim();
+        if (value) panelRef.current?.style.setProperty('--dcx-' + token, value);
+      }
+      const width = Math.min(352, window.innerWidth - 24);
+      const height = Math.min(560, window.innerHeight - 24);
+      const right = rect.right + 12;
+      const left = right + width <= window.innerWidth - 12 ? right : Math.max(12, rect.left - width - 12);
+      const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
+      setPosition({ top, left, width });
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!panelRef.current?.contains(target) && !triggerRef.current?.contains(target)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setOpen(false); triggerRef.current?.focus(); }
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+  return <>
+    <button ref={triggerRef} type="button" className="dcx-slide-layout-trigger" aria-label={label} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((value) => !value)}>
+      <Plus size={15}/><span>{label}</span><ChevronDown size={12}/>
+    </button>
+    {open ? createPortal(<div className="dcx-slide-layout-panel" ref={panelRef} role="dialog" aria-label="Add slide layout" style={{ top: position.top, left: position.left, width: position.width }}>
+      <div className="dcx-slide-layout-panel-heading"><div><strong>Add a slide</strong><small>Choose a starting layout</small></div><button type="button" aria-label="Close slide layouts" onClick={() => setOpen(false)}><X size={15}/></button></div>
+      <div className="dcx-slide-layout-grid">{layouts.map((layout) => <button type="button" className="dcx-slide-layout-card" key={layout.kind} onClick={() => { setOpen(false); onAdd(layout.kind); }}>
+        <span className={'dcx-slide-layout-preview is-' + layout.preview} aria-hidden="true"><i/><i/><i/><i/><i/></span>
+        <span className="dcx-slide-layout-card-copy"><strong>{layout.kind}</strong><small>{layout.detail}</small></span>
+      </button>)}</div>
+    </div>, document.body) : null}
+  </>;
 }
 
 export function ViewMenu({ grid, snap, guides, bounds, onToggleGrid, onToggleSnap, onToggleGuides, onToggleBounds }: {

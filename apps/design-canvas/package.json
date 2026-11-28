@@ -8,7 +8,7 @@
   },
   "private": false,
   "type": "module",
-  "description": "Installable AgentSam creative workspace for slides, visual design, design systems, and source-backed artboards",
+  "description": "Creative workspace for Pages, Documents, Spreadsheets, presentations, visual design, reusable design systems and whiteboarding, with native editable artifacts and a direct handoff to AgentSam Work for code implementation.",
   "bin": {
     "agentsam-design-canvas": "./bin/agentsam-design-canvas.mjs"
   },

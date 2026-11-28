@@ -1,0 +1,26 @@
+{
+  "type": "page",
+  "data": {
+    "title": "To-do List",
+    "subtitle": "A living list of work and next actions.",
+    "blocks": [
+      {
+        "id": "pageblock_intro",
+        "type": "paragraph",
+        "text": "Capture the work that needs action. Keep this list current as priorities change."
+      },
+      {
+        "id": "pageblock_tasks",
+        "type": "task_list",
+        "title": "To do",
+        "items": []
+      },
+      {
+        "id": "pageblock_agent_prompt",
+        "type": "callout",
+        "tone": "info",
+        "text": "Ask AgentSam: Check relevant conversations and connected apps for tasks I need to do. If context is incomplete, ask me what to add. Preserve existing tasks, edits and checkbox states. Do not invent tasks or deadlines."
+      }
+    ]
+  }
+}
