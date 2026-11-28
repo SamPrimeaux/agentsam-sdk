@@ -80,9 +80,10 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     });
     assert.equal(gatedSpawn.status, 'awaiting_approval');
     assert.ok(gatedSpawn.approval_id);
-    assert.equal(await db.prepare(
+    const childBeforeApproval = await db.prepare(
       'SELECT COUNT(*) AS count FROM agentsam_agent_run WHERE id = ?'
-    ).bind('arun_production_child').then((q) => q.first()).then((row) => row.count), 0);
+    ).bind('arun_production_child').first();
+    assert.equal(childBeforeApproval.count, 0);
 
     const pendingSpawn = await db.prepare(
       'SELECT status, master_run_id, subagents_spawned FROM agentsam_spawn_job WHERE id = ?'
