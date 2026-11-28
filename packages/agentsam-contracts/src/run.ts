@@ -96,55 +96,6 @@ export function classifyAgentRunRetry(input: AgentRunRetryClassificationInput = 
   return { class: 'terminal', automaticRetry: false, reason: code || 'unclassified_failure' };
 }
 
-export type AgentRunWakeDecisionReason =
-  | 'accepted'
-  | 'duplicate'
-  | 'run_mismatch'
-  | 'expired'
-  | 'condition_not_met';
-
-export interface AgentRunWakeDecision {
-  accepted: boolean;
-  reason: AgentRunWakeDecisionReason;
-  nextStatus?: 'queued';
-}
-
-export function evaluateAgentRunWake(
-  suspension: AgentRunSuspension,
-  wake: AgentRunWakeSignal,
-  options: { consumedDedupeKeys?: Iterable<string>; now?: number } = {},
-): AgentRunWakeDecision {
-  const consumed = new Set(options.consumedDedupeKeys || []);
-  if (consumed.has(wake.dedupeKey)) return { accepted: false, reason: 'duplicate' };
-  if (suspension.runId !== wake.runId) return { accepted: false, reason: 'run_mismatch' };
-
-  const now = options.now ?? wake.occurredAt;
-  if (suspension.expiresAt != null && now > suspension.expiresAt) {
-    return { accepted: false, reason: 'expired' };
-  }
-
-  const matched = wake.kind === 'manual'
-    || Boolean(suspension.wakeEvent && wake.eventKey === suspension.wakeEvent)
-    || Boolean(
-      wake.kind === 'dependency'
-      && wake.dependencyRunId
-      && (suspension.dependencyRunIds || []).includes(wake.dependencyRunId),
-    )
-    || Boolean(wake.kind === 'scheduled' && suspension.wakeAt != null && now >= suspension.wakeAt);
-
-  return matched
-    ? { accepted: true, reason: 'accepted', nextStatus: 'queued' }
-    : { accepted: false, reason: 'condition_not_met' };
-}
-
-export function wakeMatchesSuspension(
-  suspension: AgentRunSuspension,
-  wake: AgentRunWakeSignal,
-  now = wake.occurredAt,
-): boolean {
-  return evaluateAgentRunWake(suspension, wake, { now }).accepted;
-}
-
 export type AgentRunLifecycleAction =
   | { type: 'start' }
   | { type: 'wake' }
@@ -171,7 +122,6 @@ export type AgentRunEventType =
   | 'run.queued'
   | 'run.started'
   | 'run.status'
-  | 'run.suspended'
   | 'run.woken'
   | 'run.cancel_requested'
   | 'run.cancelled'
@@ -300,7 +250,6 @@ export interface AgentActivityEventV1 {
 function phaseForRunEvent(event: AgentRunEvent): AgentActivityPhase {
   if (event.phase) return event.phase;
   if (event.eventType === 'run.created' || event.eventType === 'run.queued' || event.eventType === 'run.started') return 'boot';
-  if (event.eventType === 'run.suspended') return 'waiting';
   if (event.eventType === 'run.woken' || event.eventType === 'run.cancel_requested') return 'recover';
   if (event.eventType === 'verification.completed') return 'verify';
   if (event.eventType === 'run.completed' || event.eventType === 'run.cancelled' || event.eventType === 'run.timed_out') return 'complete';
@@ -312,7 +261,7 @@ function activityTypeForRunEvent(event: AgentRunEvent): AgentActivityEventType {
   if (event.eventType === 'run.started') return 'run.started';
   if (event.eventType === 'run.completed') return 'run.completed';
   if (event.eventType === 'run.failed' || event.eventType === 'run.timed_out') return 'run.failed';
-  if (event.eventType === 'run.cancelled' || event.eventType === 'run.suspended' || event.eventType === 'run.woken' || event.eventType === 'run.status' || event.eventType === 'run.cancel_requested' || event.eventType === 'run.created' || event.eventType === 'run.queued') return 'phase.changed';
+  if (event.eventType === 'run.cancelled' || event.eventType === 'run.woken' || event.eventType === 'run.status' || event.eventType === 'run.cancel_requested' || event.eventType === 'run.created' || event.eventType === 'run.queued') return 'phase.changed';
   if (event.eventType === 'step.started') return 'step.started';
   if (event.eventType === 'step.completed') return 'step.completed';
   if (event.eventType === 'decision.made') return 'decision.made';
