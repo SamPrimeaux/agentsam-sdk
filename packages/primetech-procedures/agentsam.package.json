@@ -74,7 +74,7 @@
       "packages/primetech-procedures/test/creative-tools.test.mjs",
       "packages/primetech-procedures/test/production-board.test.mjs"
     ],
-    "runtime_proof": "sam-superbash-integration-fixture",
+    "runtime_proof": "terminal-exec-and-sam-runtime-integration-fixtures",
     "host_integration": "sdk-cli-bound"
   }
 }

@@ -112,6 +112,7 @@ export interface PrimeTechProcedureHandlerOptions {
   projectRoot?: string;
   receiptDir?: string | null;
   invokeSamOperation?: SamOperationInvoker;
+  invokeFileRuntime?: (request: { id: string; version: string; manifestSha256: string; entrypointSha256: string; projectRoot: string; input: Record<string, unknown>; idempotencyKey: string }) => SamOperationResult | Promise<SamOperationResult>;
   invokeNativeTool?: NativeToolInvoker | null;
   isCapabilityAvailable?: (capability: string) => boolean | Promise<boolean>;
   isNativeToolAvailable?: (toolKey: string) => boolean | Promise<boolean>;
