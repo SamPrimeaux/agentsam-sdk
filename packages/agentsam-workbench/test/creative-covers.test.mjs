@@ -6,6 +6,14 @@ import { CREATIVE_WIDGET_COVERS, creativeWidgetCover } from '../dist/widgets/cre
 
 const requiredCovers = ['docs', 'slides', 'sheets', 'design', 'data', 'whiteboard', 'design-system', 'brand-guidelines', 'design-in-code'];
 
+ test('cover imports explicitly request raw SVG markup for Vite source aliases', () => {
+  const source = readFileSync(new URL('../src/widgets/creative-covers.ts', import.meta.url), 'utf8');
+  for (const key of requiredCovers) {
+    const file = key === 'design-system' ? 'design-system' : key === 'brand-guidelines' ? 'brand-guidelines' : key === 'design-in-code' ? 'design-in-code' : key;
+    assert.ok(source.includes(`./covers/${file}.svg?raw`), `${key} must import raw SVG markup, not a Vite asset URL`);
+  }
+});
+
 test('every first-party cover is a native SVG and is shipped with the package', () => {
   for (const key of requiredCovers) {
     const dataUri = CREATIVE_WIDGET_COVERS[key];

@@ -199,10 +199,13 @@ test('Artifacts is a global Side Stage library with six focused creation routes 
   assert.match(surface, /aria-label="Sort artifacts"/);
   assert.match(surface, /aria-label="Create artifact"/);
   assert.match(surface, /openInWorkspace/);
+  assert.match(surface, /new URL\(artifact\.preview \|\| artifact\.open/);
+  assert.ok(surface.indexOf('artifact.source === "local" && onOpenArtifact') < surface.indexOf('artifact.preview || artifact.open'), 'local computer files must keep their host opener before URL preview fallback');
   assert.match(stage, /sharedLiveWorkHost\(\)/);
   assert.match(stage, /surface: "artifacts"/);
   assert.doesNotMatch(stage, /NewTabStage|if \(!project\)/);
   assert.match(stage, /artifactType === "design-canvas"/);
+  assert.match(stage, /artifact\.preview \|\| artifact\.open/);
   assert.match(launcher, /CREATION_PROMPTS/);
   assert.match(launcher, /openSideTab\("design"/);
   assert.match(launcher, /setDraft\(chatId/);

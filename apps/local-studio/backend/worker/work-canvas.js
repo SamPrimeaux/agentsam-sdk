@@ -227,11 +227,12 @@ async function createCanvas(env,owner,data){
  const user=await env.DB.prepare("SELECT default_account_id FROM auth_users WHERE id=?").bind(owner).first();
  if(!user)throw new CanvasError('unauthorized',401);
  const asset=await putVerified(env,owner,id,1,document);
+ const thumbnailKey=await putCanvasThumbnail(env,owner,id,1,document);
  try{
-  const result=await env.DB.prepare("INSERT OR IGNORE INTO agentsam_artifacts (id,user_id,tenant_id,name,artifact_type,r2_key,source,file_size_bytes,content_hash,r2_bucket,scope,visibility,artifact_status,validation_status,mime_type,metadata_json) VALUES (?,?,?,?,'design-canvas',?,'canvas.editor',?,?,'artifacts','user','private','draft','asset-verified','application/json',?)")
-   .bind(id,owner,clean(user.default_account_id)||owner,document.name,asset.key,asset.size,asset.hash,JSON.stringify({revision:1,artboardCount:document.artboards.length,history:[],...(document.creativeWorkspace?{creativeSchema:CREATIVE_SCHEMA,creativeType:document.creativeWorkspace.artifact.type}: {})})).run();
-  if(result.meta?.changes!==1){await env.ARTIFACTS.delete?.(asset.key);const current=await readCanvas(env,owner,id);if(!current)throw new CanvasError('canvas_id_conflict',409);return {...current,created:false};}
- }catch(error){await env.ARTIFACTS.delete?.(asset.key);throw error;}
+  const result=await env.DB.prepare("INSERT OR IGNORE INTO agentsam_artifacts (id,user_id,tenant_id,name,artifact_type,r2_key,source,file_size_bytes,content_hash,r2_bucket,scope,visibility,artifact_status,validation_status,mime_type,thumbnail_r2_key,metadata_json) VALUES (?,?,?,?,'design-canvas',?,'canvas.editor',?,?,'artifacts','user','private','draft','asset-verified','application/json',?,?)")
+   .bind(id,owner,clean(user.default_account_id)||owner,document.name,asset.key,asset.size,asset.hash,thumbnailKey,JSON.stringify({revision:1,artboardCount:document.artboards.length,history:[],...(document.creativeWorkspace?{creativeSchema:CREATIVE_SCHEMA,creativeType:document.creativeWorkspace.artifact.type}: {})})).run();
+  if(result.meta?.changes!==1){await env.ARTIFACTS.delete?.(asset.key);if(thumbnailKey)await env.ARTIFACTS.delete?.(thumbnailKey);const current=await readCanvas(env,owner,id);if(!current)throw new CanvasError('canvas_id_conflict',409);return {...current,created:false};}
+ }catch(error){await env.ARTIFACTS.delete?.(asset.key);if(thumbnailKey)await env.ARTIFACTS.delete?.(thumbnailKey);throw error;}
  return {...await readCanvas(env,owner,id),created:true};
 }
 async function requireProject(env,owner,id){

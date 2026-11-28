@@ -43,3 +43,55 @@ test('native creative Page, Document and Spreadsheet artifacts receive inert thu
   assert.doesNotMatch(svg,/<script|<iframe|onerror=|onload=/);
  }
 });
+
+
+test('native Slides and Design artifacts render representative editable content as multi-page previews',()=>{
+ const slides=Array.from({length:5},(_,index)=>({
+  id:'slide-'+index,name:index===0?'Cover':index===3?'Applications':'Slide '+index,
+  background:index===0?'#101820':'#ffffff',
+  objects:[
+   {id:'title-'+index,type:'text',name:'Title',x:70,y:70,w:700,h:90,text:index===0?'Brand Guidelines':index===3?'Applications':'Section '+index,fontSize:52,color:index===0?'#ffffff':'#172033'},
+   {id:'shape-'+index,type:'shape',name:'Accent',x:70,y:190,w:280,h:120,fill:'#123456',shape:'rect'},
+   {id:'remote-image-'+index,type:'image',name:'Remote image',x:400,y:190,w:300,h:180,src:'https://evil.example/preview.png'},
+  ],notes:'',comments:[],
+ }));
+ const svg=renderCanvasThumbnailSvg({name:'Brand Guidelines',creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact:{type:'slides',name:'Brand Guidelines',data:{slides}}}});
+ assert.ok(svg);
+ assert.match(svg,/Brand Guidelines/);
+ assert.match(svg,/Applications/);
+ assert.match(svg,/\+1/);
+ assert.match(svg,/#123456/);
+ assert.doesNotMatch(svg,/evil\.example|<script|<iframe|onerror=|onload=/);
+});
+
+test('native Design and Whiteboard artboards render CreativeObject geometry rather than blank legacy boards',()=>{
+ for (const type of ['design','whiteboard']) {
+  const svg=renderCanvasThumbnailSvg({name:'Canvas',creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact:{type,name:'Canvas',data:{artboards:[{
+   id:'board',name:'Main',width:1200,height:900,background:'#f7f8fa',objects:[
+    {id:'title',type:'text',name:'Title',x:80,y:70,w:760,h:100,text:'Real canvas artwork',fontSize:48,color:'#172033'},
+    {id:'accent',type:'shape',name:'Accent',x:80,y:230,w:280,h:180,fill:'#25a783',shape:'rect'},
+   ]
+  }]}}}});
+  assert.ok(svg);
+  assert.match(svg,/Real canvas artwork/);
+  assert.match(svg,/#25a783/);
+  assert.doesNotMatch(svg,/<script|<iframe|onerror=|onload=/);
+ }
+});
+
+test('native Design System and Code artifacts receive content-aware previews',()=>{
+ const system=renderCanvasThumbnailSvg({name:'PrimeTech System',creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact:{type:'system',name:'PrimeTech System',data:{
+  description:'A reusable identity system',
+  colors:[{id:'primary',name:'Primary',value:'#123456'}],
+  typography:[{id:'display',role:'Display',family:'Inter',size:42,weight:700}],
+ }}}});
+ assert.match(system,/PrimeTech System/);
+ assert.match(system,/#123456/);
+ assert.match(system,/Inter/);
+ const code=renderCanvasThumbnailSvg({name:'Code Workspace',creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact:{type:'code',name:'Code Workspace',data:{
+  files:[{id:'main',name:'main.ts',content:'const answer = 42;\nexport default answer;'}],activeFileId:'main'
+ }}}});
+ assert.match(code,/main\.ts/);
+ assert.match(code,/const answer = 42/);
+ assert.doesNotMatch(code,/<script|<iframe|onerror=|onload=/);
+});

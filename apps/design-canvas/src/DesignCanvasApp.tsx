@@ -15,7 +15,7 @@ export type { DesignCanvasAgentContext } from './creative-model';
 import { SourceLibraryApp } from './SourceLibraryApp';
 import {
   Artboard, AssetToken, CodeDocument, ColorToken, CreativeArtifact, CreativeObject, CreativeType, CreativeComment, ChartType,
-  DesignDocument, DesignSystemDocument, ScaleToken, ShadowToken, Slide, SlidesDocument,
+  DesignDocument, DesignSystemDocument, PageDocument, TextDocument, SpreadsheetDocument, ScaleToken, ShadowToken, Slide, SlidesDocument,
   TypeToken, artifactHasImages, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
   normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY, isPageDocument, isTextDocument, isSpreadsheetDocument, reidentifyCreativeData
 } from './creative-model';
@@ -1059,30 +1059,116 @@ function AgentSamBuildEditor({ artifact, leading, documentActions, assistant, as
   </DesignWorkspaceFrame>;
 }
 
+function ArtifactPreviewSurface({ width, height, background, objects }: {
+  width: number; height: number; background: string; objects: CreativeObject[];
+}) {
+  return <div className="dcx-artifact-preview-stage" aria-hidden="true" inert>
+    <EditableSurface
+      width={width}
+      height={height}
+      background={background}
+      objects={objects.slice(0, 48)}
+      selectedId=""
+      onSelect={() => undefined}
+      onChange={() => undefined}
+      className="dcx-artifact-preview-surface"
+    />
+  </div>;
+}
+
+function ArtifactPreview({ artifact }: { artifact: CreativeArtifact }) {
+  if (artifact.type === 'slides') {
+    const slides = (artifact.data as SlidesDocument).slides || [];
+    const visible = slides.slice(0, 4);
+    return visible.length ? <div className={'dcx-artifact-preview-slides' + (visible.length === 1 ? ' is-single' : '')} aria-hidden="true">
+      {visible.map((slide) => <div className="dcx-artifact-preview-slide" key={slide.id}>
+        <ArtifactPreviewSurface
+          width={1200}
+          height={675}
+          background={slide.backgroundImage ? 'url("' + (safeWidgetMediaUrl(slide.backgroundImage) || '') + '") center / cover no-repeat' : slide.background}
+          objects={slide.objects || []}
+        />
+      </div>)}
+      {slides.length > visible.length ? <span className="dcx-artifact-preview-more">+{slides.length - visible.length}</span> : null}
+    </div> : <div className="dcx-artifact-preview-empty"><Presentation size={26}/><span>{artifact.name}</span></div>;
+  }
+
+  if (artifact.type === 'design' || artifact.type === 'whiteboard') {
+    const board = (artifact.data as DesignDocument).artboards?.[0];
+    return board ? <ArtifactPreviewSurface
+      width={Math.max(1, board.width || 1200)}
+      height={Math.max(1, board.height || 900)}
+      background={board.background || '#ffffff'}
+      objects={board.objects || []}
+    /> : <div className="dcx-artifact-preview-empty"><Shapes size={27}/><span>Empty {artifact.type === 'whiteboard' ? 'board' : 'design'}</span></div>;
+  }
+
+  if (artifact.type === 'page' || artifact.type === 'document') {
+    const data = artifact.data as PageDocument | TextDocument;
+    return <div className="dcx-structured-preview" aria-hidden="true">
+      <div className="dcx-structured-preview-paper">
+        <span className="dcx-structured-preview-kicker">{artifact.type === 'page' ? 'PAGE' : 'DOCUMENT'}</span>
+        <strong>{data.title || artifact.name}</strong>
+        {data.subtitle ? <small>{data.subtitle}</small> : null}
+        <div className="dcx-structured-preview-blocks">
+          {(data.blocks || []).slice(0, 4).map((block) => {
+            if (block.type === 'heading') return <b key={block.id}>{block.text}</b>;
+            if (block.type === 'paragraph') return <p key={block.id}>{block.text}</p>;
+            if (block.type === 'task_list') return <div className="dcx-structured-preview-list" key={block.id}>{block.items.slice(0, 2).map((item) => <span key={item.id}><i/>{item.text}</span>)}</div>;
+            if (block.type === 'bullet_list') return <div className="dcx-structured-preview-list" key={block.id}>{block.items.slice(0, 2).map((item, index) => <span key={index}><i/>{item}</span>)}</div>;
+            if (block.type === 'callout') return <aside key={block.id}>{block.text}</aside>;
+            return <hr key={block.id}/>;
+          })}
+        </div>
+      </div>
+    </div>;
+  }
+
+  if (artifact.type === 'spreadsheet') {
+    const data = artifact.data as SpreadsheetDocument;
+    const sheet = data.sheets?.find((item) => item.id === data.activeSheetId) || data.sheets?.[0];
+    const columns = sheet?.columns?.slice(0, 4) || [];
+    const rows = sheet?.rows?.slice(0, 3) || [];
+    return <div className="dcx-spreadsheet-preview" aria-hidden="true">
+      <div className="dcx-spreadsheet-preview-title">{sheet?.name || artifact.name}</div>
+      <table><thead><tr>{columns.map((column) => <th key={column.id}>{column.label}</th>)}</tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={column.id}>{row.cells?.[column.id] || ''}</td>)}</tr>)}</tbody>
+      </table>
+    </div>;
+  }
+
+  if (artifact.type === 'system') {
+    const system = artifact.data as DesignSystemDocument;
+    return <div className="dcx-system-preview-content" aria-hidden="true">
+      <div className="dcx-system-preview-swatches">{system.colors.slice(0, 8).map((item) => <i key={item.id} style={{ background: item.value }} title={item.name}/>)}</div>
+      {system.typography.slice(0, 2).map((item) => <div className="dcx-system-preview-type" key={item.id}>
+        <span>{item.role}</span><strong style={{ fontFamily: item.family, fontSize: 'clamp(10px, 1.1vw, 17px)', fontWeight: item.weight }}>{item.family}</strong>
+      </div>)}
+    </div>;
+  }
+
+  if (artifact.type === 'code') {
+    const code = artifact.data as CodeDocument;
+    const file = code.files.find((item) => item.id === code.activeFileId) || code.files[0];
+    const lines = (file?.content || '').split('\n').slice(0, 5);
+    return <div className="dcx-code-preview-content" aria-hidden="true">
+      <div className="dcx-code-preview-tab"><Code2 size={11}/>{file?.name || 'Workspace'}</div>
+      <pre>{lines.length ? lines.join('\n') : 'Start with an existing project'}</pre>
+    </div>;
+  }
+
+  return <div className="dcx-artifact-preview-empty"><FileText size={26}/><span>{artifact.name}</span></div>;
+}
+
 function ArtifactCard({ artifact, onOpen, onRename, onDuplicate, onDelete, onTogglePin }: {
   artifact: CreativeArtifact; onOpen: () => void; onRename: () => void; onDuplicate: () => void; onDelete: () => void; onTogglePin: () => void;
 }) {
   const [menu, setMenu] = useState(false);
-  const slide = artifact.type === 'slides' ? (artifact.data as SlidesDocument).slides[0] : null;
-  const board = artifact.type === 'design' || artifact.type === 'whiteboard' ? (artifact.data as DesignDocument).artboards[0] : null;
-  const system = artifact.type === 'system' ? artifact.data as DesignSystemDocument : null;
-  const code = artifact.type === 'code' ? artifact.data as CodeDocument : null;
-  const page = artifact.type === 'page' ? artifact.data as { title: string; blocks: unknown[] } : null;
-  const document = artifact.type === 'document' ? artifact.data as { title: string; blocks: unknown[] } : null;
-  const spreadsheet = artifact.type === 'spreadsheet' ? artifact.data as { sheets: Array<{ name: string; rows: unknown[] }> } : null;
-  const previewBackground = slide?.background || board?.background || (page || document || spreadsheet ? 'var(--dcx-raised)' : '#1b2028');
-  const previewText = slide?.objects.filter((item) => item.type === 'text').slice(0, 2) || board?.objects.filter((item) => item.type === 'text').slice(0, 2) || [];
   const typeLabel = artifact.type === 'page' ? 'Page' : artifact.type === 'document' ? 'Document' : artifact.type === 'spreadsheet' ? 'Spreadsheet' : artifact.type === 'slides' ? 'Slides' : artifact.type === 'system' ? 'Design System' : artifact.type === 'code' ? 'Create in Code' : artifact.type === 'whiteboard' ? 'Whiteboard' : 'Design';
   return <article className="dcx-artifact-card">
-    <button className="dcx-artifact-open" onClick={onOpen}>
-      <div className={'dcx-artifact-preview ' + artifact.type} style={{ background: previewBackground }}>
-        {artifact.type === 'slides' ? previewText.length ? previewText.map((item) => <span key={item.id} style={{ color: item.color || '#ffffff', fontSize: 'clamp(14px, 2vw, 30px)', fontWeight: item.weight || 600 }}>{item.text}</span>) : <><strong>{artifact.name}</strong><small>Presentation</small></> : null}
-        {artifact.type === 'design' || artifact.type === 'whiteboard' ? board ? previewText.length ? previewText.map((item) => <span key={item.id}>{item.text}</span>) : <span>{board.name}</span> : <><Shapes size={28}/><span>Empty artboard</span></> : null}
-        {artifact.type === 'page' ? <><PanelRight size={27}/><strong>{page?.title || artifact.name}</strong><small>{page?.blocks.length || 0} blocks</small></> : null}
-        {artifact.type === 'document' ? <><FileText size={27}/><strong>{document?.title || artifact.name}</strong><small>{document?.blocks.length || 0} sections</small></> : null}
-        {artifact.type === 'spreadsheet' ? <><Table2 size={27}/><strong>{spreadsheet?.sheets[0]?.name || artifact.name}</strong><small>{spreadsheet?.sheets[0]?.rows.length || 0} rows</small></> : null}
-        {artifact.type === 'code' ? <><Code2 size={27}/><span>{code?.files.length || 0} files</span></> : null}
-        {artifact.type === 'system' ? system && system.colors.length ? <div className="dcx-system-preview-swatches">{system.colors.slice(0, 6).map((item) => <i key={item.id} style={{ background: item.value }} title={item.name}/>)}</div> : <><SwatchBook size={28}/><span>No tokens yet</span></> : null}
+    <button className="dcx-artifact-open" onClick={onOpen} aria-label={'Open ' + artifact.name}>
+      <div className={'dcx-artifact-preview ' + artifact.type}>
+        <ArtifactPreview artifact={artifact}/>
       </div>
       <div className="dcx-artifact-meta"><div><strong>{artifact.name}</strong><small>{typeLabel} · Edited {formatDate(artifact.updatedAt)}</small></div>{artifact.pinned ? <Star size={14} className="dcx-pinned-mark" fill="currentColor"/> : null}{artifact.shared ? <Share2 size={13} className="dcx-shared-mark"/> : null}</div>
     </button>
@@ -1090,6 +1176,7 @@ function ArtifactCard({ artifact, onOpen, onRename, onDuplicate, onDelete, onTog
     {menu ? <div className="dcx-card-menu"><button onClick={() => { onTogglePin(); setMenu(false); }}><Star size={14}/>{artifact.pinned ? 'Remove from pinned' : 'Pin'}</button><button onClick={() => { onRename(); setMenu(false); }}><FileText size={14}/> Rename</button><button onClick={() => { onDuplicate(); setMenu(false); }}><Copy size={14}/> Duplicate</button><button onClick={() => { onDelete(); setMenu(false); }}><Trash2 size={14}/> Delete</button></div> : null}
   </article>;
 }
+
 export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: controlledAssistantOpen, onAssistantOpenChange, assistantDock, onAssistantDockChange, initialArtifacts, initialWorkspace, initialName, initialActiveId, initialRoute, onArtifactsChange, onActiveArtifactChange, onOpenCode, onMoveArtifact, onRefreshArtifact, onManagePermissions, onGiveFeedback, onToggleOutputs, outputsOpen = false, onSaveStatusChange, onShareArtifact, onSaveToLibrary, embedded = false }: DesignCanvasAppProps) {
   const [initialState] = useState(() => {
     const loaded = normalizeArtifacts(initialArtifacts ?? (embedded && !onArtifactsChange ? [] : readArtifacts()));

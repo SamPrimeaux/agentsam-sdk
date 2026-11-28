@@ -369,6 +369,19 @@ test('slide layout picker uses a fixed portal side panel outside the scrolling s
   assert.ok(css.includes('.dcx-slide-layout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
 });
 
+test('editor dropdowns portal above clipped toolbars while staying inside the embedded workspace', async () => {
+  const menus = await readFile(new URL('../src/components/EditorMenus.tsx', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../src/design-canvas.css', import.meta.url), 'utf8');
+  assert.match(menus, /useLayoutEffect/);
+  assert.match(menus, /createPortal\(popover, document\.body\)/);
+  assert.match(menus, /closest\('\.dcx-root'\)/);
+  assert.match(menus, /position: 'fixed'/);
+  assert.match(menus, /menuRef\.current\?\.contains\(target\)/);
+  assert.match(css, /\.dcx-root\{[^}]*position:relative;isolation:isolate/);
+  assert.match(css, /\.dcx-menu-popover\{position:fixed;top:0;left:0;z-index:1200/);
+  assert.match(css, /\.dcx-library-nav-backdrop\{position:absolute;z-index:80/);
+});
+
 test('Slides editor exposes reference-led layout, view, and bottom insert controls', async () => {
   const source = await readFile(appPath, 'utf8');
   const menus = await readFile(new URL('../src/components/EditorMenus.tsx', import.meta.url), 'utf8');
@@ -381,4 +394,18 @@ test('Slides editor exposes reference-led layout, view, and bottom insert contro
   for (const control of ['Select', 'Hand', 'Text', 'Image', 'Media', 'Table', 'Shape', 'Chart', 'Comment', 'Ask AgentSam']) {
     assert.ok(menus.includes("'" + control + "'") || menus.includes('>' + control + '<') || menus.includes('>' + control), control + ' should be available in the slide insert toolbar');
   }
+});
+
+
+test('gallery artifact cards render native content previews and keep a three-column desktop, two-column mobile grid', async () => {
+  const source = await readFile(appPath, 'utf8');
+  const css = await readFile(new URL('../src/design-canvas.css', import.meta.url), 'utf8');
+  assert.match(source, /function ArtifactPreviewSurface/);
+  assert.match(source, /function ArtifactPreview\(/);
+  assert.match(source, /dcx-artifact-preview-slides/);
+  assert.match(source, /dcx-spreadsheet-preview/);
+  assert.match(source, /dcx-structured-preview-paper/);
+  assert.match(source, /<ArtifactPreview artifact=\{artifact\}\/>/);
+  assert.match(css, /\.dcx-artifact-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.dcx-artifact-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:10px\}/);
 });

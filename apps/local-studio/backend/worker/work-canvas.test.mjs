@@ -182,6 +182,9 @@ test('Page, Document and Spreadsheet artifacts persist through the shared creati
   assert.equal(response.status,201,artifact.type);
   const payload=await response.json();
   assert.equal(payload.canvas.creativeType,artifact.type);
+  const stored=await h.DB.prepare('SELECT thumbnail_r2_key FROM agentsam_artifacts WHERE id=? AND user_id=?').bind(artifact.id,'owner_a').first();
+  assert.ok(stored.thumbnail_r2_key,artifact.type+' initial thumbnail');
+  assert.ok(h.objects.has(stored.thumbnail_r2_key),artifact.type+' thumbnail object');
   const reopened=await call(h,'GET','/'+artifact.id);
   assert.equal(reopened.status,200);
   assert.deepEqual((await reopened.json()).document.creativeWorkspace.artifact,artifact);

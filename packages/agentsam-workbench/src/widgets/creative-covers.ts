@@ -1,12 +1,12 @@
-import docsSvg from './covers/docs.svg';
-import slidesSvg from './covers/slides.svg';
-import sheetsSvg from './covers/sheets.svg';
-import designSvg from './covers/design.svg';
-import dataSvg from './covers/data.svg';
-import whiteboardSvg from './covers/whiteboard.svg';
-import designsystemSvg from './covers/design-system.svg';
-import brandguidelinesSvg from './covers/brand-guidelines.svg';
-import designincodeSvg from './covers/design-in-code.svg';
+import docsSvg from './covers/docs.svg?raw';
+import slidesSvg from './covers/slides.svg?raw';
+import sheetsSvg from './covers/sheets.svg?raw';
+import designSvg from './covers/design.svg?raw';
+import dataSvg from './covers/data.svg?raw';
+import whiteboardSvg from './covers/whiteboard.svg?raw';
+import designsystemSvg from './covers/design-system.svg?raw';
+import brandguidelinesSvg from './covers/brand-guidelines.svg?raw';
+import designincodeSvg from './covers/design-in-code.svg?raw';
 
 function svgData(source: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
