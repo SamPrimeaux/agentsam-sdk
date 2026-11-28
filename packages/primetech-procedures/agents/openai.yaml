@@ -1,0 +1,6 @@
+interface:
+  display_name: "PrimeTech Design Studio"
+  short_description: "Creative production workflows"
+  default_prompt: "Use PrimeTech's creative-production workflows to plan, build, refine, and verify the requested deliverables."
+policy:
+  allow_implicit_invocation: true

@@ -4,6 +4,21 @@
 
 PrimeTech Procedures is **not** another agent, scheduler, terminal, shell provider, data registry or creative app. It is an engineering workflow layer using existing AgentSam/SAM authorization, operation routing and receipts. Procedures should be reusable by standalone app installers, the desktop host, the Cloudflare host and the Python/TypeScript SDKs without copying their source.
 
+## Package and plugin distribution
+
+- `agentsam.package.json` is the AgentSam package-install manifest and is included in the npm tarball.
+- `plugin.json` is the portable Agent Plugins 1.0 manifest. It packages the same nine canonical `skills/` workflows for OpenAI-compatible skill hosts; implicit skill invocation is enabled in `agents/openai.yaml`.
+- The `skills/` directory is the single source of truth. AgentSam-specific `agentsam.skill.json` metadata remains beside each portable `SKILL.md`; the OpenAI plugin consumes those same `SKILL.md` files rather than maintaining a second copy.
+- The OpenAI distribution is intentionally skills-first and has no `mcp.json`: it does not advertise a remote PrimeTech tool server that does not yet exist. ChatGPT uses the host's available tools; the local AgentSam CLI remains the execution host for the packaged procedure runner. Build an approval-ready plugin update archive with `python3 scripts/package-openai-plugin.py`.
+- The official AgentSam remote plugin-catalog listing is a separate product lifecycle and is not claimed by this npm package manifest.
+
+TypeScript consumers can import the typed root API or the typed `./skills` subpath:
+
+```ts
+import { createProcedureCatalog, createPrimeTechProcedureHandler } from '@inneranimalmedia/primetech-procedures';
+import { getPrimeTechSkill } from '@inneranimalmedia/primetech-procedures/skills';
+```
+
 ## Production disciplines
 
 - **Architecture and BIM:** model validation, semantic coordination, design-review drawings, revision-bound renders and documentation handoffs.

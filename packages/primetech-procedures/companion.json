@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "companion": {
+    "name": "Architect",
+    "species": "great horned owl",
+    "role": "product architecture, UX and design-system stewardship",
+    "activation_status": "referenced_family_member_unverified_in_this_package",
+    "visual_reference": "assets/architect-icon.svg",
+    "visual_description": "Great horned owl companion concept badge; final Companion Studio artwork not included in the supplied files.",
+    "state_mapping_status": "proposed"
+  },
+  "plugin": {
+    "name": "architect-design-studio",
+    "display_name": "PrimeTech Design Studio",
+    "version": "0.3.0"
+  },
+  "tool_domains": {
+    "primary": [
+      "PrimeTech creative-production procedures",
+      "AgentSam host-native creative tools"
+    ],
+    "optional_handoffs": [
+      "Figma only when explicitly requested and connected",
+      "Google Drive for requested file delivery"
+    ],
+    "execution_policy": "Use PrimeTech workflows and the current host native tools first. External design providers are optional handoff targets only when explicitly requested or necessary and connected; this plugin does not claim a remote MCP endpoint."
+  },
+  "progression": {
+    "states": [
+      "idle",
+      "planning",
+      "executing",
+      "needs-review",
+      "blocked",
+      "verified",
+      "handoff"
+    ],
+    "implementation_status": "proposed_mapping_not_connected_to_companion_studio"
+  }
+}
