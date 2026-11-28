@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/run-spawn.v1.schema.json",
+  "title": "AgentRunSpawnV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "parent_run_id",
+    "spawn_job_id",
+    "status",
+    "child_run_ids",
+    "published"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.child-run-spawn.v1"
+    },
+    "parent_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "spawn_job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "awaiting_approval",
+        "running",
+        "merging",
+        "completed",
+        "failed",
+        "partial"
+      ]
+    },
+    "child_run_id": {
+      "type": "string"
+    },
+    "child_run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "approval_id": {
+      "type": "string"
+    },
+    "queue": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "queue_job": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "queue_jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "published": {
+      "type": "boolean"
+    }
+  }
+}
