@@ -112,8 +112,13 @@ export function buildUniversalSource({
     if (identitySet.has(row.id)) throw new Error('portable_cli_identity_collision:'+row.id);
     identitySet.add(row.id);
   }
-  commands.sort((a,b)=>[a.package_manager,a.executable,a.command_key]
-    .join('|').localeCompare([b.package_manager,b.executable,b.command_key].join('|')));
+  // Do not use localeCompare here: ICU/locale differences between macOS and
+  // Linux changed the checked-in projection in CI despite identical source.
+  const commandSortKey=row=>[row.package_manager,row.executable,row.command_key].join('|');
+  commands.sort((a,b)=>{
+    const left=commandSortKey(a),right=commandSortKey(b);
+    return left<right?-1:left>right?1:0;
+  });
 
   const ops=read(root,'protocol/sam/registry.seed.json');
   if (!Array.isArray(ops.operations)) throw new Error('sam_operation_registry_invalid');
