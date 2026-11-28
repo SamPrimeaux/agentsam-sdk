@@ -50,8 +50,15 @@ test('D1-shaped database control adapter hosts the same ACP contract without loc
   assert.deepEqual(events.map((event) => event.eventType), [
     'run.created',
     'run.queued',
-    'run.suspended',
+    'run.status',
   ]);
+
+  const spawnJob = await db.prepare(
+    'SELECT master_run_id, status, subagents_spawned FROM agentsam_spawn_job WHERE id = ?'
+  ).bind(child.spawn_job_id).first();
+  assert.equal(spawnJob.master_run_id, root.run_id);
+  assert.equal(spawnJob.status, 'running');
+  assert.equal(spawnJob.subagents_spawned, 1);
 
   const queueRows = await db.prepare(
     "SELECT kind, source_run_id, job_json FROM agentsam_queue_job ORDER BY created_at_unix, id"

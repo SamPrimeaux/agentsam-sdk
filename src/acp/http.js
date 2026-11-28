@@ -113,6 +113,39 @@ export function createAgentControlHttpHandler({
         });
       }
 
+      if (parts[0] === 'v1' && parts[1] === 'approvals') {
+        if (parts.length === 2) {
+          if (request.method === 'POST') {
+            if (typeof adapter.requestApproval !== 'function') return json(errorBody(Object.assign(new Error('approval_requests_not_supported'), { code: 'approval_requests_not_supported' })), 501);
+            return json(await adapter.requestApproval(await readJson(request)), 202);
+          }
+          requireMethod(request, ['GET']);
+          if (typeof adapter.listApprovals !== 'function') return json(errorBody(Object.assign(new Error('approval_listing_not_supported'), { code: 'approval_listing_not_supported' })), 501);
+          return json(await adapter.listApprovals({
+            run_id: url.searchParams.get('run_id') || null,
+            status: url.searchParams.get('status') || 'pending',
+            limit: Number(url.searchParams.get('limit') || 100),
+          }));
+        }
+        const approvalId = clean(parts[2]);
+        if (!approvalId) throw Object.assign(new Error('approval_id_required'), { code: 'approval_id_required' });
+        if (parts.length === 3) {
+          requireMethod(request, ['GET']);
+          if (typeof adapter.getApproval !== 'function') return json(errorBody(Object.assign(new Error('approval_lookup_not_supported'), { code: 'approval_lookup_not_supported' })), 501);
+          const approval = await adapter.getApproval(approvalId);
+          if (!approval) throw Object.assign(new Error('approval_not_found:' + approvalId), { code: 'approval_not_found' });
+          return json(approval);
+        }
+        if (parts.length === 4 && parts[3] === 'decision') {
+          requireMethod(request, ['POST']);
+          if (typeof adapter.decideApproval !== 'function') return json(errorBody(Object.assign(new Error('approval_decisions_not_supported'), { code: 'approval_decisions_not_supported' })), 501);
+          const result = await adapter.decideApproval(approvalId, await readJson(request));
+          if (!result) throw Object.assign(new Error('approval_not_found:' + approvalId), { code: 'approval_not_found' });
+          return json(result, 202);
+        }
+        return json(errorBody(Object.assign(new Error('route_not_found'), { code: 'route_not_found' })), 404);
+      }
+
       if (parts[0] !== 'v1' || parts[1] !== 'runs') {
         return json(errorBody(Object.assign(new Error('route_not_found'), { code: 'route_not_found' })), 404);
       }

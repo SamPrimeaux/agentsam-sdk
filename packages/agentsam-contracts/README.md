@@ -42,7 +42,7 @@ The ACP runtime's public response shapes are owned here rather than existing onl
 
 - `AgentRunV1` and `run.v1.schema.json` describe the public run projection. `status` is the lifecycle view; `storageStatus` is the database's narrower persisted state.
 - `AgentRunStartV1` and `run-start.v1.schema.json` describe the queued control-plane acknowledgement. Queueing is not model execution.
-- `AgentRunReceiptV1` and `run-receipt.v1.schema.json` describe usage, timing, terminal state, suspension and last-event evidence.
+- `AgentRunReceiptV1` and `run-receipt.v1.schema.json` describe usage, timing, terminal state, parent/child counts and last-event evidence.
 - `AgentActivityEventV1` and `activity.v1.schema.json` describe the normalized activity projection. The schema requires every property the TypeScript contract requires.
 - The ACP `recordAgentRunTimeout()` helper persists a timeout as storage status `failed` plus an idempotent `run.timed_out` event, which the run mapper projects as lifecycle status `timed_out`.
 
@@ -111,3 +111,8 @@ IAMScene owns the actual v2 document schema and authoring implementation.
 An app must bind and test the renderer, simulator and inspector before those
 operations can be declared implemented. A file loading successfully or a
 form being rendered is not evidence of an executable tool.
+
+
+## Agent run, spawn and approval contracts
+
+The run contract distinguishes public waiting projections from persisted storage status. `automatic` is the public model-selection vocabulary; the production `selected_by` column records `thompson` as its implementation provenance. Parent/child relationships are persisted through `agentsam_agent_run.parent_run_id`, with orchestration in `agentsam_spawn_job`. Durable approvals are represented by `AgentApprovalV1` and `agentsam_approval_queue`; they are not a parallel suspension record. See the exported `run-spawn.v1`, `approval.v1`, and `approval-decision.v1` JSON Schemas.

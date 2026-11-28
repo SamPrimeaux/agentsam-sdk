@@ -1,6 +1,6 @@
-import { createAgentControlHttpHandler } from "@inneranimalmedia/agentsam-sdk/acp/http";
-import { createD1QueueControl } from "@inneranimalmedia/agentsam-sdk/acp/dependencies";
-import { DatabaseAgentControlClient } from "@inneranimalmedia/agentsam-sdk/acp/database-client";
+import { createAgentControlHttpHandler } from "../../../../src/acp/http.js";
+import { createD1QueueControl } from "../../../../src/acp/dependencies.js";
+import { DatabaseAgentControlClient } from "../../../../src/acp/database-client.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 
 const ROUTE_PREFIX = "/api/agent-control";
@@ -17,7 +17,7 @@ function json(body, status) {
  * Local SQLite remains an explicit development/test adapter, never the
  * production default for this route.
  */
-export async function handleAgentControlRequest(request, env, accountId) {
+export async function handleAgentControlRequest(request, env, accountId, actorId = accountId) {
   if (!env?.DB || typeof env.DB.prepare !== "function") {
     return json({ ok: false, error: "agent_control_database_unavailable" }, 503);
   }
@@ -33,6 +33,7 @@ export async function handleAgentControlRequest(request, env, accountId) {
     database: env.DB,
     kind: "cloudflare-d1",
     accountId,
+    actorId,
     queueControl,
     requireAccount: true,
     onTimeout: async ({ run, event, errorCode, createdAt }) => {

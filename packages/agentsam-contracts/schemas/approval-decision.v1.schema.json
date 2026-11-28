@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/approval-decision.v1.schema.json",
+  "title": "AgentApprovalDecisionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval",
+    "spawn"
+  ],
+  "properties": {
+    "approval": {
+      "$ref": "approval.v1.schema.json"
+    },
+    "spawn": {
+      "oneOf": [
+        {
+          "$ref": "run-spawn.v1.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resume": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "idempotent": {
+      "type": "boolean"
+    }
+  }
+}

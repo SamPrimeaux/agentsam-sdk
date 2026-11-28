@@ -6,29 +6,6 @@ export const AGENT_RUN_STORAGE_STATUSES = [
 ] as const;
 export type AgentRunStorageStatus = typeof AGENT_RUN_STORAGE_STATUSES[number];
 
-export const AGENT_RUN_SUSPENSION_STATES = [
-  'waiting_external', 'waiting_child', 'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
-] as const;
-export const AGENT_RUN_SUSPENSION_REASONS = [
-  'external', 'child_run', 'approval', 'input', 'retry', 'scheduled', 'rate_limit',
-] as const;
-export type AgentRunSuspensionReason = typeof AGENT_RUN_SUSPENSION_REASONS[number];
-export type AgentRunSuspensionState = typeof AGENT_RUN_SUSPENSION_STATES[number];
-
-export interface AgentRunSuspension {
-  runId: string;
-  state: AgentRunSuspensionState;
-  reason: AgentRunSuspensionReason;
-  wakeAt?: number;
-  wakeEvent?: string;
-  dependencyRunIds?: string[];
-  attempt?: number;
-  resumeStepId?: string;
-  checkpointRef?: string;
-  expiresAt?: number;
-  metadata?: Record<string, unknown>;
-}
-
 /**
  * Public ACP projection. status is the lifecycle view; storageStatus is the
  * narrower status persisted by the runtime. A timeout is recorded as a
@@ -46,7 +23,6 @@ export interface AgentRunV1 extends AgentRun {
   outputTokens: number;
   reasoningTokens: number;
   costUsd: number;
-  suspension: AgentRunSuspension | null;
 }
 
 /** Control-plane acknowledgement; scheduling is not model execution. */
@@ -59,17 +35,82 @@ export interface AgentRunStartV1 {
   published: boolean;
 }
 
-export type AgentRunWakeKind = 'event' | 'dependency' | 'scheduled' | 'manual';
+export const AGENT_SPAWN_JOB_STATUSES = [
+  'pending', 'awaiting_approval', 'running', 'merging', 'completed', 'failed', 'partial',
+] as const;
+export type AgentSpawnJobStatus = typeof AGENT_SPAWN_JOB_STATUSES[number];
 
-export interface AgentRunWakeSignal {
+/** A durable spawn orchestration backed by agentsam_spawn_job and parent_run_id. */
+export interface AgentRunSpawnV1 {
+  schema: 'agentsam.child-run-spawn.v1';
+  parent_run_id: string;
+  spawn_job_id: string;
+  status: AgentSpawnJobStatus;
+  child_run_id?: string;
+  child_run_ids: string[];
+  approval_id?: string;
+  queue?: string | null;
+  queue_job?: Record<string, unknown> | null;
+  queue_jobs?: Array<Record<string, unknown>>;
+  published: boolean;
+}
+
+export const AGENT_APPROVAL_STATUSES = ['pending', 'approved', 'denied', 'expired'] as const;
+export type AgentApprovalStatus = typeof AGENT_APPROVAL_STATUSES[number];
+
+export const AGENT_APPROVAL_TYPES = [
+  'tool', 'workflow', 'command', 'script', 'deploy', 'db_write', 'r2_write',
+  'github_write', 'terminal', 'hook', 'spawn', 'escalation', 'route_upgrade',
+] as const;
+export type AgentApprovalType = typeof AGENT_APPROVAL_TYPES[number];
+
+export const AGENT_APPROVAL_RISK_LEVELS = ['low', 'medium', 'high', 'critical'] as const;
+export type AgentApprovalRiskLevel = typeof AGENT_APPROVAL_RISK_LEVELS[number];
+
+/** Durable approval row projected from agentsam_approval_queue. */
+export interface AgentApprovalV1 {
   id: string;
-  runId: string;
-  kind: AgentRunWakeKind;
-  occurredAt: number;
-  dedupeKey: string;
-  eventKey?: string;
-  dependencyRunId?: string;
-  metadata?: Record<string, unknown>;
+  accountId: string;
+  sessionId?: string;
+  conversationId?: string;
+  runId?: string;
+  toolCallId?: string;
+  terminalJobId?: string;
+  executionStepId?: string;
+  capabilityKey?: string;
+  workflowKey?: string;
+  toolName?: string;
+  toolId?: string;
+  toolKey?: string;
+  handlerKey?: string;
+  routeKey?: string;
+  actionSummary: string;
+  sanitizedInput: Record<string, unknown>;
+  response: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  riskLevel: AgentApprovalRiskLevel;
+  approvalType: AgentApprovalType;
+  status: AgentApprovalStatus;
+  approvedBy?: string;
+  decidedAt?: number;
+  expiresAt?: number;
+  notifiedAt?: number;
+  haltedAt?: number;
+  createdAt?: number;
+}
+
+export interface AgentRunResumeV1 {
+  woke: boolean;
+  reason?: string;
+  resume_job?: Record<string, unknown>;
+  queue?: string | null;
+}
+
+export interface AgentApprovalDecisionV1 {
+  approval: AgentApprovalV1;
+  spawn: AgentRunSpawnV1 | null;
+  resume?: AgentRunResumeV1 | null;
+  idempotent?: boolean;
 }
 
 export type AgentRunRetryClass = 'transient' | 'wait' | 'replan' | 'terminal';
@@ -133,58 +174,8 @@ export function classifyAgentRunRetry(input: AgentRunRetryClassificationInput = 
   return { class: 'terminal', automaticRetry: false, reason: code || 'unclassified_failure' };
 }
 
-export type AgentRunWakeDecisionReason =
-  | 'accepted'
-  | 'duplicate'
-  | 'run_mismatch'
-  | 'expired'
-  | 'condition_not_met';
-
-export interface AgentRunWakeDecision {
-  accepted: boolean;
-  reason: AgentRunWakeDecisionReason;
-  nextStatus?: 'queued';
-}
-
-export function evaluateAgentRunWake(
-  suspension: AgentRunSuspension,
-  wake: AgentRunWakeSignal,
-  options: { consumedDedupeKeys?: Iterable<string>; now?: number } = {},
-): AgentRunWakeDecision {
-  const consumed = new Set(options.consumedDedupeKeys || []);
-  if (consumed.has(wake.dedupeKey)) return { accepted: false, reason: 'duplicate' };
-  if (suspension.runId !== wake.runId) return { accepted: false, reason: 'run_mismatch' };
-
-  const now = options.now ?? wake.occurredAt;
-  if (suspension.expiresAt != null && now > suspension.expiresAt) {
-    return { accepted: false, reason: 'expired' };
-  }
-
-  const matched = wake.kind === 'manual'
-    || Boolean(suspension.wakeEvent && wake.eventKey === suspension.wakeEvent)
-    || Boolean(
-      wake.kind === 'dependency'
-      && wake.dependencyRunId
-      && (suspension.dependencyRunIds || []).includes(wake.dependencyRunId),
-    )
-    || Boolean(wake.kind === 'scheduled' && suspension.wakeAt != null && now >= suspension.wakeAt);
-
-  return matched
-    ? { accepted: true, reason: 'accepted', nextStatus: 'queued' }
-    : { accepted: false, reason: 'condition_not_met' };
-}
-
-export function wakeMatchesSuspension(
-  suspension: AgentRunSuspension,
-  wake: AgentRunWakeSignal,
-  now = wake.occurredAt,
-): boolean {
-  return evaluateAgentRunWake(suspension, wake, { now }).accepted;
-}
-
 export type AgentRunLifecycleAction =
   | { type: 'start' }
-  | { type: 'suspend'; status: AgentRunSuspension['state'] }
   | { type: 'wake' }
   | { type: 'complete' }
   | { type: 'fail' }
@@ -199,7 +190,6 @@ export function transitionAgentRunStatus(status: AgentRunStatus, action: AgentRu
   if (action.type === 'timeout') return 'timed_out';
   if (action.type === 'complete') return 'completed';
   if (action.type === 'fail') return 'failed';
-  if (action.type === 'suspend') return action.status;
   if (action.type === 'wake') return 'queued';
   if (action.type === 'start') return 'running';
   return status;
@@ -210,7 +200,6 @@ export type AgentRunEventType =
   | 'run.queued'
   | 'run.started'
   | 'run.status'
-  | 'run.suspended'
   | 'run.woken'
   | 'run.cancel_requested'
   | 'run.cancelled'
@@ -299,8 +288,6 @@ export interface AgentRunReceiptV1 {
   status: AgentRunStatus;
   terminal: boolean;
   parentRunId: string | null;
-  planId: string | null;
-  todoId: string | null;
   usage: {
     modelCalls: number;
     toolCalls: number;
@@ -317,7 +304,6 @@ export interface AgentRunReceiptV1 {
     latencyMs: number | null;
   };
   error: { code: string | null; message: string | null } | null;
-  suspension: AgentRunSuspension | null;
   eventCount: number;
   childRunCount: number;
   lastEvent: AgentRunEventReceiptV1 | null;
@@ -342,7 +328,6 @@ export interface AgentActivityEventV1 {
 function phaseForRunEvent(event: AgentRunEvent): AgentActivityPhase {
   if (event.phase) return event.phase;
   if (event.eventType === 'run.created' || event.eventType === 'run.queued' || event.eventType === 'run.started') return 'boot';
-  if (event.eventType === 'run.suspended') return 'waiting';
   if (event.eventType === 'run.woken' || event.eventType === 'run.cancel_requested') return 'recover';
   if (event.eventType === 'verification.completed') return 'verify';
   if (event.eventType === 'run.completed' || event.eventType === 'run.cancelled' || event.eventType === 'run.timed_out') return 'complete';
@@ -354,7 +339,7 @@ function activityTypeForRunEvent(event: AgentRunEvent): AgentActivityEventType {
   if (event.eventType === 'run.started') return 'run.started';
   if (event.eventType === 'run.completed') return 'run.completed';
   if (event.eventType === 'run.failed' || event.eventType === 'run.timed_out') return 'run.failed';
-  if (event.eventType === 'run.cancelled' || event.eventType === 'run.suspended' || event.eventType === 'run.woken' || event.eventType === 'run.status' || event.eventType === 'run.cancel_requested' || event.eventType === 'run.created' || event.eventType === 'run.queued') return 'phase.changed';
+  if (event.eventType === 'run.cancelled' || event.eventType === 'run.woken' || event.eventType === 'run.status' || event.eventType === 'run.cancel_requested' || event.eventType === 'run.created' || event.eventType === 'run.queued') return 'phase.changed';
   if (event.eventType === 'step.started') return 'step.started';
   if (event.eventType === 'step.completed') return 'step.completed';
   if (event.eventType === 'decision.made') return 'decision.made';

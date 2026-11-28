@@ -1,4 +1,4 @@
-import { appendAgentRunEvent, recordAgentRunTimeout, spawnChildRun } from './dependencies.js';
+import { appendAgentRunEvent, recordAgentRunTimeout, spawnChildRun, requestAgentApproval, getAgentApproval, listAgentApprovals, decideAgentApproval } from './dependencies.js';
 import { createRootRun } from './runs.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
@@ -15,32 +15,22 @@ const RUN_JOIN = `
          (SELECT e.event_type FROM agentsam_agent_run_event e
            WHERE e.run_id = r.id AND e.event_type = 'run.timed_out'
            ORDER BY e.seq DESC LIMIT 1) AS terminal_event_type,
-         s.state AS suspension_state, s.reason AS suspension_reason,
-         s.wake_at_unix, s.wake_event, s.dependency_run_ids_json,
-         s.resume_step_id, s.checkpoint_ref, s.expires_at_unix,
-         s.attempt AS suspension_attempt, s.metadata_json AS suspension_metadata_json
+         (SELECT COUNT(*) FROM agentsam_agent_run child
+           WHERE child.parent_run_id = r.id AND child.account_id = r.account_id AND child.status IN ('queued','running')) AS active_child_count,
+         (SELECT COUNT(*) FROM agentsam_approval_queue approval
+           WHERE approval.agent_run_id = r.id AND approval.account_id = r.account_id
+             AND approval.status = 'pending'
+             AND (approval.expires_at IS NULL OR approval.expires_at > unixepoch())) AS pending_approval_count
   FROM agentsam_agent_run r
-  LEFT JOIN agentsam_agent_run_suspension s ON s.run_id = r.id
 `;
-
-function mapSuspension(row) {
-  if (!row?.suspension_state) return null;
-  return {
-    runId: row.id, state: row.suspension_state, reason: row.suspension_reason,
-    wakeAt: row.wake_at_unix ?? undefined, wakeEvent: row.wake_event ?? undefined,
-    dependencyRunIds: parseJson(row.dependency_run_ids_json, []),
-    resumeStepId: row.resume_step_id ?? undefined,
-    checkpointRef: row.checkpoint_ref ?? undefined,
-    expiresAt: row.expires_at_unix ?? undefined,
-    attempt: Number(row.suspension_attempt || 0),
-    metadata: parseJson(row.suspension_metadata_json, {}),
-  };
-}
 
 /** @returns {import('@inneranimalmedia/agentsam-contracts').AgentRunV1 | null} */
 function mapRun(row) {
   if (!row) return null;
-  const suspension = mapSuspension(row);
+  const status = row.terminal_event_type === 'run.timed_out' ? 'timed_out'
+    : isTerminal(row.status) ? row.status
+      : Number(row.pending_approval_count || 0) > 0 ? 'awaiting_approval'
+        : Number(row.active_child_count || 0) > 0 ? 'waiting_child' : row.status;
   return {
     schema: 'agentsam.run.v1', id: row.id, accountId: row.account_id ?? undefined,
     conversationId: row.conversation_id ?? undefined, parentRunId: row.parent_run_id ?? undefined,
@@ -48,19 +38,19 @@ function mapRun(row) {
     sourceClient: row.source_client ?? undefined, surface: row.surface ?? undefined, mode: row.mode ?? undefined,
     modelKey: row.model_key ?? undefined, reasoningEffort: row.reasoning_effort ?? undefined,
     requestedServiceTier: row.requested_service_tier ?? undefined, actualServiceTier: row.actual_service_tier ?? undefined,
-    selectedBy: row.selected_by ?? undefined,
-    status: row.terminal_event_type === 'run.timed_out' ? 'timed_out' : (suspension?.state || row.status),
-    storageStatus: row.status,
-    cancelRequested: Boolean(row.cancel_requested), errorCode: row.error_code ?? undefined, errorMessage: row.error_message ?? undefined,
+    selectedBy: row.selected_by === 'thompson' ? 'automatic' : (row.selected_by ?? undefined),
+    status, storageStatus: row.status,
+    cancelRequested: Boolean(row.cancel_requested), errorCode: row.error_code ?? undefined,
+    errorMessage: row.error_message ?? undefined,
     modelCallCount: Number(row.model_call_count || 0), toolCallCount: Number(row.tool_call_count || 0),
     inputTokens: Number(row.input_tokens || 0), cachedInputTokens: Number(row.cached_input_tokens || 0),
     outputTokens: Number(row.output_tokens || 0), reasoningTokens: Number(row.reasoning_tokens || 0),
-    costUsd: Number(row.cost_usd || 0), planId: row.plan_id ?? undefined, todoId: row.todo_id ?? undefined,
+    costUsd: Number(row.cost_usd || 0),
     createdAt: row.created_at_unix == null ? undefined : Number(row.created_at_unix) * 1000,
     startedAt: row.started_at_unix == null ? undefined : Number(row.started_at_unix) * 1000,
     completedAt: row.completed_at_unix == null ? undefined : Number(row.completed_at_unix) * 1000,
     updatedAt: row.updated_at_unix == null ? undefined : Number(row.updated_at_unix) * 1000,
-    latencyMs: row.latency_ms == null ? undefined : Number(row.latency_ms), suspension,
+    latencyMs: row.latency_ms == null ? undefined : Number(row.latency_ms),
   };
 }
 
@@ -91,6 +81,7 @@ export class DatabaseAgentControlClient {
     database,
     kind = 'database',
     accountId = null,
+    actorId = null,
     queueControl = null,
     onTimeout = null,
     requireAccount = false,
@@ -101,6 +92,7 @@ export class DatabaseAgentControlClient {
     this.database = database;
     this.kind = clean(kind) || 'database';
     this.accountId = clean(accountId) || null;
+    this.actorId = clean(actorId) || this.accountId;
     this.queueControl = queueControl;
     this.onTimeout = typeof onTimeout === 'function' ? onTimeout : null;
     this.requireAccount = Boolean(requireAccount);
@@ -126,6 +118,8 @@ export class DatabaseAgentControlClient {
       role: input.role ?? 'lead',
       mode: input.mode ?? 'agent',
       modelKey: input.model_key ?? input.modelKey ?? null,
+      selectedBy: input.selected_by ?? input.selectedBy ?? null,
+      routingArmId: input.routing_arm_id ?? input.routingArmId ?? null,
       reasoningEffort: input.reasoning_effort ?? input.reasoningEffort ?? null,
       serviceTier: input.service_tier ?? input.serviceTier ?? null,
       runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
@@ -156,36 +150,24 @@ export class DatabaseAgentControlClient {
     const rootFilter = this.accountId ? 'id = ? AND account_id = ?' : 'id = ?';
     const childAccountClause = this.accountId ? ' AND child.account_id = ?' : '';
     const rootParams = this.accountId ? [id, this.accountId, this.accountId] : [id];
-    const result = await this.database.prepare(`
-      WITH RECURSIVE descendants(id, depth, path) AS (
-        SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE ${rootFilter}
-        UNION ALL
-        SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','
-        FROM agentsam_agent_run child
-        JOIN descendants ON child.parent_run_id = descendants.id
-        WHERE descendants.depth < 64
-          AND instr(descendants.path, ',' || child.id || ',') = 0${childAccountClause}
-      )
-      SELECT r.*, descendants.depth,
-             s.state AS suspension_state, s.reason AS suspension_reason,
-             s.wake_at_unix, s.wake_event, s.dependency_run_ids_json,
-             s.resume_step_id, s.checkpoint_ref, s.expires_at_unix,
-             s.attempt AS suspension_attempt, s.metadata_json AS suspension_metadata_json
-      FROM descendants
-      JOIN agentsam_agent_run r ON r.id = descendants.id
-      LEFT JOIN agentsam_agent_run_suspension s ON s.run_id = r.id
-      ORDER BY descendants.depth, r.created_at_unix, r.id
-    `).bind(...rootParams).all();
+    const result = await this.database.prepare(
+      'WITH RECURSIVE descendants(id, depth, path) AS (' +
+      " SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE " + rootFilter +
+      " UNION ALL SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','" +
+      ' FROM agentsam_agent_run child JOIN descendants ON child.parent_run_id = descendants.id' +
+      ' WHERE descendants.depth < 64 AND instr(descendants.path, char(44) || child.id || char(44)) = 0' + childAccountClause +
+      ') SELECT r.*, descendants.depth,' +
+      " (SELECT e.event_type FROM agentsam_agent_run_event e WHERE e.run_id = r.id AND e.event_type = 'run.timed_out' ORDER BY e.seq DESC LIMIT 1) AS terminal_event_type," +
+      " (SELECT COUNT(*) FROM agentsam_agent_run child WHERE child.parent_run_id = r.id AND child.account_id = r.account_id AND child.status IN ('queued','running')) AS active_child_count," +
+      " (SELECT COUNT(*) FROM agentsam_approval_queue approval WHERE approval.agent_run_id = r.id AND approval.account_id = r.account_id AND approval.status = 'pending' AND (approval.expires_at IS NULL OR approval.expires_at > unixepoch())) AS pending_approval_count" +
+      ' FROM descendants JOIN agentsam_agent_run r ON r.id = descendants.id' +
+      ' ORDER BY descendants.depth, r.created_at_unix, r.id'
+    ).bind(...rootParams).all();
     const rows = result.results || [];
     if (!rows.length) return null;
-    const byId = new Map(rows.map((row) => [
-      row.id,
-      { ...mapRun(row), depth: Number(row.depth || 0), children: [] },
-    ]));
+    const byId = new Map(rows.map((row) => [row.id, { ...mapRun(row), depth: Number(row.depth || 0), children: [] }]));
     for (const node of byId.values()) {
-      if (node.parentRunId && byId.has(node.parentRunId)) {
-        byId.get(node.parentRunId).children.push(node);
-      }
+      if (node.parentRunId && byId.has(node.parentRunId)) byId.get(node.parentRunId).children.push(node);
     }
     return byId.get(id) || null;
   }
@@ -194,17 +176,65 @@ export class DatabaseAgentControlClient {
     return spawnChildRun(this.database, {
       parentRunId: id,
       childRunId: input.child_run_id ?? input.childRunId ?? null,
+      spawnJobId: input.spawn_job_id ?? input.spawnJobId ?? null,
       accountId: this.accountId || input.account_id || input.accountId || null,
+      initiatedByType: input.initiated_by_type ?? input.initiatedByType ?? 'user',
+      initiatedById: this.actorId || input.initiated_by_id || input.initiatedById || this.accountId,
       objective: input.objective ?? '',
       role: input.role ?? input.role_slug ?? null,
+      children: input.children ?? [],
       workItemId: input.work_item_id ?? input.workItemId ?? null,
       stepId: input.step_id ?? input.stepId ?? null,
       modelKey: input.model_key ?? input.modelKey ?? null,
+      selectedBy: input.selected_by ?? input.selectedBy ?? null,
+      routingArmId: input.routing_arm_id ?? input.routingArmId ?? null,
       reasoningEffort: input.reasoning_effort ?? input.reasoningEffort ?? null,
       serviceTier: input.service_tier ?? input.serviceTier ?? null,
       runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
       metadata: input.metadata ?? {},
       priority: input.priority ?? 'normal',
+      chunkingStrategy: input.chunking_strategy ?? input.chunkingStrategy ?? 'manual',
+      mergeStrategy: input.merge_strategy ?? input.mergeStrategy ?? 'concat',
+      mergeInstructions: input.merge_instructions ?? input.mergeInstructions ?? null,
+      costCapUsd: input.cost_cap_usd ?? input.costCapUsd ?? null,
+      requiresApproval: input.requires_approval ?? input.requiresApproval ?? false,
+      approvalExpiresAt: input.approval_expires_at ?? input.approvalExpiresAt ?? null,
+      queueControl: this.queueControl,
+    });
+  }
+
+  async requestApproval(input = {}) {
+    const accountId = this.accountId || clean(input.account_id ?? input.accountId) || null;
+    if (this.requireAccount && !accountId) {
+      const error = new Error('authenticated_account_required');
+      error.code = 'authenticated_account_required';
+      error.status = 401;
+      throw error;
+    }
+    return requestAgentApproval(this.database, { ...input, account_id: accountId });
+  }
+
+  async getApproval(id) {
+    return getAgentApproval(this.database, id, this.accountId, this.queueControl);
+  }
+
+  async listApprovals(options = {}) {
+    return listAgentApprovals(this.database, {
+      accountId: this.accountId || options.account_id || options.accountId,
+      runId: options.run_id || options.runId || null,
+      status: options.status || 'pending',
+      limit: options.limit || 100,
+      queueControl: this.queueControl,
+    });
+  }
+
+  async decideApproval(id, input = {}) {
+    return decideAgentApproval(this.database, {
+      id,
+      accountId: this.accountId || input.account_id || input.accountId,
+      actorId: this.actorId,
+      decision: input.decision,
+      reason: input.reason || '',
       queueControl: this.queueControl,
     });
   }
@@ -289,8 +319,6 @@ export class DatabaseAgentControlClient {
       status: run.status,
       terminal: isTerminal(run.status),
       parentRunId: run.parentRunId ?? null,
-      planId: run.planId ?? null,
-      todoId: run.todoId ?? null,
       usage: {
         modelCalls: run.modelCallCount,
         toolCalls: run.toolCallCount,
@@ -309,11 +337,10 @@ export class DatabaseAgentControlClient {
       error: run.errorCode || run.errorMessage
         ? { code: run.errorCode ?? null, message: run.errorMessage ?? null }
         : null,
-      suspension: run.suspension,
       eventCount: events.length,
       childRunCount: tree?.children?.length || 0,
       lastEvent,
-    };
+    }
   }
 }
 

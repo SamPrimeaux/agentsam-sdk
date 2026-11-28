@@ -91,7 +91,6 @@ function formatRun(run, clientKind) {
     `model    ${run.modelKey || '—'}`,
     `calls    model ${run.modelCallCount || 0} · tool ${run.toolCallCount || 0}`,
     `cost     $${Number(run.costUsd || 0).toFixed(6)}`,
-    run.suspension ? `wait     ${run.suspension.state} · ${run.suspension.reason}` : null,
   ].filter(Boolean).join('\n');
 }
 

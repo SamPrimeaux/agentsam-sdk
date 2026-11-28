@@ -903,15 +903,18 @@ export default {
     // authority before exposing run, event, queue, or timeout operations.
     if (url.pathname === "/api/agent-control" || url.pathname.startsWith("/api/agent-control/")) {
       let accountId = null;
+      let actorId = null;
       try {
         const principal = await resolveSessionUser(request, env);
+        actorId = principal?.id || null;
         accountId = principal
           ? await resolveStudioAccountIdForUser(env.DB, principal.id)
           : await resolveStudioGoalsCliAccount(request, env);
+        if (!actorId) actorId = accountId;
       } catch {
         return json({ ok: false, error: "unauthorized" }, 401);
       }
-      return handleAgentControlRequest(request, env, accountId);
+      return handleAgentControlRequest(request, env, accountId, actorId);
     }
 
     // Public merchant entry lives outside /admin. Guests see the existing

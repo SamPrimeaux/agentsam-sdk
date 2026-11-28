@@ -16,8 +16,7 @@
     "cachedInputTokens",
     "outputTokens",
     "reasoningTokens",
-    "costUsd",
-    "suspension"
+    "costUsd"
   ],
   "properties": {
     "schema": {
@@ -72,7 +71,7 @@
     "selectedBy": {
       "enum": [
         "manual",
-        "thompson",
+        "automatic",
         "fallback"
       ]
     },
@@ -140,12 +139,6 @@
       "type": "number",
       "minimum": 0
     },
-    "planId": {
-      "type": "string"
-    },
-    "todoId": {
-      "type": "string"
-    },
     "createdAt": {
       "type": "number"
     },
@@ -161,83 +154,8 @@
     "latencyMs": {
       "type": "number",
       "minimum": 0
-    },
-    "suspension": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/$defs/suspension"
-        }
-      ]
     }
   },
-  "$defs": {
-    "suspension": {
-      "type": "object",
-      "required": [
-        "runId",
-        "state",
-        "reason"
-      ],
-      "properties": {
-        "runId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "state": {
-          "enum": [
-            "waiting_external",
-            "waiting_child",
-            "awaiting_input",
-            "awaiting_approval",
-            "sleeping",
-            "retry_scheduled"
-          ]
-        },
-        "reason": {
-          "enum": [
-            "external",
-            "child_run",
-            "approval",
-            "input",
-            "retry",
-            "scheduled",
-            "rate_limit"
-          ]
-        },
-        "wakeAt": {
-          "type": "number"
-        },
-        "wakeEvent": {
-          "type": "string"
-        },
-        "dependencyRunIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "attempt": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "resumeStepId": {
-          "type": "string"
-        },
-        "checkpointRef": {
-          "type": "string"
-        },
-        "expiresAt": {
-          "type": "number"
-        },
-        "metadata": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
+  "$defs": {},
   "additionalProperties": false
 }

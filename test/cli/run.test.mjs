@@ -21,7 +21,7 @@ const validateRun = schemaAjv.compile(readRunSchema('run.v1.schema.json'));
 const validateRunStart = schemaAjv.compile(readRunSchema('run-start.v1.schema.json'));
 const validateRunReceipt = schemaAjv.compile(readRunSchema('run-receipt.v1.schema.json'));
 
-async function fixture(t, { childStatus = 'running', suspendChild = false } = {}) {
+async function fixture(t, { childStatus = 'running' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-run-'));
   fs.writeFileSync(path.join(root, 'package.json'), '{"name":"acp-test","private":true}\n');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -50,15 +50,6 @@ async function fixture(t, { childStatus = 'running', suspendChild = false } = {}
       event_id, run_id, parent_run_id, seq, event_type, phase, label, evidence_json, created_at_unix
     ) VALUES (?, ?, ?, 0, 'run.started', 'boot', 'Child started', '{}', 101)
   `).bind('evt_child_0', 'arun_child', 'arun_parent').run();
-  if (suspendChild) {
-    await db.prepare(`
-      INSERT INTO agentsam_agent_run_suspension (
-        run_id, state, reason, wake_at_unix, wake_event, dependency_run_ids_json,
-        resume_step_id, checkpoint_ref, expires_at_unix, attempt, metadata_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind('arun_child', 'waiting_external', 'external', 5000, 'provider.completed', '[]',
-      'step_resume', 'checkpoint:run', 6000, 2, JSON.stringify({ provider: 'example' })).run();
-  }
   db.close();
   return root;
 }
@@ -69,7 +60,7 @@ test('local ACP client reads run/tree/events, requests cancel, and projects rece
 
   const run = await client.getRun('arun_parent');
   assert.equal(run.schema, 'agentsam.run.v1');
-  assert.equal(run.status, 'running');
+  assert.equal(run.status, 'waiting_child');
   assert.equal(run.storageStatus, 'running');
   assert.equal(run.modelCallCount, 2);
   assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
@@ -259,25 +250,36 @@ test('HTTP ACP start uses the same POST /v1/runs contract as any hosted provider
 });
 
 
-test('run projection validates durable suspension detail', async (t) => {
-  const root = await fixture(t, { suspendChild:true });
+test('approval decisions persist to the shared approval queue and waiting state is derived', async (t) => {
+  const root = await fixture(t);
   const client = new LocalAgentControlClient({ cwd: root });
-  const run = await client.getRun('arun_child');
-  assert.equal(run.status, 'waiting_external');
-  assert.equal(run.storageStatus, 'running');
-  assert.deepEqual(run.suspension, {
-    runId:'arun_child', state:'waiting_external', reason:'external',
-    wakeAt:5000, wakeEvent:'provider.completed', dependencyRunIds:[],
-    resumeStepId:'step_resume', checkpointRef:'checkpoint:run', expiresAt:6000,
-    attempt:2, metadata:{provider:'example'},
+  const approval = await client.requestApproval({
+    account_id: 'acct_1',
+    agent_run_id: 'arun_parent',
+    action_summary: 'Run a protected operation',
+    approval_type: 'tool',
+    risk_level: 'high',
+    tool_name: 'protected.write',
+    sanitized_input: { target: 'test-resource' },
   });
-  assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
-  const receipt = await client.receipt('arun_child');
-  assert.equal(validateRunReceipt(receipt), true, schemaAjv.errorsText(validateRunReceipt.errors));
+  assert.equal(approval.status, 'pending');
+  assert.equal(approval.runId, 'arun_parent');
+  assert.equal((await client.getRun('arun_parent')).status, 'awaiting_approval');
+  const decided = await client.decideApproval(approval.id, {
+    account_id: 'acct_1', decision: 'approved', reason: 'Reviewed and allowed',
+  });
+  assert.equal(decided.approval.status, 'approved');
+  assert.ok(decided.approval.approvedBy);
+  assert.equal((await client.getApproval(approval.id)).status, 'approved');
+  assert.equal((await client.getRun('arun_parent')).status, 'waiting_child');
+  const events = await client.events('arun_parent');
+  assert.ok(events.some((event) => event.eventType === 'approval.required'));
+  assert.ok(events.some((event) => event.eventType === 'approval.approved'));
+  assert.equal(validateRun(await client.getRun('arun_parent')), true, schemaAjv.errorsText(validateRun.errors));
 });
 
 test('timeout persistence records a terminal event and projects timed_out over failed storage', async (t) => {
-  const root = await fixture(t, { suspendChild:true });
+  const root = await fixture(t);
   const db = await createLocalSqliteDatabase(runtimeDatabasePath(root));
   try {
     const first = await recordAgentRunTimeout(db, {
@@ -300,7 +302,6 @@ test('timeout persistence records a terminal event and projects timed_out over f
   assert.equal(run.storageStatus, 'failed');
   assert.equal(run.errorCode, 'deadline_exceeded');
   assert.equal(run.errorMessage, 'Child exceeded its deadline');
-  assert.equal(run.suspension, null);
   assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
   const receipt = await client.receipt('arun_child');
   assert.equal(receipt.eventCount, 2);
