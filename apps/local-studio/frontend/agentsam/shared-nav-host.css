@@ -266,3 +266,27 @@ body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-ex
    top:calc(50% + env(safe-area-inset-top,0px) / 2)!important;
  }
 }
+
+/* Active conversations own a floating identity, not a second header row. */
+@media(max-width:767px) {
+  body.agentsam-conversation-route .console-topbar:has(.agentsam-conversation-companion) { overflow:visible; }
+  body.agentsam-conversation-route .console-topbar:has(.agentsam-conversation-companion) .console-topbar-center {
+    display:flex!important; top:4px!important; left:50%!important; transform:translateX(-50%)!important;
+    max-width:calc(100% - 200px)!important; width:max-content!important; pointer-events:none;
+  }
+}
+@media(max-width:767px) and (display-mode:standalone) {
+  body.agentsam-conversation-route .console-topbar:has(.agentsam-conversation-companion) .console-topbar-center {
+    top:calc(4px + env(safe-area-inset-top,0px))!important;
+  }
+}
+
+/* Dedicated Canvas routes return to their gallery using the editor's own
+   back action. The chat-hosted stage still needs its Return to chat control. */
+@media(max-width:767px) {
+  body.agentsam-shared-navigation:not(.agentsam-conversation-route):has([data-design-workspace="canvas"] .dcx-phone-design-frame .dcx-back-button) .console-topbar { display:none!important; }
+  body.agentsam-shared-navigation:not(.agentsam-conversation-route):has([data-design-workspace="canvas"] .dcx-phone-design-frame .dcx-back-button) .console-body { flex:1; min-height:0; height:auto; }
+}
+@media(max-width:767px) and (display-mode:standalone) {
+  body.agentsam-shared-navigation:not(.agentsam-conversation-route):has([data-design-workspace="canvas"] .dcx-phone-design-frame .dcx-back-button) .console-body { box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); }
+}

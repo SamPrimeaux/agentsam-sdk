@@ -12,6 +12,7 @@ import { WorkProjectSelect } from '@/components/workbench/work-project-select';
 
 import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
+import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { emitCompanionHandoff } from './companion-events';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AgentConversationSurface } from '@inneranimalmedia/agentsam-workbench/agent';
@@ -243,6 +244,11 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const mobileWorkOpen = compactWorkLayout && (state.sideOpen || workSurface !== 'chat');
   const mobileHeaderState = mobileWorkOpen ? 'surface' : empty ? 'start' : 'conversation';
   const showModeSwitcher = empty && (!isMobile || mobileHeaderState === 'start');
+  const showConversationCompanion = isMobile && mobileHeaderState === 'conversation' && !findChatOpen;
+  const conversationCompanion = showConversationCompanion ? <div className="agentsam-conversation-companion" data-mobile-header-state="conversation" data-working={streaming ? "true" : "false"}>
+    <AgentSamPetTrigger state={streaming ? "working" : "idle"} onActivate={() => window.dispatchEvent(new Event("agentsam:assistant:activate"))}/>
+    <div className="agentsam-conversation-companion-label"><strong>AgentSam</strong>{streaming ? <span role="status">Working</span> : null}</div>
+  </div> : null;
   // Work mirrors the reference: stage on the left, chat on the right.
   // Chat mode keeps the established lead-left / Stage-right layout.
   const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout;
@@ -295,14 +301,14 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <Nav.PinnedSummary />
     </div>}
   </div>;
-  return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface} data-mobile-stage-focused={mobileFocusedStage ? "true" : undefined}>
-    {hostModeSlot ? createPortal(showModeSwitcher ? <div className="agentsam-mode-host" data-mobile-header-state={mobileHeaderState}><Nav.ModeSwitcher /></div> : <span hidden data-mobile-header-state={mobileHeaderState} />, hostModeSlot) : null}
+  return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface} data-mobile-stage-focused={mobileFocusedStage ? "true" : undefined} data-conversation-companion={showConversationCompanion ? (streaming ? "working" : "idle") : undefined}>
+    {hostModeSlot ? createPortal(showModeSwitcher ? <div className="agentsam-mode-host" data-mobile-header-state={mobileHeaderState}><Nav.ModeSwitcher /></div> : conversationCompanion ?? <span hidden data-mobile-header-state={mobileHeaderState} />, hostModeSlot) : null}
     {hostLeadingSlot && !isMobile ? createPortal(leadingControls, hostLeadingSlot) : null}
     {hostActionsSlot ? createPortal(headerActions ?? <span className="agentsam-blank-conversation-actions" data-mobile-header-state={mobileHeaderState} aria-hidden="true" />, hostActionsSlot) : null}
     {!hostModeSlot ? <Nav.Topbar className={"agentsam-conversation-topbar" + (showModeSwitcher ? " is-empty-thread" : " is-active-thread")}>
       {leadingControls}
       {showModeSwitcher ? <div className="agentsam-topbar-mode"><Nav.ModeSwitcher /></div>
-        : !isMobile ? <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span> : null}
+        : !isMobile ? <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span> : conversationCompanion}
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}

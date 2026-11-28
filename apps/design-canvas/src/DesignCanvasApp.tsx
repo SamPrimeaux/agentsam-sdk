@@ -19,7 +19,7 @@ import {
   TypeToken, artifactHasImages, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
   normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY, isPageDocument, isTextDocument, isSpreadsheetDocument, reidentifyCreativeData
 } from './creative-model';
-import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, SlideInsertToolbar, SlideLayoutMenu, ViewMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
+import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, SlideInsertToolbar, SlideLayoutMenu, ViewMenu, ZoomControls, MenuPopover, MenuAction, MenuDivider, type ShapeKind } from './components/EditorMenus';
 import { SelectionFormattingToolbar } from './components/SelectionFormattingToolbar';
 import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
@@ -825,11 +825,46 @@ function DesignEditor({ artifact, onChange, onOpenReferences, onAsk, leading, do
   </div>;
   const inspector = board && inspectorOpen ? <div className="dcx-inspector-shell">{commentsOpen ? <DesignCommentsPanel comments={board.comments || []} selected={selected} targetLabel={board.name} onAskComment={onAsk ? (text) => onAsk({ artifactId: artifact.id, artifactType: artifact.type, title: artifact.name, selection: { id: selected?.id || board.id, kind: selected?.type || 'artboard', label: selected?.name || board.name }, comment: text }) : undefined} onAddComment={(value) => addComment(value)} onResolve={(id) => updateBoard({ comments: (board.comments || []).map((item) => item.id === id ? { ...item, resolved: !item.resolved } : item) })} onClose={() => setCommentsOpen(false)}/> : <DesignInspector board={board} selected={selected} onBoard={updateBoard} onObject={(patch) => selected && updateObject(selected.id, patch)} onDelete={() => selected && updateObject(selected.id, { name: '__delete__' })} onUploadImage={uploadImage} onAlign={alignSelected} onToggleComments={() => { setCommentsOpen(true); setInspectorOpen(true); }} commentsCount={(board.comments || []).length}/>}</div> : undefined;
   const commands = <>
+    <div className="dcx-desktop-commands">
     <div className="dcx-command-group"><ArtboardMenu onAdd={addBoard}/><InsertMenu onText={() => addObject('text')} onImage={uploadImage} onShape={addShape}/><button className="dcx-command-button" onClick={onOpenReferences}><Library size={15}/> Source library</button><button className={'dcx-command-button' + (commentsOpen ? ' active' : '')} onClick={() => { setCommentsOpen((value) => !value); setInspectorOpen(true); }}><MessageSquare size={14}/> Comments</button><button className="dcx-command-icon" title="Undo" aria-label="Undo" disabled={historyIndex === 0} onClick={undo}><Undo2 size={15}/></button><button className="dcx-command-icon" title="Redo" aria-label="Redo" disabled={historyIndex >= history.length - 1} onClick={redo}><Redo2 size={15}/></button></div>
     <div className="dcx-command-group">{onAsk ? <button className="dcx-command-button" onClick={() => onAsk({ artifactId: artifact.id, artifactType: 'design', title: artifact.name, selection: selected ? { id: selected.id, kind: selected.type, label: selected.name } : board ? { id: board.id, kind: 'artboard', label: board.name } : undefined })}>Ask AgentSam</button> : null}<ZoomControls zoom={zoom} onChange={setZoom} onFit={fitCanvas} grid={showGrid} onToggleGrid={() => setShowGrid(!showGrid)}/><button className={'dcx-command-icon' + (inspectorOpen ? ' active' : '')} title={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-label={inspectorOpen ? 'Hide properties' : 'Show properties'} aria-pressed={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)}><Settings2 size={15}/></button><button className="dcx-command-icon" title="Export design JSON" aria-label="Export design JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', artifact)}><Download size={15}/></button></div>
+    </div>
+    <div className="dcx-phone-commands">
+      <div className="dcx-phone-tool-group" role="group" aria-label="Artboards and editing tools">
+        <MenuPopover label="Artboards" className="dcx-phone-menu" trigger={<><Layers size={17}/><span>{doc.artboards.length}</span><ChevronDown size={12}/></>}>{close => <>
+          {doc.artboards.map(item => <MenuAction key={item.id} label={item.name} icon={item.id === board?.id ? <Check size={16}/> : <Square size={16}/>} onClick={() => { setBoardId(item.id); setSelectedId(''); }} close={close}/>)}
+          <MenuDivider/>
+          <MenuAction label="Add landscape artboard" onClick={() => addBoard('landscape')} close={close}/>
+          <MenuAction label="Add square artboard" onClick={() => addBoard('square')} close={close}/>
+          <MenuAction label="Add portrait artboard" onClick={() => addBoard('portrait')} close={close}/>
+        </>}</MenuPopover>
+        <MenuPopover label="Editing tool" className="dcx-phone-menu" trigger={<>{tool === 'hand' ? <Hand size={18}/> : tool === 'pen' ? <PenTool size={18}/> : <MousePointer2 size={18}/>}<ChevronDown size={12}/></>}>{close => <>
+          {(['select','hand','text','shape','image','pen','frame','comment','rect','ellipse',...(artifact.type === 'whiteboard' ? ['note'] : [])] as Tool[]).map(value => <MenuAction key={value} label={value === 'rect' ? 'Rectangle' : value === 'note' ? 'Sticky note' : value[0].toUpperCase()+value.slice(1)} icon={tool === value ? <Check size={16}/> : undefined} onClick={() => handleToolChange(value)} close={close}/>)}
+        </>}</MenuPopover>
+        <InsertMenu onText={() => addObject('text')} onImage={uploadImage} onShape={addShape}/>
+      </div>
+      <div className="dcx-phone-tool-group" role="group" aria-label="View and properties">
+        <button type="button" className="dcx-command-icon" title="Properties" aria-label="Properties" aria-pressed={inspectorOpen && !commentsOpen} onClick={() => {setCommentsOpen(false); setInspectorOpen(value => commentsOpen || !value);}}><SlidersHorizontal size={18}/></button>
+        <MenuPopover label="Zoom" className="dcx-phone-menu" trigger={<>{zoom}%<ChevronDown size={12}/></>}>{close => <>
+          <MenuAction label="Zoom in" onClick={() => setZoom(Math.min(400,Math.round(zoom*1.2)))} close={close}/>
+          <MenuAction label="Zoom out" onClick={() => setZoom(Math.max(4,Math.round(zoom/1.2)))} close={close}/>
+          <MenuAction label="Fit artboard" onClick={fitCanvas} close={close}/>
+          <MenuDivider/>
+          {[25,50,75,100,150,200].map(value => <MenuAction key={value} label={value+'%'} icon={zoom===value?<Check size={16}/>:undefined} onClick={() => setZoom(value)} close={close}/>)}
+          <MenuDivider/><MenuAction label="Layout grid" icon={showGrid?<Check size={16}/>:undefined} onClick={() => setShowGrid(!showGrid)} close={close}/>
+          <MenuAction label="Undo" disabled={historyIndex===0} onClick={undo} close={close}/><MenuAction label="Redo" disabled={historyIndex>=history.length-1} onClick={redo} close={close}/>
+        </>}</MenuPopover>
+        <MenuPopover label="More editor tools" className="dcx-phone-menu" trigger={<MoreHorizontal size={18}/>}>{close => <>
+          <MenuAction label="Comments" onClick={() => {setCommentsOpen(true);setInspectorOpen(true);}} close={close}/>
+          <MenuAction label="Source library" onClick={onOpenReferences} close={close}/>
+          {onAsk ? <MenuAction label="Ask AgentSam" onClick={() => onAsk({artifactId:artifact.id,artifactType:artifact.type,title:artifact.name,selection:selected?{id:selected.id,kind:selected.type,label:selected.name}:board?{id:board.id,kind:'artboard',label:board.name}:undefined})} close={close}/> : null}
+          <MenuAction label="Export design JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.json',artifact)} close={close}/>
+        </>}</MenuPopover>
+      </div>
+    </div>
   </>;
   return <>
-    <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : board ? { id: board.id, kind: 'artboard' } : undefined)} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} inspectorSheetOpen={commentsOpen && inspectorOpen} onInspectorSheetDismiss={() => { setCommentsOpen(false); setInspectorOpen(false); }} stageLabel="Design editor" className="dcx-shared-frame">
+    <DesignWorkspaceFrame snapshot={snapshotFor(artifact, selected ? { id: selected.id, kind: selected.type } : board ? { id: board.id, kind: 'artboard' } : undefined)} leading={leading} commands={commands} documentActions={documentActions} explorer={explorer} inspector={inspector} assistant={assistant} assistantOpen={assistantOpen} onAssistantOpenChange={onAssistantOpenChange} assistantDock={assistantDock} onAssistantDockChange={onAssistantDockChange} inspectorSheetOpen={inspectorOpen} onInspectorSheetDismiss={() => { setCommentsOpen(false); setInspectorOpen(false); }} stageLabel="Design editor" className="dcx-shared-frame dcx-phone-design-frame">
       {board ? <div className="dcx-editor-stage dcx-design-stage">
         <div ref={canvasAreaRef} tabIndex={0} aria-label="Design canvas; scroll to zoom, middle-drag to pan" className={'dcx-design-canvas-area dcx-zoom-viewport' + (showGrid ? ' is-grid' : '') + (tool === 'hand' ? ' is-hand' : '')}>
           <div className="dcx-zoom-world" style={viewport.worldStyle}><div className="dcx-canvas-zoom-wrap" style={viewport.artboardStyle}>
@@ -1588,7 +1623,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       <button className="dcx-library-menu-button" type="button" aria-label="Toggle workspace navigation" aria-expanded={navOpen} onClick={() => setNavOpen(value => !value)}>
         <Menu size={17}/>
       </button>
-      <button className="dcx-back-button" type="button" onClick={() => { setRoute('gallery'); setActiveId(''); }}>
+      <button className="dcx-back-button" type="button" aria-label="Back to all work" onClick={() => { setRoute('gallery'); setActiveId(''); }}>
         <ArrowLeft size={15}/><span>All work</span><span className="dcx-breadcrumb-separator">/</span><span>{workspaceLabel}</span>
       </button>
       <DocumentActionsMenu name={active.name} pinned={active.pinned} currentType={active.type} onRename={() => renameArtifact(active.id)} onDuplicate={() => duplicate(active)} onTogglePin={() => togglePin(active.id)} onExport={() => download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active)} onDelete={() => requestDelete(active.id)} onSaveToLibrary={onSaveToLibrary ? () => onSaveToLibrary(active) : undefined} onShare={onShareArtifact ? () => onShareArtifact(active) : undefined} onHandoff={onOpenCode ? handoffToAgentSam : undefined} onTurnInto={active.type === 'slides' || active.type === 'design' || active.type === 'whiteboard' ? turnInto : undefined} onMoveTo={onMoveArtifact ? () => onMoveArtifact(active) : undefined} onRefresh={onArtifactsChange ? (onRefreshArtifact ? refreshActive : undefined) : refreshActive} onStorage={() => setStorageInfoOpen(true)} onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined} onFeedback={onGiveFeedback ? () => onGiveFeedback(active) : undefined} onClose={() => { setRoute('gallery'); setActiveId(''); }}/>
