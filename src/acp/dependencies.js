@@ -398,7 +398,7 @@ export async function requestAgentApproval(database, input = {}) {
   return mapApproval(await readApproval(database, id, accountId));
 }
 
-export async function getAgentApproval(database, id, accountId = null) {
+export async function getAgentApproval(database, id, accountId = null, queueControl = null) {
   const row = await readApproval(database, clean(id), accountId);
   if (!row) return null;
   if (row.status === 'pending' && row.expires_at != null && Number(row.expires_at) <= Math.floor(Date.now() / 1000)) {
@@ -412,7 +412,7 @@ export async function getAgentApproval(database, id, accountId = null) {
         "UPDATE agentsam_spawn_job SET status = 'failed', error_message = 'Spawn approval expired', completed_at = datetime('now') WHERE id = ? AND account_id = ? AND status = 'awaiting_approval'"
       ).bind(spawnJobId, row.account_id).run();
     }
-    await wakeRunAfterApproval(database, row, { decision: 'expired' });
+    await wakeRunAfterApproval(database, row, { decision: 'expired', queueControl });
     return mapApproval(await readApproval(database, row.id, accountId));
   }
   return mapApproval(row);
@@ -423,6 +423,7 @@ export async function listAgentApprovals(database, {
   runId = null,
   status = 'pending',
   limit = 100,
+  queueControl = null,
 } = {}) {
   const owner = clean(accountId);
   if (!owner) {
@@ -442,7 +443,7 @@ export async function listAgentApprovals(database, {
     'SELECT * FROM agentsam_approval_queue WHERE account_id = ? AND status = \'expired\' AND decided_at = ? AND agent_run_id IS NOT NULL'
   ).bind(owner, now).all();
   for (const expired of expiredApprovals.results || []) {
-    await wakeRunAfterApproval(database, expired, { decision: 'expired' });
+    await wakeRunAfterApproval(database, expired, { decision: 'expired', queueControl });
   }
   const params = [owner];
   let where = 'account_id = ?';
