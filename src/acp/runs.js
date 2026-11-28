@@ -24,6 +24,8 @@ export async function createRootRun(database, {
   role = 'lead',
   mode = 'agent',
   modelKey = null,
+  selectedBy = null,
+  routingArmId = null,
   reasoningEffort = null,
   serviceTier = null,
   runtimeRequirements = {},
@@ -49,9 +51,9 @@ export async function createRootRun(database, {
   await database.prepare(`
     INSERT INTO agentsam_agent_run (
       id, account_id, conversation_id, source_client, surface, mode, model_key,
-      reasoning_effort, requested_service_tier, selected_by, status,
+      reasoning_effort, requested_service_tier, selected_by, routing_arm_id, status,
       created_at_unix, updated_at_unix
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'fallback', 'queued', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
   `).bind(
     id,
     account,
@@ -62,6 +64,8 @@ export async function createRootRun(database, {
     clean(modelKey) || null,
     clean(reasoningEffort) || null,
     clean(serviceTier) || null,
+    clean(selectedBy) === 'automatic' ? 'thompson' : (['manual', 'fallback', 'thompson'].includes(clean(selectedBy)) ? clean(selectedBy) : null),
+    clean(routingArmId) || null,
     now,
     now,
   ).run();
