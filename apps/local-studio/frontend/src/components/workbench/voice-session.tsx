@@ -40,7 +40,7 @@ export function startDictation(onText: (text: string) => void, onStatus: (status
   return () => { recognition.onend = null; recognition.onresult = null; recognition.abort(); };
 }
 
-export function VoiceSession({ open, onClose, targetId, targetKind }: { open: boolean; onClose: () => void; targetId: string; targetKind: 'chat' | 'side' }) {
+export function VoiceSession({ open, onClose, targetId, targetKind, onSubmit }: { open: boolean; onClose: () => void; targetId: string; targetKind: 'chat' | 'side'; onSubmit?: (text: string) => Promise<void> }) {
   const [phase, setPhase] = useState<'ready' | 'listening' | 'working' | 'speaking' | 'unavailable'>('ready');
   const [status, setStatus] = useState('');
   const [voiceURI, setVoiceURI] = useState('');
@@ -91,7 +91,7 @@ export function VoiceSession({ open, onClose, targetId, targetKind }: { open: bo
       recognition.onend = null;
       recognition.stop();
       setPhase('working'); setStatus(`You: ${transcript}`);
-      void useWorkStore.getState().send(targetId, targetKind, transcript).then(() => {
+      void (onSubmit ? onSubmit(transcript) : useWorkStore.getState().send(targetId, targetKind, transcript)).then(() => {
         if (!live.current) return;
         const state = useWorkStore.getState();
         const items = targetKind === 'chat' ? state.chats.find(item => item.id === targetId)?.messages : state.sideTabs.find(item => item.id === targetId)?.messages;
