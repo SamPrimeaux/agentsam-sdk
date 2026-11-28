@@ -7,14 +7,17 @@ import { fileURLToPath } from 'node:url';
 import { normalizeSkillManifest } from '../../src/skills/manifest.js';
 import { SkillRegistry } from '../../src/skills/registry.js';
 import { SkillContentResolver } from '../../src/skills/content-resolver.js';
-import { getSkill, listSkills } from '../../src/skills/catalog.js';
+import { getSkill, listSkills, resolveSkillFilePath } from '../../src/skills/catalog.js';
+import { resolveNpmPackageRoot } from '../../src/skills/package-source.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const skillsRoot = path.join(root, 'skills');
 const catalog = JSON.parse(fs.readFileSync(path.join(skillsRoot, 'catalog.json'), 'utf8'));
 
 function sourcePaths(entry) {
-  const markdown = path.resolve(skillsRoot, entry.entry);
+  const markdown = entry.package_root
+    ? resolveSkillFilePath(entry)
+    : path.resolve(skillsRoot, entry.entry);
   return { markdown, directory: path.dirname(markdown), manifest: path.join(path.dirname(markdown), 'agentsam.skill.json') };
 }
 
@@ -42,7 +45,8 @@ test('every SDK catalog skill has a validating adjacent manifest and instruction
     assert.ok(manifest.name.length > 0 && manifest.description.length > 0);
     if (entry.package_root) {
       assert.equal(manifest.package, entry.package_name);
-      const packageManifest = JSON.parse(fs.readFileSync(path.join(root, entry.package_root, 'package.json'), 'utf8'));
+      const packageRoot = resolveNpmPackageRoot(entry.package_root);
+      const packageManifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
       assert.equal(packageManifest.version, entry.package_version);
     }
     if (manifest.slash?.suggested) {
@@ -71,21 +75,18 @@ test('npm package skill selection is explicit and package-owned skills have an i
 
   const rootFiles = new Set(pkg.files);
   for (const entry of catalog.skills.filter((row) => row.package_root)) {
-    const packageManifest = JSON.parse(fs.readFileSync(path.join(root, entry.package_root, 'package.json'), 'utf8'));
-    const relativeDir = path.posix.relative(
-      entry.package_root,
-      path.posix.dirname(path.posix.join('skills', entry.entry)),
-    );
+    const packageRoot = resolveNpmPackageRoot(entry.package_root);
+    const packageManifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
+    const relativeDir = path.posix.join('skills', path.posix.dirname(entry.entry));
     const packageIncludesSkill = packageManifest.files.some((file) => {
       const prefix = String(file).replace(/\/$/, '');
       return relativeDir === prefix || relativeDir.startsWith(prefix + '/') || prefix.startsWith(relativeDir + '/');
     });
     assert.ok(packageIncludesSkill, 'package files allowlist omits ' + entry.id);
-    assert.ok([...rootFiles].some((file) =>
-      file === entry.package_root + '/skills' ||
-      file === entry.package_root + '/skills/' ||
-      file.startsWith(entry.package_root + '/skills/')),
-    'root SDK package must include the package skill source tree');
+    assert.equal(pkg.dependencies[entry.package_name], entry.package_version,
+      'root SDK must install the canonical npm package at the catalogued version');
+    assert.equal([...rootFiles].some((file) => file.startsWith('packages/primetech-procedures/')), false,
+      'root SDK must not vendor a duplicate copy of the PrimeTech package');
   }
 
   assert.equal(listSkills().length, catalog.skills.length, 'the development SDK must expose all catalog skills');

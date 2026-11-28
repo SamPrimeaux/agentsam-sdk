@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.18",
+  "version": "2.6.19",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -185,7 +185,6 @@
     "packages/agentsam-errors",
     "packages/agentsam-3d-viewer",
     "packages/agentsam-occt",
-    "packages/primetech-procedures",
     "packages/catalog",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
@@ -263,15 +262,7 @@
     "skills/agentsam-arch-documents",
     "skills/agentsam-arch-verify",
     "skills/agentsam-arch-orchestrate",
-    "packages/agentsam-architectural-intelligence",
-    "packages/primetech-procedures/package.json",
-    "packages/primetech-procedures/agentsam.package.json",
-    "packages/primetech-procedures/README.md",
-    "packages/primetech-procedures/src",
-    "packages/primetech-procedures/procedures",
-    "packages/primetech-procedures/profiles",
-    "packages/primetech-procedures/skills",
-    "packages/primetech-procedures/scripts"
+    "packages/agentsam-architectural-intelligence"
   ],
   "workspaces": [
     "packages/primetech-procedures",
@@ -469,7 +460,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "@inneranimalmedia/agentsam-contracts": "2.6.18",
     "@inneranimalmedia/agentsam-errors": "2.6.18",
-    "@inneranimalmedia/primetech-procedures": "2.6.19",
+    "@inneranimalmedia/primetech-procedures": "2.6.20",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "fast-xml-parser": "^5.12.0",
     "google-protobuf": "^3.21.4",

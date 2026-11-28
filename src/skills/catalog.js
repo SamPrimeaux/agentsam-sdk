@@ -1,11 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveNpmPackageRoot } from './package-source.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(moduleDir, '..', '..');
 const skillsRoot = path.join(repoRoot, 'skills');
-const packageSkillRoot = path.join(repoRoot, 'packages', 'primetech-procedures', 'skills');
+const workspacePackageSkillRoot = path.join(repoRoot, 'packages', 'primetech-procedures', 'skills');
+function resolvePrimeTechSkillRoot() {
+  try {
+    return path.join(resolveNpmPackageRoot('@inneranimalmedia/primetech-procedures'), 'skills');
+  } catch {
+    // Local source fallback for an SDK checkout before npm workspace linking.
+    return workspacePackageSkillRoot;
+  }
+}
+const packageSkillRoot = resolvePrimeTechSkillRoot();
 const catalogPath = path.join(skillsRoot, 'catalog.json');
 
 function readCatalog() {
@@ -20,7 +30,7 @@ function normalizeSkillId(value) {
 // The source catalog may contain additional skills intentionally held from npm.
 function skillIsAvailable(skill) {
   try {
-    return fs.existsSync(safeSkillPath(skill.entry));
+    return fs.existsSync(resolveSkillFilePath(skill));
   } catch {
     return false;
   }
@@ -37,12 +47,24 @@ function resolveSkillRecord(idOrAlias) {
   }) ?? null;
 }
 
-function safeSkillPath(relativePath) {
-  const resolved = path.resolve(skillsRoot, relativePath);
-  const allowed = [skillsRoot, packageSkillRoot].some((root) =>
+function safeSkillPath(relativePath, skill = null, rootOverride = null) {
+  const requestedRoot = rootOverride ? path.resolve(rootOverride) : skillsRoot;
+  const isPrimeTechPackageSkill = skill?.package_name === '@inneranimalmedia/primetech-procedures'
+    && requestedRoot === skillsRoot;
+  const baseRoot = isPrimeTechPackageSkill ? packageSkillRoot : requestedRoot;
+  const resolved = path.resolve(baseRoot, relativePath);
+  const allowedRoots = isPrimeTechPackageSkill
+    ? [packageSkillRoot, workspacePackageSkillRoot]
+    : [requestedRoot];
+  const allowed = allowedRoots.some((root) =>
     resolved === root || resolved.startsWith(root + path.sep));
   if (!allowed) throw new Error('skill_path_outside_root');
   return resolved;
+}
+
+export function resolveSkillFilePath(skill, options = {}) {
+  if (!skill?.entry) throw new Error('skill_entry_required');
+  return safeSkillPath(skill.entry, skill, options.skillsRoot || null);
 }
 
 export function listSkills() {
@@ -60,7 +82,7 @@ export function loadSkill(idOrAlias, options = {}) {
 
   const result = {
     skill: { ...skill },
-    instructions: fs.readFileSync(safeSkillPath(skill.entry), 'utf8'),
+    instructions: fs.readFileSync(resolveSkillFilePath(skill), 'utf8'),
   };
 
   if (options.references === true) {

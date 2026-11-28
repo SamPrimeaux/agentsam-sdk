@@ -23,6 +23,16 @@ current task calls for them.
 List or open them with `agentsam skills`; aliases such as `quick-bytes`, `no-regress`,
 `ingest` are intentionally short enough for terminal use.
 
+## PrimeTech package skills
+
+The nine `primetech-*` entries in `skills/catalog.json` are a catalog projection of the npm package `@inneranimalmedia/primetech-procedures`; the package owns the canonical `SKILL.md` and adjacent `agentsam.skill.json` files. In the SDK distribution, those paths resolve through `node_modules/@inneranimalmedia/primetech-procedures/skills/` rather than a second vendored copy.
+
+- `agentsam skills` lists and loads the package skills directly from the installed dependency.
+- `agentsam skill install @inneranimalmedia/primetech-procedures` imports all nine into the user's local skill registry.
+- Updating a package skill updates the existing canonical package file and the matching `agentsam_skill` row; it does not create a duplicate skill identity.
+
+The SDK package declares the PrimeTech npm dependency explicitly. If it is absent, the catalog omits those package-backed skills instead of advertising unavailable instructions.
+
 ## Portable game-development cookbooks
 
 Fourteen engine-independent or engine-specific game cookbooks live in
@@ -41,7 +51,7 @@ the adapted cookbooks.
 
 | Table | Owns | New-user requirement |
 |-------|------|----------------------|
-| `agentsam_skill` (+ revision/invocation) | Dashboard Skills CRUD / slash triggers | Ship schema + seed portable skill metadata that mirrors `skills/catalog.json` |
+| `agentsam_skill` | Canonical skill identity, metadata, and slash triggers | Keep one row per skill; store long Markdown in its configured content source and update the existing row on package releases |
 | `agentsam_tools` (+ capabilities/call log) | Callable tools: AST retrieve, merkle, D1, Vectorize, … | Ship schema migrations under `migrations/d1/` + optional seed of filesystem/code AST tools so scaffolds match IAM host |
 
 Apps may contain host-specific skill directories of their own. Those do not

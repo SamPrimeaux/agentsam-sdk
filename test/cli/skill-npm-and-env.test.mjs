@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { resolveNpmSkillPackage } from '../../src/commands/skill.js';
-import { installSkillFromPath } from '../../src/skills/index.js';
+import { resolveNpmSkillPackage, runSkill } from '../../src/commands/skill.js';
+import { installSkillFromPath, readLocalRegistry } from '../../src/skills/index.js';
 import { runEnv } from '../../src/commands/env.js';
 
 function tmpHome() {
@@ -140,4 +140,58 @@ test('env boot-line prints source load-agent-env command', async () => {
   assert.equal(result.command, 'source ~/.agentsam/load-agent-env.sh');
   assert.ok(lines.join('').includes('load-agent-env.sh'));
   assert.ok(lines.join('').includes('agentsam env shell'));
+});
+
+
+test('npm package collections install every nested AgentSam skill through the CLI', async () => {
+  const pkgRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-npm-skill-collection-'));
+  fs.writeFileSync(
+    path.join(pkgRoot, 'package.json'),
+    JSON.stringify({
+      name: 'tmp-agentsam-skill-collection',
+      version: '0.0.0',
+      files: ['skills/'],
+    }),
+  );
+
+  for (const id of ['collection-alpha', 'collection-beta']) {
+    const skillRoot = path.join(pkgRoot, 'skills', id);
+    fs.mkdirSync(skillRoot, { recursive: true });
+    fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `# ${id}\n\nReusable fixture instructions.\n`);
+    fs.writeFileSync(
+      path.join(skillRoot, 'agentsam.skill.json'),
+      JSON.stringify({
+        schema: 'agentsam.skill.v1',
+        id,
+        name: id,
+        description: `${id} test skill`,
+        slash: { suggested: `/${id}` },
+        instructions: { source: 'local_file', ref: 'SKILL.md' },
+        execution: { mode: 'turn', tools: [], operations: [], capabilities: [] },
+      }),
+    );
+  }
+
+  const packageRoot = resolveNpmSkillPackage(pkgRoot, { spawnSyncImpl: spawnSync });
+  assert.ok(fs.existsSync(path.join(packageRoot, 'skills', 'collection-alpha', 'agentsam.skill.json')));
+  assert.ok(fs.existsSync(path.join(packageRoot, 'skills', 'collection-beta', 'agentsam.skill.json')));
+
+  const home = tmpHome();
+  const output = [];
+  const installed = await runSkill(['install', packageRoot], {
+    home,
+    write: (value) => output.push(value),
+  });
+
+  assert.equal(installed.length, 2);
+  assert.deepEqual(installed.map((row) => row.id).sort(), ['collection-alpha', 'collection-beta']);
+  const registry = readLocalRegistry({ home });
+  assert.deepEqual(Object.keys(registry.entries).sort(), ['collection-alpha', 'collection-beta']);
+  assert.equal(registry.triggers['/collection-alpha'], 'collection-alpha');
+  assert.equal(registry.triggers['/collection-beta'], 'collection-beta');
+  assert.match(output.join(''), /installed 2 skills/);
+  for (const id of ['collection-alpha', 'collection-beta']) {
+    const installedSkill = path.join(home, '.agentsam', 'skills', 'installed', id, 'SKILL.md');
+    assert.match(fs.readFileSync(installedSkill, 'utf8'), new RegExp(id));
+  }
 });

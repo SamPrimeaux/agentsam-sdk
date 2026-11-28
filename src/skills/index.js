@@ -18,6 +18,8 @@ export { SkillRuntime } from './runtime.js';
 export {
   createUserSkill,
   installSkillFromPath,
+  installSkillsFromPath,
+  findSkillManifestFiles,
   aliasSkill,
   removeSkill,
   readLocalRegistry,
@@ -25,7 +27,7 @@ export {
 } from './local-store.js';
 
 // Legacy catalog surface (agentsam skills list / load)
-export { listSkills, getSkill, loadSkill, AGENTSAM_SKILLS_ROOT } from './catalog.js';
+export { listSkills, getSkill, loadSkill, resolveSkillFilePath, AGENTSAM_SKILLS_ROOT } from './catalog.js';
 export { createNullHostedSkillStore } from './hosted-store.js';
 
 export { validateCanvasDirections, loadCanvasCreationKnowledge } from './canvas-knowledge.js';

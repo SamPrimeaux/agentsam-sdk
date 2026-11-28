@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { CLI_COMMAND_CATALOG } from '../cli/command-catalog.js';
+import { resolveNpmPackageRoot } from '../skills/package-source.js';
 
 const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (root, relative) => JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
@@ -132,20 +133,32 @@ export function buildUniversalSource({
   const skillCatalog=read(root,'skills/catalog.json');
   if (!Array.isArray(skillCatalog.skills)) throw new Error('skills_catalog_invalid');
   const skills=skillCatalog.skills.map(row=>{
-    const src=path.posix.normalize(path.posix.join('skills',row.entry || (row.id+'/SKILL.md')));
-    const dir=path.posix.dirname(src);
-    const manifest=dir+'/agentsam.skill.json';
-    if (!fs.existsSync(path.join(root,src)) || !fs.existsSync(path.join(root,manifest)))
+    const packageName=row.package_name||pkg.name;
+    const packageRootRef=row.package_root||'';
+    const packageRootPath=packageRootRef ? resolveNpmPackageRoot(packageRootRef) : null;
+    const skillFile=packageRootPath
+      ? path.join(packageRootPath,'skills',row.entry || (row.id+'/SKILL.md'))
+      : path.join(root,'skills',row.entry || (row.id+'/SKILL.md'));
+    const skillDir=path.dirname(skillFile);
+    const manifestFile=path.join(skillDir,'agentsam.skill.json');
+    const src=packageRootPath
+      ? `${packageRootRef}/skills/${row.entry || (row.id+'/SKILL.md')}`
+      : path.relative(root,skillFile).split(path.sep).join('/');
+    if (!fs.existsSync(skillFile) || !fs.existsSync(manifestFile))
       throw new Error('skill_source_missing:'+row.id);
-    const definition=read(root,manifest);
+    const definition=JSON.parse(fs.readFileSync(manifestFile,'utf8'));
     if (definition.id !== row.id || definition.schema !== 'agentsam.skill.v1'
         || definition.instructions?.ref !== 'SKILL.md') throw new Error('skill_manifest_drift:'+row.id);
-    const packageRoot=row.package_root||'';
-    const packageName=row.package_name||pkg.name;
-    const packageVersion=row.package_version||pkg.version;
-    const packageManifest=packageRoot ? read(root,packageRoot+'/package.json') : pkg;
+    const packageVersion=row.package_version||(packageRootPath
+      ? JSON.parse(fs.readFileSync(path.join(packageRootPath,'package.json'),'utf8')).version
+      : pkg.version);
+    const packageManifest=packageRootPath
+      ? JSON.parse(fs.readFileSync(path.join(packageRootPath,'package.json'),'utf8'))
+      : pkg;
     const packageFiles=new Set(packageManifest.files||[]);
-    const relativeDir=packageRoot ? path.posix.relative(packageRoot,dir) : dir;
+    const relativeDir=packageRootPath
+      ? path.relative(packageRootPath,skillDir).split(path.sep).join('/')
+      : path.relative(root,skillDir).split(path.sep).join('/');
     const packaged=[...packageFiles].some(f=>{
       const entry=String(f).replace(/\/$/,'');
       return relativeDir===entry || relativeDir.startsWith(entry+'/') || entry.startsWith(relativeDir+'/');
@@ -154,8 +167,8 @@ export function buildUniversalSource({
     return {
       id:row.id,name:definition.name,slash_trigger:definition.slash?.suggested||null,
       npm_package_name:packageName,npm_source_version:packageVersion,
-      source:src,content_checksum:hex(fs.readFileSync(path.join(root,src))),
-      content_markdown:fs.readFileSync(path.join(root,src),'utf8'),
+      source:src,content_checksum:hex(fs.readFileSync(skillFile)),
+      content_markdown:fs.readFileSync(skillFile,'utf8'),
       description:definition.description||'',
       packaged_in_source_manifest:packaged,
       state:packaged?'package_candidate':'source_only',
@@ -184,7 +197,7 @@ export function buildUniversalSource({
     schema:'agentsam.universal-source-registry.v1',
     authority:{
       commands:['package.json','src/cli/command-catalog.js','python/pyproject.toml',py.source],
-      tools:['protocol/sam/registry.seed.json'],skills:['skills/catalog.json','skills/*/agentsam.skill.json'],
+      tools:['protocol/sam/registry.seed.json'],skills:['skills/catalog.json','@inneranimalmedia/primetech-procedures/skills/*/agentsam.skill.json'],
       scripts:['package.json#bin'],hooks:['.agentsam/hooks.json'],
       rules:['AGENTSAM.md'],workflows:['agentsam_workflows','agentsam_workflow_nodes','agentsam_workflow_edges'],
     },
