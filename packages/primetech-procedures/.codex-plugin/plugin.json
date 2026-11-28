@@ -14,7 +14,7 @@
     "longDescription": "PrimeTech Design Studio is an agent-native creative-production system for brand identity and kits, icon families, custom type and letterforms, character and pet identities, sprite atlases, design systems, high-fidelity UI/UX flows and interactive demos, visual quality assurance, creative asset packaging, and digital publishing. Its nine reusable skills guide evidence-based briefs, design rationale, meaningful iteration, approval, production checks and usable deliverables. Use the tools available in the current host and AgentSam PrimeTech procedures; external design providers are optional handoffs, not required dependencies.",
     "shortDescription": "Creative production workflows"
   },
-  "name": "architect-design-studio",
+  "name": "primetech-design-studio",
   "version": "0.3.0",
   "description": "PrimeTech Design Studio is an agent-native creative-production system for brand identity and kits, icon families, custom type and letterforms, character and pet identities, sprite atlases, design systems, high-fidelity UI/UX flows and interactive demos, visual quality assurance, creative asset packaging, and digital publishing. Its nine reusable skills guide evidence-based briefs, design rationale, meaningful iteration, approval, production checks and usable deliverables. Use the tools available in the current host and AgentSam PrimeTech procedures; external design providers are optional handoffs, not required dependencies.",
   "author": {

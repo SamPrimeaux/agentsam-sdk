@@ -23,7 +23,7 @@ def main() -> int:
     plugin = json.loads((package_root / 'plugin.json').read_text())
     codex = json.loads((package_root / '.codex-plugin' / 'plugin.json').read_text())
     interface = plugin['extensions']['com.openai']['interface']
-    if plugin['name'] != 'architect-design-studio' or codex['name'] != plugin['name']:
+    if plugin['name'] != 'primetech-design-studio' or codex['name'] != plugin['name']:
         raise SystemExit('Plugin identity mismatch; refusing to build an update archive.')
     if codex['version'] != plugin['version']:
         raise SystemExit('OpenAI and Codex plugin versions do not match.')

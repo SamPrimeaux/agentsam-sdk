@@ -10,7 +10,7 @@
     "state_mapping_status": "proposed"
   },
   "plugin": {
-    "name": "architect-design-studio",
+    "name": "primetech-design-studio",
     "display_name": "PrimeTech Design Studio",
     "version": "0.3.0"
   },
