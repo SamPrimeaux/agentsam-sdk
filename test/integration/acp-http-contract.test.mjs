@@ -34,6 +34,22 @@ function fixture() {
       calls.push(['receipt', id]);
       return { schema: 'agentsam.run-receipt.v1', runId: id, status: 'running' };
     },
+    async requestApproval(input) {
+      calls.push(['requestApproval', input]);
+      return { id: 'appr_1', status: 'pending', ...input };
+    },
+    async listApprovals(options) {
+      calls.push(['listApprovals', options]);
+      return [{ id: 'appr_1', status: 'pending' }];
+    },
+    async getApproval(id) {
+      calls.push(['getApproval', id]);
+      return id === 'missing' ? null : { id, status: 'pending' };
+    },
+    async decideApproval(id, input) {
+      calls.push(['decideApproval', id, input]);
+      return { approval: { id, status: input.decision }, spawn: null };
+    },
   };
   const handler = createAgentControlHttpHandler({ control, service: 'test-acp' });
   const fetchImpl = (url, init = {}) => handler(new Request(url, init));
@@ -61,8 +77,14 @@ test('portable HTTP handler is wire-compatible with HttpAgentControlClient acros
   assert.equal((await client.cancel('arun_root')).cancelRequested, true);
   assert.equal((await client.receipt('arun_root')).runId, 'arun_root');
 
+  assert.equal((await client.requestApproval({ action_summary: 'Approve a tool', approval_type: 'tool' })).id, 'appr_1');
+  assert.equal((await client.approvals({ run_id: 'arun_root', status: 'pending', limit: 10 }))[0].id, 'appr_1');
+  assert.equal((await client.getApproval('appr_1')).status, 'pending');
+  assert.equal((await client.decideApproval('appr_1', { decision: 'approved' })).approval.status, 'approved');
+
   assert.deepEqual(fx.calls.map((call) => call[0]), [
     'start', 'get', 'events', 'tree', 'spawn', 'cancel', 'receipt',
+    'requestApproval', 'listApprovals', 'getApproval', 'decideApproval',
   ]);
   assert.deepEqual(fx.calls[2][2], { after: 7, limit: 9 });
 });
