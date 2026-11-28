@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
   "version": "2.6.18",
-  "description": "Framework-neutral AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
+  "description": "Framework-neutral AgentSam run, spawn, approval, tool, authority, provider, event, hook, execution, identity and repository contracts.",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {
@@ -137,7 +137,10 @@
     "./schemas/activity.v1.schema.json": "./schemas/activity.v1.schema.json",
     "./schemas/run.v1.schema.json": "./schemas/run.v1.schema.json",
     "./schemas/run-start.v1.schema.json": "./schemas/run-start.v1.schema.json",
-    "./schemas/run-receipt.v1.schema.json": "./schemas/run-receipt.v1.schema.json"
+    "./schemas/run-receipt.v1.schema.json": "./schemas/run-receipt.v1.schema.json",
+    "./schemas/run-spawn.v1.schema.json": "./schemas/run-spawn.v1.schema.json",
+    "./schemas/approval.v1.schema.json": "./schemas/approval.v1.schema.json",
+    "./schemas/approval-decision.v1.schema.json": "./schemas/approval-decision.v1.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
