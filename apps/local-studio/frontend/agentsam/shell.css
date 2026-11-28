@@ -647,7 +647,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .agentsam-shell .agentsam-main:has(.as-nav-launch-dock) {
-    padding-bottom: calc(77px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(62px + max(9px, env(safe-area-inset-bottom, 0px)));
+  }
+  .agentsam-shell .agentsam-main:has(.as-nav-launch-dock[aria-label="Merchant navigation"]) {
+    padding-bottom: calc(66px + max(9px, env(safe-area-inset-bottom, 0px)));
   }
   .agentsam-shell .agentsam-page-layout .agentsam-conversation-dock {
     padding-bottom: 7px;
@@ -708,12 +711,12 @@
   display: block; width: 32px; height: 32px; object-fit: contain;
 }
 @media(max-width:767px) {
-  .agentsam-mobile-companion-identity { flex-direction:column; gap:0; font-size:13px; line-height:1.15; color:var(--nav-text,var(--c-ink)); }
-  .agentsam-mobile-companion-identity .agentsam-pet-trigger { height:68px; width:68px; min-width:68px; padding:0; background:transparent; }
+  .agentsam-mobile-companion-identity { flex-direction:row; gap:4px; font-size:14px; line-height:1.2; color:var(--nav-text,var(--c-ink)); }
+  .agentsam-mobile-companion-identity .agentsam-pet-trigger { height:44px; width:44px; min-width:44px; padding:0; background:transparent; }
   .agentsam-mobile-companion-identity .agentsam-pet-trigger picture,
-  .agentsam-mobile-companion-identity .agentsam-pet-trigger picture img { height:68px; width:68px; }
-  .agentsam-mobile-companion-identity > span { padding:3px 12px; border-radius:999px; background:var(--as-glass-fill,color-mix(in srgb,var(--c-surface, #222) 78%,transparent)); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
-  .platform-console .platform-console-topbar:has(.agentsam-mobile-companion-identity) { height:96px; min-height:96px; }
+  .agentsam-mobile-companion-identity .agentsam-pet-trigger picture img { height:32px; width:32px; }
+  .agentsam-mobile-companion-identity > span { padding:0; white-space:nowrap; }
+  .platform-console .platform-console-topbar:has(.agentsam-mobile-companion-identity) { height:56px; min-height:56px; }
 
 }
 
