@@ -107,7 +107,7 @@
         "sam.codebaseindex"
       ],
       "title": "AgentSam Codebaseindex",
-      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands \u2014 use agentsam codebaseindex / codebaseindex.ingest.",
+      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands — use agentsam codebaseindex / codebaseindex.ingest.",
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true
@@ -518,14 +518,14 @@
         "primetech_brand_kit",
         "brand-kit"
       ],
-      "title": "PrimeTech \u00b7 Brand kit development",
+      "title": "PrimeTech · Brand kit development",
       "description": "Lead a complete, approval-led brand identity project from a focused brief through concepts, systems, production checks and usable deliverables.",
-      "entry": "../packages/primetech-procedures/skills/primetech-brand-kit/SKILL.md",
+      "entry": "primetech-brand-kit/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-character-sprites",
@@ -533,14 +533,14 @@
         "primetech_character_sprites",
         "character-sprites"
       ],
-      "title": "PrimeTech \u00b7 Character and sprite production",
+      "title": "PrimeTech · Character and sprite production",
       "description": "Create consistent character and pet identities, 2D sprite sheets, 3D companion assets, rigging and animation deliverables.",
-      "entry": "../packages/primetech-procedures/skills/primetech-character-sprites/SKILL.md",
+      "entry": "primetech-character-sprites/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-creative-delivery",
@@ -548,14 +548,14 @@
         "primetech_creative_delivery",
         "creative-delivery"
       ],
-      "title": "PrimeTech \u00b7 Creative asset packaging and delivery",
+      "title": "PrimeTech · Creative asset packaging and delivery",
       "description": "Assemble approved creative sources and derivatives into traceable, checksummed delivery packages with explicit formats and handoff status.",
-      "entry": "../packages/primetech-procedures/skills/primetech-creative-delivery/SKILL.md",
+      "entry": "primetech-creative-delivery/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-design-systems",
@@ -563,14 +563,14 @@
         "primetech_design_systems",
         "design-systems"
       ],
-      "title": "PrimeTech \u00b7 Design system production",
+      "title": "PrimeTech · Design system production",
       "description": "Turn an approved visual direction into consistent design tokens, accessible palettes, typography rules and reusable UI foundations.",
-      "entry": "../packages/primetech-procedures/skills/primetech-design-systems/SKILL.md",
+      "entry": "primetech-design-systems/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-digital-publishing",
@@ -578,14 +578,14 @@
         "primetech_digital_publishing",
         "digital-publishing"
       ],
-      "title": "PrimeTech \u00b7 Digital publication production",
+      "title": "PrimeTech · Digital publication production",
       "description": "Prepare structured book content and produce validated EPUB 3 publications with navigation, preview and source provenance.",
-      "entry": "../packages/primetech-procedures/skills/primetech-digital-publishing/SKILL.md",
+      "entry": "primetech-digital-publishing/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-iconography",
@@ -593,14 +593,14 @@
         "primetech_iconography",
         "iconography"
       ],
-      "title": "PrimeTech \u00b7 Icon and mark families",
+      "title": "PrimeTech · Icon and mark families",
       "description": "Develop, refine, remaster and compare logo marks, product icons and coherent icon families with vector masters and production-ready variants.",
-      "entry": "../packages/primetech-procedures/skills/primetech-iconography/SKILL.md",
+      "entry": "primetech-iconography/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-type-design",
@@ -608,14 +608,14 @@
         "primetech_type_design",
         "type-design"
       ],
-      "title": "PrimeTech \u00b7 Custom type and letterform design",
+      "title": "PrimeTech · Custom type and letterform design",
       "description": "Develop custom lettering and type systems, then turn approved Typeface Studio glyph geometry into verified static font packages.",
-      "entry": "../packages/primetech-procedures/skills/primetech-type-design/SKILL.md",
+      "entry": "primetech-type-design/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-ui-ux-prototypes",
@@ -623,14 +623,14 @@
         "primetech_ui_ux_prototypes",
         "ui-ux-prototypes"
       ],
-      "title": "PrimeTech \u00b7 High-fidelity UX flows and demos",
+      "title": "PrimeTech · High-fidelity UX flows and demos",
       "description": "Research, map, implement and verify complete responsive product flows and working demos in the actual application codebase.",
-      "entry": "../packages/primetech-procedures/skills/primetech-ui-ux-prototypes/SKILL.md",
+      "entry": "primetech-ui-ux-prototypes/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     },
     {
       "id": "primetech-visual-qa",
@@ -638,14 +638,14 @@
         "primetech_visual_qa",
         "visual-qa"
       ],
-      "title": "PrimeTech \u00b7 Visual quality assurance",
+      "title": "PrimeTech · Visual quality assurance",
       "description": "Compare approved references and rendered outputs with measurable image evidence and a separate semantic design review.",
-      "entry": "../packages/primetech-procedures/skills/primetech-visual-qa/SKILL.md",
+      "entry": "primetech-visual-qa/SKILL.md",
       "references": [],
       "user_invocable": true,
-      "package_root": "packages/primetech-procedures",
+      "package_root": "@inneranimalmedia/primetech-procedures",
       "package_name": "@inneranimalmedia/primetech-procedures",
-      "package_version": "2.6.18"
+      "package_version": "2.6.20"
     }
   ]
 }

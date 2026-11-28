@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/primetech-procedures",
-  "version": "2.6.19",
+  "version": "2.6.20",
   "type": "module",
   "description": "PrimeTech creative-production procedures, portable AgentSam/OpenAI skills, deterministic asset builders, approval-aware execution and evidence receipts.",
   "exports": {

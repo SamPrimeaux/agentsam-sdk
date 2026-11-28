@@ -2,7 +2,7 @@
   "schema": "agentsam.package.v1",
   "id": "primetech-procedures",
   "name": "@inneranimalmedia/primetech-procedures",
-  "version": "2.6.18",
+  "version": "2.6.20",
   "catalog_status": "classified",
   "class": "package",
   "status": "public-package",

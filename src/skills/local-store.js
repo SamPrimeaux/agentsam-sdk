@@ -113,6 +113,90 @@ export function createUserSkill(skillId, options = {}) {
 }
 
 /**
+ * Find skill manifests in a skill directory or a package containing a `skill/`
+ * or `skills/` collection. Only the collection's direct child directories are
+ * inspected; arbitrary recursive package traversal is intentionally avoided.
+ * @param {string} sourcePath
+ * @returns {string[]} absolute agentsam.skill.json paths
+ */
+export function findSkillManifestFiles(sourcePath) {
+  const abs = path.resolve(sourcePath);
+  const directFile = abs.endsWith('agentsam.skill.json') ? abs : path.join(abs, 'agentsam.skill.json');
+  if (fs.existsSync(directFile) && fs.statSync(directFile).isFile()) return [directFile];
+
+  const roots = [abs, path.join(abs, 'skill'), path.join(abs, 'skills')];
+  const direct = roots
+    .map((root) => path.join(root, 'agentsam.skill.json'))
+    .filter((file) => fs.existsSync(file) && fs.statSync(file).isFile());
+  if (direct.length) return [...new Set(direct)].sort();
+
+  const found = [];
+  for (const root of roots) {
+    if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) continue;
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const file = path.join(root, entry.name, 'agentsam.skill.json');
+      if (fs.existsSync(file) && fs.statSync(file).isFile()) found.push(file);
+    }
+  }
+  return [...new Set(found)].sort();
+}
+
+/**
+ * Install one skill or every skill declared by a multi-skill npm package.
+ * Multi-skill packages are preflighted for duplicate IDs and slash collisions
+ * before any local registry entries are written.
+ * @param {string} sourcePath
+ * @param {{ trigger?: string, aliasOnCollision?: string, home?: string, env?: NodeJS.ProcessEnv }} [options]
+ */
+export function installSkillsFromPath(sourcePath, options = {}) {
+  const manifestFiles = findSkillManifestFiles(sourcePath);
+  if (!manifestFiles.length) throw new Error('agentsam.skill.json_required');
+  if (manifestFiles.length === 1) {
+    return installSkillFromPath(path.dirname(manifestFiles[0]), options);
+  }
+  if (options.aliasOnCollision || options.trigger) {
+    throw new Error('skill_package_alias_requires_single_skill');
+  }
+
+  const prepared = manifestFiles.map((manifestFile) => {
+    const manifest = normalizeSkillManifest(JSON.parse(fs.readFileSync(manifestFile, 'utf8')));
+    return {
+      manifest,
+      baseDir: path.dirname(manifestFile),
+      trigger: canonicalizeSlashTrigger(manifest.slash?.suggested || `/${manifest.id}`),
+    };
+  });
+
+  const ids = new Set();
+  for (const item of prepared) {
+    if (ids.has(item.manifest.id)) throw new Error(`duplicate_skill_id:${item.manifest.id}`);
+    ids.add(item.manifest.id);
+  }
+
+  const registry = readLocalRegistry(options);
+  const triggerOwners = { ...registry.triggers };
+  for (const [trigger, owner] of Object.entries(triggerOwners)) {
+    if (ids.has(owner)) delete triggerOwners[trigger];
+  }
+  for (const item of prepared) {
+    const owner = triggerOwners[item.trigger];
+    if (owner && owner !== item.manifest.id) {
+      const err = new Error(`slash_collision:${item.trigger}`);
+      err.code = 'SLASH_COLLISION';
+      err.suggested = item.trigger;
+      err.owner = owner;
+      err.candidates = [`${item.trigger}-${item.manifest.id}`.slice(0, 64), `/${item.manifest.id}`];
+      err.packageSkillCount = prepared.length;
+      throw err;
+    }
+    triggerOwners[item.trigger] = item.manifest.id;
+  }
+
+  return prepared.map((item) => installSkillFromPath(item.baseDir, options));
+}
+
+/**
  * Install from a directory containing agentsam.skill.json (or package root).
  * @param {string} sourcePath
  * @param {{ trigger?: string, aliasOnCollision?: string, home?: string }} [options]

@@ -36,7 +36,9 @@ test('npm tarball includes AgentSam and OpenAI manifests, skills, and TypeScript
   assert.equal(files.has('test/typescript-consumer.mts'), false, 'test fixture must not ship');
 
   const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'agentsam.package.json'), 'utf8'));
+  const npmPackage = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
   assert.equal(manifest.name, packed.name);
+  assert.equal(manifest.version, npmPackage.version, 'agentsam.package.json version must match the npm package version');
   const plugin = JSON.parse(fs.readFileSync(path.join(packageRoot, 'plugin.json'), 'utf8'));
   assert.equal(plugin.name, 'primetech-design-studio');
   assert.equal(plugin.version, '0.3.0');
@@ -56,6 +58,7 @@ test('npm tarball includes AgentSam and OpenAI manifests, skills, and TypeScript
   assert.equal(skillDirs.length, 9, 'expected nine canonical skills');
   for (const skillDir of skillDirs) {
     assert.ok(files.has(`skills/${skillDir.name}/SKILL.md`), `missing skill from npm tarball: ${skillDir.name}`);
+    assert.ok(files.has(`skills/${skillDir.name}/agentsam.skill.json`), `missing AgentSam skill manifest from npm tarball: ${skillDir.name}`);
   }
 });
 

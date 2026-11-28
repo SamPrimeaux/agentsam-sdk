@@ -7,7 +7,8 @@ import {
   SkillRuntime,
   SkillContentResolver,
   createUserSkill,
-  installSkillFromPath,
+  installSkillsFromPath,
+  findSkillManifestFiles,
   aliasSkill,
   removeSkill,
   readLocalRegistry,
@@ -137,21 +138,9 @@ export function resolveNpmSkillPackage(spec, options = {}) {
     throw new Error(`npm_extract_failed:${String(tar.stderr || '').trim() || 'tar failed'}`);
   }
   const packageRoot = path.join(extractDir, 'package');
-  const candidates = [
-    path.join(packageRoot, 'agentsam.skill.json'),
-    path.join(packageRoot, 'skill', 'agentsam.skill.json'),
-    path.join(packageRoot, 'skills', 'agentsam.skill.json'),
-  ];
-  for (const file of candidates) {
-    if (fs.existsSync(file)) return path.dirname(file);
-  }
-  // walk one level
-  if (fs.existsSync(packageRoot)) {
-    for (const name of fs.readdirSync(packageRoot)) {
-      const nested = path.join(packageRoot, name, 'agentsam.skill.json');
-      if (fs.existsSync(nested)) return path.dirname(nested);
-    }
-  }
+  const manifests = findSkillManifestFiles(packageRoot);
+  if (manifests.length === 1) return path.dirname(manifests[0]);
+  if (manifests.length > 1) return packageRoot;
   throw new Error(`agentsam.skill.json_not_found_in_package:${spec}`);
 }
 
@@ -235,23 +224,34 @@ export async function runSkill(argv = [], options = {}) {
     }
 
     try {
-      const result = installSkillFromPath(installPath, {
+      const result = installSkillsFromPath(installPath, {
         home: options.home,
         env: options.env,
         aliasOnCollision,
       });
+      const installed = Array.isArray(result) ? result : [result];
       writeLine(write, '');
-      writeLine(write, `  installed ${result.id}`);
-      writeLine(write, `  trigger   ${result.trigger}`);
+      if (installed.length > 1) {
+        writeLine(write, `  installed ${installed.length} skills`);
+        for (const skill of installed) writeLine(write, `  ${skill.id}  ${skill.trigger}`);
+      } else {
+        writeLine(write, `  installed ${installed[0].id}`);
+        writeLine(write, `  trigger   ${installed[0].trigger}`);
+      }
       writeLine(write, '');
       return result;
     } catch (error) {
       if (error?.code === 'SLASH_COLLISION') {
         writeLine(write, '');
         writeLine(write, `  Conflict: ${error.suggested} already owned by ${error.owner}`);
-        writeLine(write, '  Choose an alias:');
-        for (const c of error.candidates || []) {
-          writeLine(write, `    agentsam skill install ${source} --alias ${c}`);
+        if (error.packageSkillCount > 1) {
+          writeLine(write, '  This package contains multiple skills; no skills were installed.');
+          writeLine(write, '  Install the conflicting skill directory separately with --alias, then install the remaining skills.');
+        } else {
+          writeLine(write, '  Choose an alias:');
+          for (const c of error.candidates || []) {
+            writeLine(write, `    agentsam skill install ${source} --alias ${c}`);
+          }
         }
         writeLine(write, '');
         throw error;

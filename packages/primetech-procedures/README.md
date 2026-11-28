@@ -19,6 +19,22 @@ import { createProcedureCatalog, createPrimeTechProcedureHandler } from '@innera
 import { getPrimeTechSkill } from '@inneranimalmedia/primetech-procedures/skills';
 ```
 
+### AgentSam SDK and CLI
+
+The AgentSam SDK consumes this npm package as the single canonical source for the nine PrimeTech skills; it does not vendor a second copy of their instructions. The SDK's `skills/catalog.json` points into the installed npm dependency.
+
+```sh
+# List and load the nine PrimeTech skills already bundled with the SDK
+agentsam skills
+agentsam skills primetech-design-systems
+
+# Register all nine package skills in the user's local slash-skill registry
+agentsam skill install @inneranimalmedia/primetech-procedures
+agentsam skill list
+```
+
+`agentsam skills` reads the SDK's built-in catalog. `agentsam skill install` imports every `skills/<id>/agentsam.skill.json` entry from a multi-skill npm package into `~/.agentsam/skills/`; both paths read the same packaged `SKILL.md` files.
+
 ## Production disciplines
 
 - **Architecture and BIM:** model validation, semantic coordination, design-review drawings, revision-bound renders and documentation handoffs.
@@ -169,7 +185,7 @@ The local SDK shell installs the eight creative SAM operations. Write-capable op
 
 The generic procedure capability is available in the local AgentSam CLI. The separate Cloudflare D1 tool row for primetech.procedure.run remains inactive because a Worker-native handler for Node filesystem and native image/font packaging has not been implemented. The active D1 skill records can guide AgentSam chat, and the existing cloud image, illustration, Meshy and MovieMode tools remain their own registered tools; this does not falsely claim that local filesystem packaging is already available to remote Work.
 
-The nine skill records are active in the account-scoped D1 skill registry with database-backed content and package manifests in metadata. They remain marked unpublished and have no npm package version attached until the package is released.
+The nine existing skill rows are active in the account-scoped `agentsam_skill` registry and use R2-backed Markdown bodies. Their current production metadata points to the published `@inneranimalmedia/primetech-procedures@2.6.19` package. The next package release is staged as 2.6.20 to correct the embedded `agentsam.package.json` version; it reuses the same nine skill rows and unchanged skill bodies. After that release is published, update the existing rows' package-version metadata in place—do not create duplicate skill or revision records.
 
 ## Build, validate and release
 
