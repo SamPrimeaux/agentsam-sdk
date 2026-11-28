@@ -64,7 +64,12 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
     });
     assert.equal(decidedToolApproval.approval.status, 'approved');
     assert.equal(decidedToolApproval.approval.approvedBy, 'user_42');
+    assert.equal(decidedToolApproval.resume.woke, true);
     assert.equal((await client.getRun(rootRun.run_id)).status, 'queued');
+    const approvalResume = await db.prepare(
+      "SELECT job_json FROM agentsam_queue_job WHERE source_run_id = ? AND kind = 'agent.resume' ORDER BY created_at_unix DESC LIMIT 1"
+    ).bind(rootRun.run_id).first();
+    assert.equal(JSON.parse(approvalResume.job_json).payload.wake_reason, 'approval');
 
     const gatedSpawn = await client.spawn(rootRun.run_id, {
       spawn_job_id: 'spawn_production_1',
@@ -146,6 +151,27 @@ test('ACP spawn and approval lifecycle runs against the strict production D1 tab
       total_output_tokens: 4,
     });
     assert.equal((await client.getRun(rootRun.run_id)).status, 'queued');
+
+    const deniedSpawn = await client.spawn(rootRun.run_id, {
+      spawn_job_id: 'spawn_production_denied',
+      objective: 'Protected child work',
+      requires_approval: true,
+      child_run_id: 'arun_production_denied_child',
+    });
+    const deniedDecision = await client.decideApproval(deniedSpawn.approval_id, {
+      decision: 'denied', reason: 'Not authorized for this action',
+    });
+    assert.equal(deniedDecision.approval.status, 'denied');
+    assert.equal(deniedDecision.resume.woke, true);
+    const deniedJob = await db.prepare(
+      'SELECT status, error_message FROM agentsam_spawn_job WHERE id = ?'
+    ).bind('spawn_production_denied').first();
+    assert.equal(deniedJob.status, 'failed');
+    assert.match(deniedJob.error_message, /Not authorized/);
+    const deniedChild = await db.prepare(
+      'SELECT id FROM agentsam_agent_run WHERE id = ?'
+    ).bind('arun_production_denied_child').first();
+    assert.equal(deniedChild, null);
 
     const legacyTables = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('agentsam_agent_run_suspension','agentsam_agent_run_dependency')"
