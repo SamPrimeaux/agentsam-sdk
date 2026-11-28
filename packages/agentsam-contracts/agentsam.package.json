@@ -21,7 +21,12 @@
     "resource_ref_contract": "packages/agentsam-contracts/src/resource-ref.ts",
     "resource_ref_schema": "packages/agentsam-contracts/schemas/resource-ref.v1.schema.json",
     "scene_document_contract": "packages/agentsam-contracts/src/scene-document.ts",
-    "scene_document_schema": "packages/agentsam-contracts/schemas/scene-document.v2.schema.json"
+    "scene_document_schema": "packages/agentsam-contracts/schemas/scene-document.v2.schema.json",
+    "run_contract": "packages/agentsam-contracts/src/run.ts",
+    "run_schema": "packages/agentsam-contracts/schemas/run.v1.schema.json",
+    "spawn_schema": "packages/agentsam-contracts/schemas/run-spawn.v1.schema.json",
+    "approval_schema": "packages/agentsam-contracts/schemas/approval.v1.schema.json",
+    "approval_decision_schema": "packages/agentsam-contracts/schemas/approval-decision.v1.schema.json"
   },
   "execution_domains": [
     "browser",
@@ -42,7 +47,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-contracts",
-  "purpose": "Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/round-trip receipts; does not implement codecs, renderers, authorization or asset storage.",
+  "purpose": "Portable AgentSam contracts for agents, runs, parent/child spawn orchestration, approvals, events, tools, authority, providers, workspaces and resource references; does not implement execution, authorization or asset storage.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-contracts",
@@ -66,7 +71,10 @@
     "tools",
     "runtime-capability",
     "scene-document",
-    "scene-v2"
+    "scene-v2",
+    "agent-run",
+    "spawn-jobs",
+    "approvals"
   ],
   "use_when": [
     "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
