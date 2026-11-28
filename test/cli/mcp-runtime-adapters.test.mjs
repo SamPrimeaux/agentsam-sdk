@@ -105,3 +105,15 @@ test('account policy denies absent grants and uses canonical account/device reco
   blocked=true;assert.equal((await authorize(input)).allowed,false);
   assert.equal((await authorize({...input,principal:{kind:'oauth',account_id:'other'}})).allowed,false);
 });
+
+test('explicit local project connection invokes real declared tools without trusting a catalog',async t=>{
+  const root=await fixture(t,'node','stdio');
+  const {runMcp}=await import('../../src/commands/mcp.js');
+  const options={write(){}};
+  await assert.rejects(runMcp(['project-tools',root],options),/explicit_trust_required/);
+  const tools=await runMcp(['project-tools',root,'--trust-project'],options);
+  assert.equal(tools.tools.length,4);
+  const result=await runMcp(['project-call',root,'--trust-project','--tool','math.calculate','--input','{"left":6,"right":7,"operation":"multiply"}'],options);
+  assert.equal(result.result.result,42);
+  await assert.rejects(runMcp(['project-call',root,'--trust-project','--tool','workspace.read'],options),/tool_not_declared/);
+});

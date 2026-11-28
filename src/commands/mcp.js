@@ -24,7 +24,7 @@ import {
   IAM_MCP_RESOURCE, IAM_MCP_SCOPE, IAM_MCP_WRITE_SCOPE, IAM_MCP_SERVER, describeMcpServer, resolveMcpResourceServer, McpResourceError,
 } from '../mcp/oauth-connection.js';
 import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
-import { runMcpProject } from '../lib/scaffold/mcp-project.js';
+import { runMcpProject, runLocalMcpProject } from '../lib/scaffold/mcp-project.js';
 import { requestStudioMcp, serveNativeWorkspace } from '../mcp/server/studio-host.js';
 import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
 
@@ -83,6 +83,7 @@ export function parseMcpArgs(argv = []) {
   let toolName = '';
   let toolInput = '{}';
   let authMode = '';
+  let trustProject = false;
   let writeAccess = false;
   let force = false;
 
@@ -106,6 +107,7 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--input') toolInput = argv[++i] || '{}';
     else if (arg === '--public') authMode = 'public';
     else if (arg === '--oauth') authMode = 'oauth';
+    else if (arg === '--trust-project') trustProject = true;
     else if (arg === '--write') writeAccess = true;
     else if (arg === '--force') force = true;
     else if (arg === '--json') json = true;
@@ -134,6 +136,7 @@ export function parseMcpArgs(argv = []) {
     toolName,
     toolInput,
     authMode,
+    trustProject,
     writeAccess,
     force,
     json,
@@ -173,6 +176,8 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--runtime cloudflare-worker|node|python] [--python-sdk-source <dir>] [--transport streamable_http|stdio] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]
+    agentsam mcp project-tools <dir> --trust-project
+    agentsam mcp project-call <dir> --trust-project --tool <name> [--input <json>] [--write]
     agentsam mcp register <name> --url <https-url> [--write]
     agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
@@ -230,6 +235,15 @@ export async function runMcp(argv = [], options = {}) {
     if (!target || !args.workspaceId || !args.connectionId) throw new McpResourceError('mcp_workspace_root_and_ids_required', 'agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>');
     await serveNativeWorkspace({...options,root:target,workspaceId:args.workspaceId,connectionId:args.connectionId});
     return null;
+  }
+
+  if (['project-tools','project-call'].includes(subcommand)) {
+    const result=await runLocalMcpProject(subcommand==='project-tools'?'tools':'call',target||'.',{
+      cwd:options.cwd,trustProject:args.trustProject,allowWrite:args.writeAccess,
+      tool:args.toolName,input:subcommand==='project-call'?JSON.parse(args.toolInput):{},
+    });
+    write(JSON.stringify(result,null,2)+'\n');
+    return result;
   }
 
   if (['validate','inspect','install','test','build','dev','deploy'].includes(subcommand)) {

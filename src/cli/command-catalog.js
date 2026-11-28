@@ -93,6 +93,8 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
     usage: [
       'agentsam mcp create <name> [--preset <preset>] [--runtime <runtime>] [--python-sdk-source <dir>] [--transport <transport>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public]',
       'agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]',
+      'agentsam mcp project-tools <dir> --trust-project',
+      'agentsam mcp project-call <dir> --trust-project --tool <name> [--input <json>] [--write]',
       'agentsam mcp register <name> --url <https-url> [--write]',
       'agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>',
       'agentsam mcp add <name> [--client <client>|all] [--url <url>]',
