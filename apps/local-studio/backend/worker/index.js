@@ -64,7 +64,7 @@ import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, 
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
-import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
+import { completeConnectorOAuth, isConnectorOAuthCallbackRequest, refreshStudioGithubGrant } from "./connector-oauth.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
@@ -1355,6 +1355,13 @@ export default {
     // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
     if (url.pathname === "/api/public-config") {
       return handlePublicConfigRequest(request, env);
+    }
+
+    // IAM can request an owner-side refresh without receiving Studio secrets.
+    if (url.pathname === "/api/internal/oauth/github/refresh") {
+      const gate=await requireBridgeKey(request,env);
+      if(!gate.ok)return json({ok:false,error:"unauthorized"},gate.status||401);
+      return refreshStudioGithubGrant(request,env);
     }
 
     // Gmail resource OAuth callback is public only long enough to redeem the one-time PKCE state.

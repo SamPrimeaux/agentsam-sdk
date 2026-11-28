@@ -241,7 +241,7 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   await saveOauthState(env, {
     state, userId, verifier, returnTo,
     provider: stateProvider(def), resource: def.provider,
-    metadata:{requested_scopes:requestedScopes},
+    metadata:{requested_scopes:requestedScopes, ...(def.kind === "github" ? {oauth_client_id:creds.id, selected_account:connectionIdParts(body.connection_id||body.connectionId).accountIdentifier} : {})},
   });
 
   const redirectUri = new URL(request.url).origin + callbackPath(def);
@@ -251,8 +251,9 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   auth.searchParams.set("state", state);
   auth.searchParams.set("code_challenge", challenge);
   auth.searchParams.set("code_challenge_method", "S256");
-  auth.searchParams.set("scope", requestedScopes.join(" "));
+  // GitHub App user grants are determined by installation permissions, not OAuth App scopes.
   if (def.kind !== "github") {
+    auth.searchParams.set("scope", requestedScopes.join(" "));
     auth.searchParams.set("response_type", "code");
     auth.searchParams.set("access_type", "offline");
     auth.searchParams.set("prompt", "consent");
@@ -292,7 +293,7 @@ async function fetchProfile(def, accessToken) {
     const profile = await response.json().catch(() => ({}));
     const login = clean(profile.login);
     if (!response.ok || !login) return null;
-    return { identifier: login, display: clean(profile.name) || login, email: clean(profile.email).toLowerCase() };
+    return { identifier: login, display: clean(profile.name) || login, email: clean(profile.email).toLowerCase(), githubAccountId:profile.id || null };
   }
   const response = await fetch(GOOGLE_USERINFO_URL, { headers: { authorization: "Bearer " + accessToken } });
   const profile = await response.json().catch(() => ({}));
@@ -311,7 +312,7 @@ async function persistConnectorGrant(env, userId, def, tokens, profile, requeste
       "WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ? LIMIT 1"
   ).bind(userId, def.provider, account).first();
   const refreshToken = clean(tokens.refresh_token)
-    || (existing ? await readStoredOauthToken(material, existing, "refresh", aad) : "");
+    || (def.kind !== "github" && existing ? await readStoredOauthToken(material, existing, "refresh", aad) : "");
   const accessEnc = await sealOauthToken(material, clean(tokens.access_token), aad);
   const refreshEnc = refreshToken ? await sealOauthToken(material, refreshToken, aad) : null;
   const tokenScopes=clean(tokens.scope).replace(/,/g, " ");
@@ -325,6 +326,7 @@ async function persistConnectorGrant(env, userId, def, tokens, profile, requeste
   const metadata = JSON.stringify({
     status: "connected", product: "agentsam-work", provider: def.provider,
     email: profile.email || null, display: profile.display,
+    ...(def.kind === "github" ? { oauth_client_id:clientCreds(env,def).id, oauth_owner:"local-studio", github_account_id:profile.githubAccountId||null } : {}),
     scope_provenance: def.kind==='github'?'github_installation_permissions'
       :(tokenScopes?'token_response':'request_equivalence'),
   });
@@ -336,7 +338,7 @@ async function persistConnectorGrant(env, userId, def, tokens, profile, requeste
     ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0) " +
     "ON CONFLICT(account_id, provider, account_identifier) DO UPDATE SET " +
       "access_token_encrypted = excluded.access_token_encrypted, " +
-      "refresh_token_encrypted = COALESCE(excluded.refresh_token_encrypted, user_oauth_tokens.refresh_token_encrypted), " +
+      (def.kind === "github" ? "refresh_token_encrypted = excluded.refresh_token_encrypted, " : "refresh_token_encrypted = COALESCE(excluded.refresh_token_encrypted, user_oauth_tokens.refresh_token_encrypted), ") +
       "scopes = excluded.scopes, expires_at = excluded.expires_at, " +
       "metadata_json = excluded.metadata_json, is_active = 1, " +
       "revoked_at = NULL, refresh_failure_count = 0, last_refresh_error_code = NULL, updated_at = excluded.updated_at"
@@ -353,6 +355,7 @@ async function persistConnectorGrant(env, userId, def, tokens, profile, requeste
           "health_status, last_health_at, last_healthy_at, consecutive_failures, last_error_code, created_at, updated_at) " +
         "VALUES (?, ?, ?, 1, 'connected', ?, 'healthy', ?, ?, 0, NULL, ?, ?) " +
         "ON CONFLICT(account_id, plugin_id, instance_key) DO UPDATE SET " +
+          (def.kind === "github" ? "enabled = 1, " : "") +
           "setup_status = 'connected', secret_ref = excluded.secret_ref, health_status = 'healthy', " +
           "last_health_at = excluded.last_health_at, last_healthy_at = excluded.last_healthy_at, " +
           "consecutive_failures = 0, last_error_code = NULL, updated_at = excluded.updated_at"
@@ -408,10 +411,12 @@ export async function completeConnectorOAuth(request, env) {
     if (completed) return completed;
     return new Response(def.label + " authorization expired. Return to AgentSam and retry.", { status: 400 });
   }
+  if (def.kind === "github" && pending.metadata?.oauth_client_id !== clientCreds(env,def).id) return new Response("GitHub App configuration changed. Reconnect from AgentSam.", {status:409});
   const tokens = await exchangeCode(env, def, code, pending.code_verifier, url.origin + callbackPath(def));
   if (!tokens) return new Response(def.label + " token exchange failed.", { status: 502 });
   const profile = await fetchProfile(def, tokens.access_token);
   if (!profile) return new Response(def.label + " account unavailable.", { status: 502 });
+  if (def.kind === "github" && pending.metadata?.selected_account && pending.metadata.selected_account.toLowerCase() !== profile.identifier.toLowerCase()) return new Response("GitHub account does not match the selected connection. Reconnect using the correct account.", {status:409});
 
   const requestedScopes = Array.isArray(pending.metadata?.requested_scopes)
     ? pending.metadata.requested_scopes
@@ -517,53 +522,96 @@ export async function resolveConnectorAccess(env, userId, provider, accountIdent
  * GitHub App user access tokens are permission-scoped by installation/account,
  * not OAuth repo scopes. Refresh encrypted expiring grants on demand.
  */
+export function isStudioGithubGrant(row, clientId) {
+  let meta;
+  try { meta=JSON.parse(row?.metadata_json||"{}"); } catch { return false; }
+  return meta.scope_provenance==="github_installation_permissions" &&
+    (!meta.oauth_owner || meta.oauth_owner==="local-studio") &&
+    (!meta.oauth_client_id || meta.oauth_client_id===clientId);
+}
+
 export async function resolveGithubConnectorAccess(env, userId, account, options={}) {
   if(!clean(userId)||!clean(account))return {ok:false,code:"github_account_selection_required"};
+  const creds=clientCreds(env,connectorProvider("github"));
+  const read=()=>env.DB.prepare(
+    "SELECT access_token_encrypted, refresh_token_encrypted, expires_at, scopes, metadata_json, last_refresh_at " +
+    "FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)='github' AND account_identifier=? " +
+    "AND COALESCE(is_active,1)=1 AND (revoked_at IS NULL OR revoked_at=0) LIMIT 1"
+  ).bind(userId,account).first();
   let row;
-  try {
-    row=await env.DB.prepare(
-      "SELECT access_token_encrypted, refresh_token_encrypted, expires_at, scopes " +
-      "FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)='github' AND account_identifier=? " +
-      "AND COALESCE(is_active,1)=1 AND (revoked_at IS NULL OR revoked_at=0) LIMIT 1"
-    ).bind(userId,account).first();
-  }catch{return {ok:false,code:"github_oauth_storage_unavailable"};}
+  try { row=await read(); } catch {return {ok:false,code:"github_oauth_storage_unavailable"};}
   if(!row)return {ok:false,code:"github_oauth_required"};
+  if(!isStudioGithubGrant(row,creds.id))return {ok:false,code:"github_oauth_reconnect_required"};
   const material=vaultMaterial(env);
   if(!material)return {ok:false,code:"github_oauth_vault_unavailable"};
   const aad=oauthAad("github",userId,account);
   const now=Math.floor(Date.now()/1000);
   const expires=Number(row.expires_at||0);
+  const current=async value=>{
+    if(!value||!isStudioGithubGrant(value,creds.id))return null;
+    const exp=Number(value.expires_at||0);
+    if(exp&&exp<=Math.floor(Date.now()/1000)+90)return null;
+    return await readStoredOauthToken(material,value,"access",aad);
+  };
   if(!expires||expires>now+90){
-    const token=await readStoredOauthToken(material,row,"access",aad);
+    const token=await current(row);
     return token?{ok:true,accessToken:token}:{ok:false,code:"github_oauth_reconnect_required"};
   }
   const refresh=await readStoredOauthToken(material,row,"refresh",aad);
-  if(!refresh||!clean(env.GITHUB_CLIENT_ID)||!clean(env.GITHUB_CLIENT_SECRET))
-    return {ok:false,code:"github_oauth_reconnect_required"};
+  if(!refresh||!creds.id||!creds.secret)return {ok:false,code:"github_oauth_reconnect_required"};
+  // GitHub rotates refresh tokens. Acquire an atomic short lease in the existing
+  // refresh timestamp column before any provider request; competing readers must
+  // not submit the same refresh token. Compare the old sealed value on every write.
+  const where=" WHERE account_id=? AND LOWER(provider)='github' AND account_identifier=? AND refresh_token_encrypted=? AND expires_at=? AND COALESCE(is_active,1)=1 AND (revoked_at IS NULL OR revoked_at=0)";
+  const key=[userId,account,row.refresh_token_encrypted,row.expires_at];
+  try {
+    const lock=await env.DB.prepare("UPDATE user_oauth_tokens SET last_refresh_at=?"+where+" AND (last_refresh_at IS NULL OR last_refresh_at<=?)").bind(now,...key,now-45).run();
+    if(lock?.meta?.changes!==1){
+      const token=await current(await read());
+      return token?{ok:true,accessToken:token}:{ok:false,code:"github_oauth_refresh_concurrent_retry"};
+    }
+  } catch {return {ok:false,code:"github_oauth_refresh_storage_failed"};}
+  const fail=async(code,inactive=false)=>{
+    try {
+      const updated=await env.DB.prepare("UPDATE user_oauth_tokens SET last_refresh_error_code=?,refresh_failure_count=COALESCE(refresh_failure_count,0)+1,updated_at=?"+(inactive?",is_active=0":"")+where+" AND last_refresh_at=?").bind(code,now,...key,now).run();
+      if(updated?.meta?.changes===0){const token=await current(await read());if(token)return {ok:true,accessToken:token};}
+    }catch{}
+    return {ok:false,code};
+  };
   let data;
   try {
     const response=await (options.fetchImpl||fetch)(GITHUB_TOKEN_URL,{
       method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",accept:"application/json"},
-      body:new URLSearchParams({client_id:clean(env.GITHUB_CLIENT_ID),
-        client_secret:clean(env.GITHUB_CLIENT_SECRET),grant_type:"refresh_token",refresh_token:refresh}),
+      redirect:"error",signal:AbortSignal.timeout(12000),
+      body:new URLSearchParams({client_id:creds.id,client_secret:creds.secret,grant_type:"refresh_token",refresh_token:refresh}),
     });
     data=await response.json().catch(()=>({}));
-    if(!response.ok||!clean(data.access_token)||!clean(data.refresh_token))
-      return {ok:false,code:"github_oauth_reconnect_required"};
-  }catch{return {ok:false,code:"github_oauth_refresh_unavailable"};}
-  const accessEnc=await sealOauthToken(material,clean(data.access_token),aad);
-  const refreshEnc=await sealOauthToken(material,clean(data.refresh_token),aad);
-  const newExpiry=now+Math.max(60,Number(data.expires_in||28800));
+    if(["bad_refresh_token","expired_token","invalid_grant"].includes(data.error))return fail("github_oauth_reconnect_required",true);
+    if(!response.ok||!clean(data.access_token)||!clean(data.refresh_token)||data.error)return fail("github_oauth_refresh_unavailable");
+  }catch{return fail("github_oauth_refresh_unavailable");}
   try {
+    const accessEnc=await sealOauthToken(material,clean(data.access_token),aad);
+    const refreshEnc=await sealOauthToken(material,clean(data.refresh_token),aad);
+    const lifetime=Number(data.expires_in);
+    if(!Number.isFinite(lifetime)||lifetime<=90)return fail("github_oauth_refresh_unavailable");
+    const newExpiry=now+Math.floor(lifetime);
     const updated=await env.DB.prepare(
-      "UPDATE user_oauth_tokens SET access_token_encrypted=?,refresh_token_encrypted=?,expires_at=?,"+
-      "updated_at=?,last_refresh_at=?,last_refresh_error_code=NULL,refresh_failure_count=0 "+
-      "WHERE account_id=? AND LOWER(provider)='github' AND account_identifier=? AND expires_at=? "+
-      "AND COALESCE(is_active,1)=1"
-    ).bind(accessEnc,refreshEnc,newExpiry,now,now,userId,account,row.expires_at).run();
-    if(updated?.meta?.changes===0)return {ok:false,code:"github_oauth_refresh_concurrent_retry"};
+      "UPDATE user_oauth_tokens SET access_token_encrypted=?,refresh_token_encrypted=?,expires_at=?,updated_at=?,last_refresh_error_code=NULL,refresh_failure_count=0"+where+" AND last_refresh_at=?"
+    ).bind(accessEnc,refreshEnc,newExpiry,now,...key,now).run();
+    if(updated?.meta?.changes!==1){const token=await current(await read());return token?{ok:true,accessToken:token}:{ok:false,code:"github_oauth_refresh_concurrent_retry"};}
   }catch{return {ok:false,code:"github_oauth_refresh_storage_failed"};}
   return {ok:true,accessToken:clean(data.access_token)};
+}
+
+/** Only the Studio OAuth owner performs a provider refresh. This internal
+ * operation returns status, never the GitHub token or any OAuth client secret. */
+export async function refreshStudioGithubGrant(request,env) {
+  if(request.method!=="POST")return json({ok:false,error:"method_not_allowed"},405);
+  const body=await request.json().catch(()=>null);
+  const userId=clean(body?.account_id),account=clean(body?.account_identifier);
+  if(!/^au_[a-zA-Z0-9_-]+$/.test(userId)||!/^[a-zA-Z0-9-]{1,39}$/.test(account))return json({ok:false,error:"github_connection_required"},400);
+  const result=await resolveGithubConnectorAccess(env,userId,account);
+  return result.ok?json({ok:true}):json({ok:false,error:result.code},result.code==="github_oauth_refresh_concurrent_retry"?409:503);
 }
 
 export async function connectorStatus(env, userId, key) {
@@ -574,6 +622,7 @@ export async function connectorStatus(env, userId, key) {
       "SELECT account_identifier, json_extract(metadata_json, '$.display') AS account_display, scopes " +
         "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = ? " +
         "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) " +
+        (def.kind === "github" ? "AND CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.scope_provenance') END = 'github_installation_permissions' " : "") +
         "ORDER BY account_identifier COLLATE NOCASE ASC"
     ).bind(userId, def.provider).all();
     return (result?.results || []).map((row) => ({

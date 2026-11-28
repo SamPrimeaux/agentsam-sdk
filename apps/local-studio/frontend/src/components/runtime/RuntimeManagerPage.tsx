@@ -38,6 +38,8 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
   const [machines, setMachines] = useState<LocalStudioConnectionsResponse["machines"]>();
   const [message, setMessage] = useState<string | null>(null);
   const [expandedRuntime, setExpandedRuntime] = useState<string | null>(null);
+  const [terminalTarget, setTerminalTarget] = useState<RuntimeKind | null>(null);
+  const [terminalCwd, setTerminalCwd] = useState("");
   const activeProject = useWorkStore((state) => state.projects.find((item) => item.id === state.activeProjectId));
   const createSession = useTerminalSessionStore((state) => state.createSession);
 
@@ -159,16 +161,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                   {expandedRuntime === runtime.id ? "Hide details" : "Details"}
                 </button>
                 {usable && runtime.capabilities.includes("pty") ? (
-                  <Button type="button" size="sm" onClick={() => {
-                    createSession({
-                      cwd: runtime.activeSession?.cwd || (runtime.id === "local" ? activeProject?.workspaceRoot : undefined),
-                      connectionId: runtime.activeSession?.connectionId || runtime.machine?.connection_id || undefined,
-                      instanceId: runtime.activeSession?.instanceId || runtime.machine?.id,
-                      lane: runtime.activeSession?.lane || (runtime.id === "gcp" ? "remote" : "local"),
-                      runtimeLabel: runtime.activeSession?.runtimeLabel || runtime.name,
-                    });
-                    useWorkStore.getState().setTerminalOpen(true);
-                  }}>
+                  <Button type="button" size="sm" onClick={() => { setTerminalCwd(""); setTerminalTarget(runtime.id); }}>
                     <TerminalSquare className="size-4" /> {runtime.activeSession ? "New terminal" : "Connect terminal"}
                   </Button>
                 ) : runtime.id === "docker" && runtime.state === "available" && local?.state === "online" ? (
@@ -183,6 +176,35 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                 ) : null}
                 </div>
               </div>
+              {terminalTarget === runtime.id ? (
+                <form className="mt-4 grid gap-3 border-t border-border pt-4" onSubmit={event => {
+                  event.preventDefault();
+                  const cwd = terminalCwd.trim();
+                  createSession({
+                    cwd: cwd || undefined, cwdMode: "machine",
+                    connectionId: runtime.activeSession?.connectionId || runtime.machine?.connection_id || undefined,
+                    instanceId: runtime.activeSession?.instanceId || runtime.machine?.id,
+                    lane: runtime.activeSession?.lane || (runtime.id === "gcp" ? "remote" : "local"),
+                    runtimeLabel: runtime.activeSession?.runtimeLabel || runtime.name,
+                  });
+                  setTerminalTarget(null);
+                  useWorkStore.getState().setTerminalOpen(true);
+                }}>
+                  <label className="grid gap-1 text-sm font-medium">
+                    Starting directory
+                    <input className="min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm font-normal" value={terminalCwd} onChange={event=>setTerminalCwd(event.target.value)} placeholder="Machine default directory" autoComplete="off" spellCheck={false}/>
+                  </label>
+                  <p className="text-xs text-muted-foreground">Enter a path on this machine, or leave blank for its default. Existing device and account restrictions still apply.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {runtime.id === "local" && activeProject?.workspaceRoot ? <Button type="button" size="sm" variant="outline" onClick={()=>setTerminalCwd(activeProject.workspaceRoot || "")}>Use project folder</Button> : null}
+                    {runtime.activeSession?.cwd ? <Button type="button" size="sm" variant="outline" onClick={()=>setTerminalCwd(runtime.activeSession?.cwd || "")}>Use current terminal folder</Button> : null}
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button type="button" size="sm" variant="ghost" onClick={()=>setTerminalTarget(null)}>Cancel</Button>
+                    <Button type="submit" size="sm">Open terminal</Button>
+                  </div>
+                </form>
+              ) : null}
               {expandedRuntime === runtime.id ? (
                 <div className="mt-4 grid gap-3 border-t border-border pt-4 text-xs sm:grid-cols-3">
                   <div><p className="text-muted-foreground">Adapter</p><p className="mt-1 font-medium">{runtime.adapter}</p></div>

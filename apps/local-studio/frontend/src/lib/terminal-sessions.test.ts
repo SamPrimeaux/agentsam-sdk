@@ -113,3 +113,16 @@ test("saved scenes can be assigned independently of companion animations in each
   store.getState().patchSession(a, { sceneId: undefined, companionId: 'bella', animationStateId: 'thinking' });
   assert.equal(store.getState().sessions.find((item) => item.id === duplicate)?.sceneId, 'scene_a');
 });
+
+test('machine terminal directory is independent of the last session and can be duplicated explicitly',()=>{
+  const old=store.getState().createSession({cwd:'/previous/repository'});
+  const fresh=store.getState().createSession({cwdMode:'machine',connectionId:'paired-device'});
+  const specific=store.getState().createSession({cwdMode:'machine',cwd:'/chosen/folder',connectionId:'paired-device'});
+  const duplicate=store.getState().duplicateSession(specific);
+  const session=(id:string)=>store.getState().sessions.find(s=>s.id===id);
+  assert.equal(session(old)?.cwd,'/previous/repository');
+  assert.equal(session(fresh)?.cwd,undefined);
+  assert.equal(session(fresh)?.cwdMode,'machine');
+  assert.equal(session(duplicate)?.cwd,'/chosen/folder');
+  assert.equal(session(duplicate)?.cwdMode,'machine');
+});
