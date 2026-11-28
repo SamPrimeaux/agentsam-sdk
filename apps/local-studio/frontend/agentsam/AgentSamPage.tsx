@@ -258,7 +258,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const slidesContext = (state.sideOpen || mobileWorkOpen) && activeStage?.kind === 'design' && stageParams.get('type') === 'slides' && stageParams.get('canvas')
     ? { id: stageParams.get('canvas')!, title: activeStage.title }
     : undefined;
-  const leadComposer = <Composer artifactContext={isMobile ? slidesContext : undefined} workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
+  const leadComposer = <Composer artifactContext={isMobile ? slidesContext : undefined} workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || !leadComposerDetached)} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     {!isMobile ? <>

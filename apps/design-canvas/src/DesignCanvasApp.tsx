@@ -7,6 +7,7 @@ import {
   Undo2, Upload, X, ZoomIn, ZoomOut, Ruler, Component, FileUp, Settings2, Sparkles
 } from 'lucide-react';
 import { DesignWorkspaceFrame } from '@inneranimalmedia/agentsam-workbench/design';
+import { safeWidgetMediaUrl } from '@inneranimalmedia/agentsam-workbench/widgets';
 import type { DesignWorkspaceSnapshot } from '@inneranimalmedia/agentsam-contracts';
 import type { DesignCanvasAgentContext } from './creative-model';
 import { sanitizeInlineSvg } from './svg';
@@ -15,8 +16,8 @@ import { SourceLibraryApp } from './SourceLibraryApp';
 import {
   Artboard, AssetToken, CodeDocument, ColorToken, CreativeArtifact, CreativeObject, CreativeType, CreativeComment, ChartType,
   DesignDocument, DesignSystemDocument, ScaleToken, ShadowToken, Slide, SlidesDocument,
-  TypeToken, artifactHasImages, brandGuidelinesSlides, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
-  normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY
+  TypeToken, artifactHasImages, contrastRatio, duplicateArtifact, makeArtifact, makeId, makeSlidePreset, reorderSlides,
+  normalizeArtifacts, readArtifacts, writeArtifacts, STORAGE_KEY, isPageDocument, isTextDocument, isSpreadsheetDocument, reidentifyCreativeData
 } from './creative-model';
 import { ArtboardMenu, CreationMenu, DocumentActionsMenu, InsertMenu, PresentMenu, SlideInsertToolbar, SlideLayoutMenu, ViewMenu, ZoomControls, type ShapeKind } from './components/EditorMenus';
 import { SelectionFormattingToolbar } from './components/SelectionFormattingToolbar';
@@ -24,6 +25,10 @@ import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
 import './design-canvas.css';
 import { CREATIVE_WIDGET_COVERS } from '@inneranimalmedia/agentsam-workbench/creative-covers';
+import { TemplateBrowserDialog, type TemplateBrowserItem } from './components/TemplateBrowserDialog';
+import { PageEditor, DocumentEditor, SpreadsheetEditor } from './components/StructuredEditors';
+import { loadCreativeArtifacts, persistCreativeArtifact, archiveCreativeArtifact, type CreativeStorageRecord } from './creative-artifact-store';
+
 const slidesCover=CREATIVE_WIDGET_COVERS.slides,designCover=CREATIVE_WIDGET_COVERS.design,codeCover=CREATIVE_WIDGET_COVERS['design-in-code'],systemCover=CREATIVE_WIDGET_COVERS['design-system'],whiteboardCover=CREATIVE_WIDGET_COVERS.whiteboard;
 
 type AskContext = DesignCanvasAgentContext;
@@ -67,7 +72,7 @@ type Section = 'overview' | 'colors' | 'typography' | 'spacing' | 'radii' | 'sha
 type Tool = 'select' | 'hand' | 'text' | 'shape' | 'image' | 'media' | 'chart' | 'table' | 'pen' | 'comment' | 'note' | 'frame' | 'rect' | 'ellipse';
 type AlignCommand = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
 type TokenModal = 'color' | 'type' | 'scale' | 'shadow' | 'component' | null;
-type StudioTemplate = { id: string; kind: string; title: string; description: string; category?: string; payloadUrl: string | null };
+type StudioTemplate = TemplateBrowserItem;
 type StudioTemplatePayload = { type?: string; prompt?: string; data?: unknown };
 
 
@@ -1048,19 +1053,12 @@ function AgentSamBuildEditor({ artifact, leading, documentActions, assistant, as
         <div className="dcx-build-capabilities">
           <span>Project files</span><span>IDE and terminal</span><span>Shared conversation</span>
         </div>
-        <button type="button" className="dcx-primary-button" onClick={() => onOpenCode?.({ artifactId: artifact.id, artifactType: artifact.type, title: artifact.name })}>Continue with AgentSam <Code2 size={14}/></button>
+        {onOpenCode ? <button type="button" className="dcx-primary-button" onClick={() => onOpenCode({ artifactId: artifact.id, artifactType: artifact.type, title: artifact.name })}>Continue with AgentSam <Code2 size={14}/></button> : <p className="dcx-build-host-note" role="status">Code editing runs in AgentSam Work. Open Design Canvas inside Work to continue this saved code workspace.</p>}
       </div>
     </div>
   </DesignWorkspaceFrame>;
 }
 
-function CreateSlidesDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (kind: 'blank' | 'brand') => void }) {
-  return <div className="dcx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className="dcx-modal dcx-create-modal">
-    <div className="dcx-modal-heading"><strong>New presentation</strong><button onClick={onClose} aria-label="Close"><X size={16}/></button></div>
-    <button className="dcx-template-option" onClick={() => onCreate('brand')}><span className="dcx-template-preview brand"><b>Brand</b><i>Guidelines</i></span><span><strong>Brand Guidelines</strong><small>A seven-slide starting deck for your identity.</small></span><Plus size={16}/></button>
-    <button className="dcx-template-option" onClick={() => onCreate('blank')}><span className="dcx-template-preview blank"><span/></span><span><strong>Blank presentation</strong><small>Start with a clean slide.</small></span><Plus size={16}/></button>
-  </div></div>;
-}
 function ArtifactCard({ artifact, onOpen, onRename, onDuplicate, onDelete, onTogglePin }: {
   artifact: CreativeArtifact; onOpen: () => void; onRename: () => void; onDuplicate: () => void; onDelete: () => void; onTogglePin: () => void;
 }) {
@@ -1069,16 +1067,22 @@ function ArtifactCard({ artifact, onOpen, onRename, onDuplicate, onDelete, onTog
   const board = artifact.type === 'design' || artifact.type === 'whiteboard' ? (artifact.data as DesignDocument).artboards[0] : null;
   const system = artifact.type === 'system' ? artifact.data as DesignSystemDocument : null;
   const code = artifact.type === 'code' ? artifact.data as CodeDocument : null;
-  const previewBackground = slide?.background || board?.background || '#1b2028';
+  const page = artifact.type === 'page' ? artifact.data as { title: string; blocks: unknown[] } : null;
+  const document = artifact.type === 'document' ? artifact.data as { title: string; blocks: unknown[] } : null;
+  const spreadsheet = artifact.type === 'spreadsheet' ? artifact.data as { sheets: Array<{ name: string; rows: unknown[] }> } : null;
+  const previewBackground = slide?.background || board?.background || (page || document || spreadsheet ? 'var(--dcx-raised)' : '#1b2028');
   const previewText = slide?.objects.filter((item) => item.type === 'text').slice(0, 2) || board?.objects.filter((item) => item.type === 'text').slice(0, 2) || [];
-  const typeLabel = artifact.type === 'slides' ? 'Slides' : artifact.type === 'system' ? 'Design System' : artifact.type === 'code' ? 'Create in Code' : artifact.type === 'whiteboard' ? 'Whiteboard' : 'Design';
+  const typeLabel = artifact.type === 'page' ? 'Page' : artifact.type === 'document' ? 'Document' : artifact.type === 'spreadsheet' ? 'Spreadsheet' : artifact.type === 'slides' ? 'Slides' : artifact.type === 'system' ? 'Design System' : artifact.type === 'code' ? 'Create in Code' : artifact.type === 'whiteboard' ? 'Whiteboard' : 'Design';
   return <article className="dcx-artifact-card">
     <button className="dcx-artifact-open" onClick={onOpen}>
       <div className={'dcx-artifact-preview ' + artifact.type} style={{ background: previewBackground }}>
         {artifact.type === 'slides' ? previewText.length ? previewText.map((item) => <span key={item.id} style={{ color: item.color || '#ffffff', fontSize: 'clamp(14px, 2vw, 30px)', fontWeight: item.weight || 600 }}>{item.text}</span>) : <><strong>{artifact.name}</strong><small>Presentation</small></> : null}
-        {artifact.type === 'design' || artifact.type === 'whiteboard' ? board ? previewText.length ? previewText.map((item) => <span key={item.id}>{item.text}</span>) : <span>{board.name}</span> : <><img src={designCover} alt=""/><span>Empty artboard</span></> : null}
+        {artifact.type === 'design' || artifact.type === 'whiteboard' ? board ? previewText.length ? previewText.map((item) => <span key={item.id}>{item.text}</span>) : <span>{board.name}</span> : <><Shapes size={28}/><span>Empty artboard</span></> : null}
+        {artifact.type === 'page' ? <><PanelRight size={27}/><strong>{page?.title || artifact.name}</strong><small>{page?.blocks.length || 0} blocks</small></> : null}
+        {artifact.type === 'document' ? <><FileText size={27}/><strong>{document?.title || artifact.name}</strong><small>{document?.blocks.length || 0} sections</small></> : null}
+        {artifact.type === 'spreadsheet' ? <><Table2 size={27}/><strong>{spreadsheet?.sheets[0]?.name || artifact.name}</strong><small>{spreadsheet?.sheets[0]?.rows.length || 0} rows</small></> : null}
         {artifact.type === 'code' ? <><Code2 size={27}/><span>{code?.files.length || 0} files</span></> : null}
-        {artifact.type === 'system' ? system && system.colors.length ? <div className="dcx-system-preview-swatches">{system.colors.slice(0, 6).map((item) => <i key={item.id} style={{ background: item.value }} title={item.name}/>)}</div> : <><img src={systemCover} alt=""/><span>No tokens yet</span></> : null}
+        {artifact.type === 'system' ? system && system.colors.length ? <div className="dcx-system-preview-swatches">{system.colors.slice(0, 6).map((item) => <i key={item.id} style={{ background: item.value }} title={item.name}/>)}</div> : <><SwatchBook size={28}/><span>No tokens yet</span></> : null}
       </div>
       <div className="dcx-artifact-meta"><div><strong>{artifact.name}</strong><small>{typeLabel} · Edited {formatDate(artifact.updatedAt)}</small></div>{artifact.pinned ? <Star size={14} className="dcx-pinned-mark" fill="currentColor"/> : null}{artifact.shared ? <Share2 size={13} className="dcx-shared-mark"/> : null}</div>
     </button>
@@ -1088,11 +1092,15 @@ function ArtifactCard({ artifact, onOpen, onRename, onDuplicate, onDelete, onTog
 }
 export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: controlledAssistantOpen, onAssistantOpenChange, assistantDock, onAssistantDockChange, initialArtifacts, initialWorkspace, initialName, initialActiveId, initialRoute, onArtifactsChange, onActiveArtifactChange, onOpenCode, onMoveArtifact, onRefreshArtifact, onManagePermissions, onGiveFeedback, onToggleOutputs, outputsOpen = false, onSaveStatusChange, onShareArtifact, onSaveToLibrary, embedded = false }: DesignCanvasAppProps) {
   const [initialState] = useState(() => {
-    const loaded = normalizeArtifacts(initialArtifacts ?? readArtifacts());
+    const loaded = normalizeArtifacts(initialArtifacts ?? (embedded && !onArtifactsChange ? [] : readArtifacts()));
     const selected = initialActiveId ? loaded.find((item) => item.id === initialActiveId) : undefined;
     if (selected) return { artifacts: loaded, activeId: selected.id, route: 'editor' as const };
     if (initialWorkspace) {
-      const artifact = initialWorkspace === 'slides' && initialName === 'Brand Guidelines' ? makeArtifact('slides','Brand Guidelines',brandGuidelinesSlides()) : makeArtifact(initialWorkspace, initialName || (
+      if (initialWorkspace === 'slides' && initialName === 'Brand Guidelines') return { artifacts: loaded, activeId: '', route: 'gallery' as const };
+      const artifact = makeArtifact(initialWorkspace, initialName || (
+        initialWorkspace === 'page' ? 'Untitled page' :
+        initialWorkspace === 'document' ? 'Untitled document' :
+        initialWorkspace === 'spreadsheet' ? 'Untitled spreadsheet' :
         initialWorkspace === 'slides' ? 'Untitled presentation' :
         initialWorkspace === 'system' ? 'Untitled design system' :
         initialWorkspace === 'code' ? 'Create in Code' :
@@ -1103,6 +1111,11 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     return { artifacts: loaded, activeId: '', route: initialRoute === 'references' ? 'references' as const : 'gallery' as const };
   });
   const [artifacts, setArtifacts] = useState<CreativeArtifact[]>(initialState.artifacts);
+  const remoteStore = embedded && !onArtifactsChange;
+  const [remoteReady, setRemoteReady] = useState(!remoteStore);
+  const remoteRecordsRef = useRef<Map<string, CreativeStorageRecord>>(new Map());
+  const remoteSnapshotsRef = useRef<Map<string, string>>(new Map());
+  const remoteSyncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [activeId, setActiveId] = useState(initialState.activeId);
   const [route, setRoute] = useState<'gallery' | 'editor' | 'references'>(initialState.route);
   const [tab, setTab] = useState<'all' | 'pinned' | 'yours' | 'shared'>('all');
@@ -1121,6 +1134,13 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   const [templatesError, setTemplatesError] = useState('');
   const [templateBusyId, setTemplateBusyId] = useState('');
   const [templateActionError, setTemplateActionError] = useState('');
+  const [templateBrowserOpen, setTemplateBrowserOpen] = useState(initialState.route === 'gallery' && initialWorkspace === 'slides' && initialName === 'Brand Guidelines');
+  const [pendingImageTemplate, setPendingImageTemplate] = useState<StudioTemplate | null>(null);
+  const [pendingImagePrompt, setPendingImagePrompt] = useState('');
+  const [integrationNotice, setIntegrationNotice] = useState('');
+  const presentationImportInput = useRef<HTMLInputElement>(null);
+  const presentationUploadInput = useRef<HTMLInputElement>(null);
+  const templateReferenceInput = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [internalAssistantOpen, setInternalAssistantOpen] = useState(true);
@@ -1132,6 +1152,12 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   };
   const active = artifacts.find((item) => item.id === activeId);
   useEffect(() => {
+    if (!embedded) {
+      setStudioTemplates([]);
+      setTemplatesError('');
+      setTemplatesLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setTemplatesLoading(true);
     setTemplatesError('');
@@ -1139,13 +1165,36 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       .then(async (response) => {
         if (!response.ok) throw new Error('Template catalog could not be loaded (' + response.status + ').');
         const body = await response.json() as { items?: StudioTemplate[] };
-        const supported = (body.items || []).filter((item) => ['presentation_template', 'slide_template', 'image_generation_template'].includes(item.kind));
+        const supported = (body.items || []).filter((item) => ['page_template', 'document_template', 'spreadsheet_template', 'sheet_template', 'presentation_template', 'slide_template', 'image_generation_template'].includes(item.kind));
         setStudioTemplates(supported);
       })
       .catch((error) => { if (error?.name !== 'AbortError') setTemplatesError(error instanceof Error ? error.message : 'Template catalog could not be loaded.'); })
       .finally(() => { if (!controller.signal.aborted) setTemplatesLoading(false); });
     return () => controller.abort();
-  }, []);
+  }, [embedded]);
+  useEffect(() => {
+    if (!remoteStore) { setRemoteReady(true); return; }
+    let cancelled = false;
+    setRemoteReady(false);
+    loadCreativeArtifacts().then((loaded) => {
+      if (cancelled) return;
+      remoteRecordsRef.current = loaded.records;
+      remoteSnapshotsRef.current = new Map([...loaded.records].map(([id, record]) => [id, record.snapshot]));
+      const merged = new Map<string, CreativeArtifact>();
+      for (const artifact of initialState.artifacts) merged.set(artifact.id, artifact);
+      for (const artifact of loaded.artifacts) merged.set(artifact.id, artifact);
+      setArtifacts(normalizeArtifacts([...merged.values()]));
+      setStorageError(false);
+      setRemoteReady(true);
+      onSaveStatusChange?.('saved');
+    }).catch((error) => {
+      if (cancelled) return;
+      setStorageError(true);
+      setIntegrationNotice('Your saved creative workspace could not be loaded: ' + (error instanceof Error ? error.message : 'storage unavailable'));
+      onSaveStatusChange?.('error');
+    });
+    return () => { cancelled = true; };
+  }, [remoteStore]);
   useEffect(() => {
     const sync = () => setFullscreen(document.fullscreenElement === rootRef.current);
     document.addEventListener('fullscreenchange', sync);
@@ -1168,13 +1217,43 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   };
   useEffect(() => { onActiveArtifactChange?.(active?.id || null, active || null); }, [active?.id, active?.name, active?.type, onActiveArtifactChange]);
   useEffect(() => {
-    if (onArtifactsChange) onArtifactsChange(artifacts);
-    else {
-      const saved = writeArtifacts(artifacts);
-      setStorageError(!saved);
-      onSaveStatusChange?.(saved ? 'saved' : 'error');
+    if (onArtifactsChange) {
+      onArtifactsChange(artifacts);
+      return;
     }
-  }, [artifacts, onArtifactsChange, onSaveStatusChange]);
+    if (remoteStore) {
+      if (!remoteReady) return;
+      const snapshot = [...artifacts];
+      const timer = window.setTimeout(() => {
+        remoteSyncQueueRef.current = remoteSyncQueueRef.current.then(async () => {
+          const activeIds = new Set(snapshot.map((item) => item.id));
+          for (const [id, record] of [...remoteRecordsRef.current]) {
+            if (activeIds.has(id)) continue;
+            await archiveCreativeArtifact(id, record);
+            remoteRecordsRef.current.delete(id);
+            remoteSnapshotsRef.current.delete(id);
+          }
+          for (const artifact of snapshot) {
+            const serialized = JSON.stringify(artifact);
+            if (remoteSnapshotsRef.current.get(artifact.id) === serialized) continue;
+            const record = await persistCreativeArtifact(artifact, remoteRecordsRef.current.get(artifact.id));
+            remoteRecordsRef.current.set(artifact.id, record);
+            remoteSnapshotsRef.current.set(artifact.id, serialized);
+          }
+          setStorageError(false);
+          onSaveStatusChange?.('saved');
+        }).catch((error) => {
+          setStorageError(true);
+          setIntegrationNotice('Creative changes could not be saved: ' + (error instanceof Error ? error.message : 'storage unavailable'));
+          onSaveStatusChange?.('error');
+        });
+      }, 350);
+      return () => window.clearTimeout(timer);
+    }
+    const saved = writeArtifacts(artifacts);
+    setStorageError(!saved);
+    onSaveStatusChange?.(saved ? 'saved' : 'error');
+  }, [artifacts, onArtifactsChange, onSaveStatusChange, remoteStore, remoteReady]);
   const visible = useMemo(() => artifacts.filter((item) => {
     const matchesTab = tab === 'pinned' ? Boolean(item.pinned) : tab === 'shared' ? Boolean(item.shared) : tab === 'yours' ? !item.shared : true;
     const matchesType = filterType === 'all' || item.type === filterType;
@@ -1182,41 +1261,150 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     return matchesTab && matchesType && (!query || haystack.includes(query.toLowerCase()));
   }).sort((a,b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt)), [artifacts, tab, filterType, query]);
   const create = (artifact: CreativeArtifact) => { setArtifacts((items) => [artifact, ...items]); setActiveId(artifact.id); setRoute('editor'); };
-  const createDesign = () => create(makeArtifact('design'));
-  const createSystem = () => create(makeArtifact('system'));
-  const createBrandGuidelines = () => {
-    create(makeArtifact('slides', 'Brand Guidelines', brandGuidelinesSlides()));
-    setNavOpen(false);
-  };
-  const applyStudioTemplate = async (template: StudioTemplate) => {
-    setTemplateActionError('');
-    if (template.kind === 'image_generation_template') {
-      if (!template.payloadUrl) { setTemplateActionError('This prompt template has no saved payload.'); return; }
-      setTemplateBusyId(template.id);
-      try {
-        const response = await fetch(template.payloadUrl, { credentials: 'same-origin' });
-        if (!response.ok) throw new Error('The saved prompt could not be loaded (' + response.status + ').');
-        const payload = await response.json() as StudioTemplatePayload;
-        const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
-        if (!prompt.trim()) throw new Error('The saved prompt is empty.');
-        onAskAgentSam?.({ artifactType: 'design', title: template.title, comment: 'Use the saved image-generation template “' + template.title + '” (catalog item ' + template.id + '). Prompt: ' + prompt });
-        if (!onAskAgentSam) throw new Error('The shared AgentSam composer is unavailable in this surface.');
-      } catch (error) { setTemplateActionError(error instanceof Error ? error.message : 'The saved prompt could not be opened.'); }
-      finally { setTemplateBusyId(''); }
+  const openTemplateBrowser = () => { setTemplateActionError(''); setTemplateBrowserOpen(true); setNavOpen(false); };
+  const selectCreation = (type: CreativeType) => {
+    if (type === 'slides') { openTemplateBrowser(); return; }
+    if (type === 'code') {
+      setTemplateBrowserOpen(false);
+      if (onOpenCode) onOpenCode();
+      else setIntegrationNotice('Code workspaces run in AgentSam Work. Open Design Canvas inside Work to start a code session.');
+      setNavOpen(false);
       return;
     }
-    if (!template.payloadUrl) { setTemplateActionError('This document template has no saved payload.'); return; }
+    setTemplateBrowserOpen(false);
+    setIntegrationNotice('');
+    create(makeArtifact(type));
+    setNavOpen(false);
+  };
+  const createFromScratch = (type: CreativeType = 'slides') => {
+    setTemplateBrowserOpen(false);
+    setTemplateActionError('');
+    create(makeArtifact(type));
+  };
+  const importPresentationFile = async (file?: File) => {
+    if (!file) return;
+    setTemplateActionError('');
+    try {
+      const parsed = JSON.parse(await file.text()) as Record<string, unknown>;
+      const rawData = parsed.type === 'slides' ? parsed.data : parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+      const sourceSlides = rawData && typeof rawData === 'object' ? (rawData as { slides?: unknown }).slides : undefined;
+      if (!Array.isArray(sourceSlides) || !sourceSlides.length || sourceSlides.some((item) => !item || typeof item !== 'object' || !Array.isArray((item as { objects?: unknown }).objects))) {
+        throw new Error('This file is not a valid AgentSam Slides document. Import a Design Canvas JSON export.');
+      }
+      const slides = JSON.parse(JSON.stringify(sourceSlides)) as Slide[];
+      for (const slide of slides) {
+        slide.id = makeId('slide');
+        slide.comments = Array.isArray(slide.comments) ? slide.comments : [];
+        for (const object of slide.objects) object.id = makeId('object');
+      }
+      const name = file.name.replace(/\.json$/i, '').trim() || 'Imported presentation';
+      setTemplateBrowserOpen(false);
+      create(makeArtifact('slides', name, { slides }));
+    } catch (error) {
+      setTemplateActionError(error instanceof Error ? error.message : 'The presentation file could not be imported.');
+      setTemplateBrowserOpen(true);
+    }
+  };
+  const uploadImageToMedia = async (file: File): Promise<string> => {
+    const supportedImage = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(file.type);
+    if (!supportedImage || file.size > 10 * 1024 * 1024) throw new Error('Choose a JPEG, PNG, WebP, GIF or AVIF image up to 10 MB.');
+    const form = new FormData();
+    form.append('files', file);
+    form.append('folder', 'images');
+    form.append('alt_text', file.name);
+    const response = await fetch('/api/admin/media?provider=cloudflare', { method: 'POST', credentials: 'same-origin', body: form });
+    const result = await response.json() as { ok?: boolean; error?: string; assets?: Array<{ url?: string; delivery_url?: string }> };
+    if (!response.ok || !result.ok) throw new Error(result.error || `Media upload failed (${response.status}).`);
+    const src = safeWidgetMediaUrl(result.assets?.[0]?.url || result.assets?.[0]?.delivery_url || '');
+    if (!src) throw new Error('The media service did not return a safe image delivery URL.');
+    return src;
+  };
+
+  const uploadPresentationImage = async (file?: File) => {
+    if (!file) return;
+    setTemplateActionError('');
+    try {
+      const src = await uploadImageToMedia(file);
+      const slide = makeSlidePreset('Title');
+      slide.name = file.name.replace(/\.[^.]+$/, '') || 'Image';
+      slide.objects.push({ id: makeId('object'), type: 'image', name: file.name, x: 84, y: 414, w: 1032, h: 180, src, imageFit: 'contain' });
+      setTemplateBrowserOpen(false);
+      create(makeArtifact('slides', slide.name, { slides: [slide] }));
+    } catch (error) {
+      setTemplateActionError(error instanceof Error ? error.message : 'The image could not be added to a presentation.');
+      setTemplateBrowserOpen(true);
+    }
+  };
+  const uploadTemplateReference = async (file?: File) => {
+    if (!file || !pendingImageTemplate) return;
+    setTemplateActionError('');
+    try {
+      const referenceUrl = await uploadImageToMedia(file);
+      if (!onAskAgentSam) throw new Error('The shared AgentSam composer is unavailable in this surface.');
+      onAskAgentSam({ artifactType: 'design', title: pendingImageTemplate.title, comment: 'Use the saved image-generation template “' + pendingImageTemplate.title + '” (catalog item ' + pendingImageTemplate.id + '). Prompt: ' + pendingImagePrompt + ' Reference image URL: ' + referenceUrl });
+      setPendingImageTemplate(null);
+      setPendingImagePrompt('');
+      setTemplateBrowserOpen(false);
+    } catch (error) {
+      setTemplateActionError(error instanceof Error ? error.message : 'The reference image could not be uploaded.');
+      setTemplateBrowserOpen(true);
+    }
+  };
+
+  const applyStudioTemplate = async (template: StudioTemplate): Promise<boolean> => {
+    setTemplateActionError('');
+    if (!template.payloadUrl) { setTemplateActionError('This template has no registered R2 payload.'); return false; }
     setTemplateBusyId(template.id);
     try {
       const response = await fetch(template.payloadUrl, { credentials: 'same-origin' });
-      if (!response.ok) throw new Error('The saved document could not be loaded (' + response.status + ').');
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({})) as { error?: string; message?: string };
+        const reason = detail.message || detail.error || `HTTP ${response.status}`;
+        if (response.status === 403) throw new Error(`The catalog entry is visible, but its saved R2 payload is not authorized (${reason}). The template storage reference must be corrected before this can be opened.`);
+        throw new Error(`The saved template could not be loaded (${reason}).`);
+      }
       const payload = await response.json() as StudioTemplatePayload;
+      if (template.kind === 'image_generation_template') {
+        const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
+        if (!prompt.trim()) throw new Error('The saved prompt is empty.');
+        if (!onAskAgentSam) throw new Error('The shared AgentSam composer is unavailable in this surface.');
+        if (String(template.specs?.reference_input || '') === 'required-upload') {
+          setPendingImageTemplate(template);
+          setPendingImagePrompt(prompt);
+          templateReferenceInput.current?.click();
+          return false;
+        }
+        onAskAgentSam({ artifactType: 'design', title: template.title, comment: 'Use the saved image-generation template “' + template.title + '” (catalog item ' + template.id + '). Prompt: ' + prompt });
+        setTemplateBrowserOpen(false);
+        return true;
+      }
+      if (template.kind === 'page_template') {
+        if (payload.type !== 'page' || !isPageDocument(payload.data)) throw new Error('The saved Page template does not contain valid editable Page blocks.');
+        create(makeArtifact('page', template.title, reidentifyCreativeData(payload.data)));
+        setTemplateBrowserOpen(false);
+        setNavOpen(false);
+        return true;
+      }
+      if (template.kind === 'document_template') {
+        if (payload.type !== 'document' || !isTextDocument(payload.data)) throw new Error('The saved Document template does not contain valid editable document blocks.');
+        create(makeArtifact('document', template.title, reidentifyCreativeData(payload.data)));
+        setTemplateBrowserOpen(false);
+        setNavOpen(false);
+        return true;
+      }
+      if (template.kind === 'spreadsheet_template' || template.kind === 'sheet_template') {
+        if (payload.type !== 'spreadsheet' || !isSpreadsheetDocument(payload.data)) throw new Error('The saved Spreadsheet template does not contain valid editable sheets.');
+        create(makeArtifact('spreadsheet', template.title, reidentifyCreativeData(payload.data)));
+        setTemplateBrowserOpen(false);
+        setNavOpen(false);
+        return true;
+      }
       const data = payload.data as { slides?: Slide[] } | undefined;
-      const slides = Array.isArray(data?.slides) ? data.slides : [];
-      if (!slides.length || slides.some((slide) => !slide || typeof slide.name !== 'string' || !Array.isArray(slide.objects))) {
+      const sourceSlides = Array.isArray(data?.slides) ? data.slides : [];
+      if (!sourceSlides.length || sourceSlides.some((slide) => !slide || typeof slide.name !== 'string' || !Array.isArray(slide.objects))) {
         throw new Error('The saved template does not contain editable slide data.');
       }
-      const cleanSlides = JSON.parse(JSON.stringify(slides)) as Slide[];
+      const cleanSlides = JSON.parse(JSON.stringify(sourceSlides)) as Slide[];
       for (const slide of cleanSlides) {
         slide.id = makeId('slide');
         slide.comments = Array.isArray(slide.comments) ? slide.comments : [];
@@ -1231,18 +1419,13 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       } else {
         create(makeArtifact('slides', template.title, { slides: cleanSlides }));
       }
+      setTemplateBrowserOpen(false);
       setNavOpen(false);
-    } catch (error) { setTemplateActionError(error instanceof Error ? error.message : 'The saved document could not be opened.'); }
-    finally { setTemplateBusyId(''); }
-  };
-  const selectCreation = (type: CreativeType) => {
-    if (type === 'code') {
-      onOpenCode?.();
-      setNavOpen(false);
-      return;
-    }
-    create(makeArtifact(type));
-    setNavOpen(false);
+      return true;
+    } catch (error) {
+      setTemplateActionError(error instanceof Error ? error.message : 'The saved template could not be opened.');
+      return false;
+    } finally { setTemplateBusyId(''); }
   };
   const renameArtifact = (id: string) => {
     const item = artifacts.find((value) => value.id === id);
@@ -1274,15 +1457,29 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     converted.workspace = active.workspace;
     create(converted);
   };
-  const refreshActive = () => {
+  const refreshActive = async () => {
     if (!active) return;
     if (onRefreshArtifact) { onRefreshArtifact(active); return; }
+    if (remoteStore) {
+      try {
+        const loaded = await loadCreativeArtifacts();
+        remoteRecordsRef.current = loaded.records;
+        remoteSnapshotsRef.current = new Map([...loaded.records].map(([id, record]) => [id, record.snapshot]));
+        const saved = loaded.artifacts.find((item) => item.id === active.id);
+        if (saved) setArtifacts((items) => items.map((item) => item.id === active.id ? saved : item));
+        setStorageError(false);
+      } catch (error) {
+        setStorageError(true);
+        setIntegrationNotice('The saved document could not be refreshed: ' + (error instanceof Error ? error.message : 'storage unavailable'));
+      }
+      return;
+    }
     const saved = readArtifacts().find((item) => item.id === active.id);
     if (saved) setArtifacts((items) => items.map((item) => item.id === active.id ? saved : item));
   };
   const handoffToAgentSam = () => {
     if (!active || !onOpenCode) return;
-    onOpenCode({ artifactId: active.id, artifactType: active.type === 'slides' ? 'slides' : active.type === 'whiteboard' ? 'whiteboard' : active.type === 'code' ? 'code' : 'design', title: active.name });
+    onOpenCode({ artifactId: active.id, artifactType: active.type, title: active.name });
   };
   const togglePin = (id: string) => setArtifacts((items) => items.map((item) => item.id === id ? { ...item, pinned: !item.pinned, updatedAt: new Date().toISOString() } : item));
   const deleteArtifact = (id: string) => {
@@ -1298,7 +1495,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     onAskAgentSam(context);
   } : undefined;
   const requestDelete = (id: string) => setDeleteId(id);
-  const workspaceLabel = active ? active.type === 'slides' ? 'Slides' : active.type === 'system' ? 'Design System' : active.type === 'code' ? 'Create in Code' : active.type === 'whiteboard' ? 'Whiteboard' : 'Design' : '';
+  const workspaceLabel = active ? active.type === 'page' ? 'Page' : active.type === 'document' ? 'Document' : active.type === 'spreadsheet' ? 'Spreadsheet' : active.type === 'slides' ? 'Slides' : active.type === 'system' ? 'Design System' : active.type === 'code' ? 'Create in Code' : active.type === 'whiteboard' ? 'Whiteboard' : 'Design' : '';
   const leading = active ? (
     <div className="dcx-leading-actions">
       <button className="dcx-library-menu-button" type="button" aria-label="Toggle workspace navigation" aria-expanded={navOpen} onClick={() => setNavOpen(value => !value)}>
@@ -1307,7 +1504,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       <button className="dcx-back-button" type="button" onClick={() => { setRoute('gallery'); setActiveId(''); }}>
         <ArrowLeft size={15}/><span>All work</span><span className="dcx-breadcrumb-separator">/</span><span>{workspaceLabel}</span>
       </button>
-      <DocumentActionsMenu name={active.name} pinned={active.pinned} currentType={active.type} onRename={() => renameArtifact(active.id)} onDuplicate={() => duplicate(active)} onTogglePin={() => togglePin(active.id)} onExport={() => download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active)} onDelete={() => requestDelete(active.id)} onSaveToLibrary={onSaveToLibrary ? () => onSaveToLibrary(active) : undefined} onShare={onShareArtifact ? () => onShareArtifact(active) : undefined} onHandoff={onOpenCode ? handoffToAgentSam : undefined} onTurnInto={active.type === 'slides' || active.type === 'design' || active.type === 'whiteboard' ? turnInto : undefined} onMoveTo={onMoveArtifact ? () => onMoveArtifact(active) : undefined} onRefresh={refreshActive} onStorage={() => setStorageInfoOpen(true)} onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined} onFeedback={onGiveFeedback ? () => onGiveFeedback(active) : undefined} onClose={() => { setRoute('gallery'); setActiveId(''); }}/>
+      <DocumentActionsMenu name={active.name} pinned={active.pinned} currentType={active.type} onRename={() => renameArtifact(active.id)} onDuplicate={() => duplicate(active)} onTogglePin={() => togglePin(active.id)} onExport={() => download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active)} onDelete={() => requestDelete(active.id)} onSaveToLibrary={onSaveToLibrary ? () => onSaveToLibrary(active) : undefined} onShare={onShareArtifact ? () => onShareArtifact(active) : undefined} onHandoff={onOpenCode ? handoffToAgentSam : undefined} onTurnInto={active.type === 'slides' || active.type === 'design' || active.type === 'whiteboard' ? turnInto : undefined} onMoveTo={onMoveArtifact ? () => onMoveArtifact(active) : undefined} onRefresh={onArtifactsChange ? (onRefreshArtifact ? refreshActive : undefined) : refreshActive} onStorage={() => setStorageInfoOpen(true)} onPermissions={onManagePermissions ? () => onManagePermissions(active) : undefined} onFeedback={onGiveFeedback ? () => onGiveFeedback(active) : undefined} onClose={() => { setRoute('gallery'); setActiveId(''); }}/>
     </div>
   ) : undefined;
   const documentActions = active ? (
@@ -1318,7 +1515,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       {onShareArtifact ? <button className="dcx-topbar-icon" type="button" title="Share document" aria-label="Share document" onClick={() => onShareArtifact(active)}>
         <Share2 size={16}/>
       </button> : null}
-      <CreationMenu onCreate={selectCreation} onCreateBrandGuidelines={createBrandGuidelines}/>
+      <CreationMenu onOpenTemplates={openTemplateBrowser}/>
       {onToggleOutputs ? <button className="dcx-topbar-icon" type="button" title={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-label={outputsOpen ? 'Return to canvas' : 'Show outputs and files'} aria-pressed={outputsOpen} onClick={onToggleOutputs}>
         {outputsOpen ? <PanelRightClose size={16}/> : <PanelRight size={16}/>}
       </button> : null}
@@ -1329,13 +1526,19 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
     leading, documentActions, assistant, assistantOpen: effectiveAssistantOpen,
     onAssistantOpenChange: updateAssistantOpen, assistantDock, onAssistantDockChange
   };
-  const editor = active ? active.type === 'slides'
-    ? <SlideEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
-    : active.type === 'system'
-      ? <DesignSystemEditor artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
-      : active.type === 'code'
-        ? <AgentSamBuildEditor artifact={active} leading={leading} documentActions={documentActions} onOpenCode={onOpenCode}/>
-        : <DesignEditor artifact={active} onChange={updateActive} onOpenReferences={() => setRoute('references')} onAsk={ask} {...editorChrome}/> : null;
+  const editor = active ? active.type === 'page'
+    ? <PageEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+    : active.type === 'document'
+      ? <DocumentEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+      : active.type === 'spreadsheet'
+        ? <SpreadsheetEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+        : active.type === 'slides'
+          ? <SlideEditor key={active.id} artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+          : active.type === 'system'
+            ? <DesignSystemEditor artifact={active} onChange={updateActive} onAsk={ask} {...editorChrome}/>
+            : active.type === 'code'
+              ? <AgentSamBuildEditor artifact={active} leading={leading} documentActions={documentActions} onOpenCode={onOpenCode}/>
+              : <DesignEditor artifact={active} onChange={updateActive} onOpenReferences={() => setRoute('references')} onAsk={ask} {...editorChrome}/> : null;
   if (route === 'references') return <SourceLibraryApp assetsBase={embedded ? '/design-canvas/sources' : './sources'} onExit={() => setRoute(active ? 'editor' : 'gallery')}/>;
   return <div ref={rootRef} className={'dcx-root' + (embedded ? ' is-embedded' : '') + (route === 'gallery' ? ' is-gallery' : '') + (fullscreen ? ' is-fullscreen' : '')}>
     <main className="dcx-main">
@@ -1364,10 +1567,11 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
             ) : (
               <button className="dcx-gallery-tool" type="button" title="Search" aria-label="Search" onClick={() => setSearchOpen(true)}><Search size={16}/></button>
             )}
+          <button className="dcx-primary-button dcx-gallery-create" type="button" onClick={openTemplateBrowser}><Plus size={15}/> Create</button>
           <div className="dcx-filter-anchor">
             <button className={'dcx-gallery-tool' + (filterType !== 'all' ? ' active' : '')} title="Filter by type" aria-label="Filter by type" aria-expanded={filterOpen} onClick={() => setFilterOpen(value => !value)}><SlidersHorizontal size={16}/></button>
             {filterOpen ? <div className="dcx-filter-popover" role="group" aria-label="Filter by type">
-              {([{value:'all',label:'All types'},{value:'slides',label:'Slides'},{value:'design',label:'Design'},{value:'code',label:'Create in Code'},{value:'system',label:'Design System'},{value:'whiteboard',label:'Whiteboard'}] as const).map(option => <button key={option.value} className={filterType === option.value ? 'active' : ''} onClick={() => { setFilterType(option.value); setFilterOpen(false); }}>{option.label}</button>)}
+              {([{value:'all',label:'All types'},{value:'page',label:'Pages'},{value:'document',label:'Documents'},{value:'spreadsheet',label:'Spreadsheets'},{value:'slides',label:'Slides'},{value:'design',label:'Design'},{value:'code',label:'Create in Code'},{value:'system',label:'Design System'},{value:'whiteboard',label:'Whiteboard'}] as const).map(option => <button key={option.value} className={filterType === option.value ? 'active' : ''} onClick={() => { setFilterType(option.value); setFilterOpen(false); }}>{option.label}</button>)}
             </div> : null}
           </div>
           <button className="dcx-gallery-tool" type="button" title={viewMode === 'grid' ? 'List view' : 'Grid view'} aria-label={viewMode === 'grid' ? 'List view' : 'Grid view'} aria-pressed={viewMode === 'list'} onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>{viewMode === 'grid' ? <List size={16}/> : <LayoutGrid size={16}/>}</button>
@@ -1383,24 +1587,11 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
             <button className="dcx-create-tile whiteboard" onClick={() => selectCreation('whiteboard')}><img src={whiteboardCover} alt=""/><span>Whiteboard <i>Beta</i></span></button>
           </div>
         </section>
-        <section className="dcx-studio-templates" aria-label="Studio templates">
-          <div className="dcx-section-label">Studio templates <span>From your shared template catalog</span></div>
-          {templatesLoading ? <p role="status">Loading saved templates…</p> : null}
-          {templatesError ? <p role="alert">{templatesError}</p> : null}
-          {templateActionError ? <p role="alert">{templateActionError}</p> : null}
-          {studioTemplates.length ? <div className="dcx-studio-template-list">{studioTemplates.map((template) => {
-            const previewCover = template.title.trim().toLowerCase() === 'brand guidelines' ? CREATIVE_WIDGET_COVERS['brand-guidelines'] : undefined;
-            return <article className="dcx-studio-template" key={template.id}>
-              {previewCover ? <img className="dcx-studio-template__cover" src={previewCover} alt="" aria-hidden="true" loading="lazy" decoding="async"/> : null}
-              <div className="dcx-studio-template__content"><strong>{template.title}</strong><small>{template.category || (template.kind === 'slide_template' ? 'Slide' : template.kind === 'presentation_template' ? 'Presentation' : 'Image prompt')}</small>{template.description ? <p>{template.description}</p> : null}</div>
-              <button type="button" disabled={templateBusyId === template.id} onClick={() => void applyStudioTemplate(template)}>{templateBusyId === template.id ? 'Opening…' : template.kind === 'image_generation_template' ? 'Use prompt' : template.kind === 'slide_template' && active?.type === 'slides' ? 'Add to current presentation' : 'Create editable slides'}</button>
-            </article>;
-          })}</div> : !templatesLoading && !templatesError ? <p>No saved Design Canvas templates are available.</p> : null}
-        </section>
         <section className="dcx-artifacts-section" aria-label="Saved work">
-          {visible.length ? <div className={'dcx-artifact-grid' + (viewMode === 'list' ? ' is-list' : '')}>{visible.map((item) => <ArtifactCard key={item.id} artifact={item} onOpen={() => { setActiveId(item.id); setRoute('editor'); }} onRename={() => renameArtifact(item.id)} onDuplicate={() => duplicate(item)} onTogglePin={() => togglePin(item.id)} onDelete={() => requestDelete(item.id)}/>)}</div> : <EmptyState title={query ? 'No matching work' : tab === 'pinned' ? 'Nothing pinned yet' : tab === 'shared' ? 'Nothing shared with you yet' : 'Your work will appear here'} description={query ? 'Try another search or clear the type filter.' : tab === 'pinned' ? 'Pin a document from its actions menu to find it here.' : tab === 'shared' ? 'Documents shared with you will appear here.' : 'Create a presentation, design, design system or whiteboard, or open Code to work in an existing project.'}/>}
+          {visible.length ? <div className={'dcx-artifact-grid' + (viewMode === 'list' ? ' is-list' : '')}>{visible.map((item) => <ArtifactCard key={item.id} artifact={item} onOpen={() => { setActiveId(item.id); setRoute('editor'); }} onRename={() => renameArtifact(item.id)} onDuplicate={() => duplicate(item)} onTogglePin={() => togglePin(item.id)} onDelete={() => requestDelete(item.id)}/>)}</div> : <EmptyState title={query ? 'No matching work' : tab === 'pinned' ? 'Nothing pinned yet' : tab === 'shared' ? 'Nothing shared with you yet' : 'Your work will appear here'} description={query ? 'Try another search or clear the type filter.' : tab === 'pinned' ? 'Pin a document from its actions menu to find it here.' : tab === 'shared' ? 'Documents shared with you will appear here.' : 'Create a Page, Document, Spreadsheet, presentation, design system or whiteboard, or open Code to work in an existing project.'}/>}
         </section>
-        {storageError ? <div className="dcx-storage-warning" role="status">Changes could not be saved in this browser.</div> : null}
+        {storageError ? <div className="dcx-storage-warning" role="status">{remoteStore ? 'Changes could not be saved to your AgentSam workspace.' : 'Changes could not be saved in this browser.'}</div> : null}
+        {integrationNotice ? <div className="dcx-toast" role="status">{integrationNotice}<button type="button" aria-label="Dismiss message" onClick={() => setIntegrationNotice('')}><X size={13}/></button></div> : null}
         {filterOpen ? <button className="dcx-filter-dismiss" aria-label="Close filters" onClick={() => setFilterOpen(false)}/> : null}
         {navOpen ? <div className="dcx-library-nav-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setNavOpen(false); }}>
           <nav className="dcx-library-nav" aria-label="Creative workspace navigation">
@@ -1416,8 +1607,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
           <div className="dcx-library-nav-heading"><strong>Creative workspace</strong><button onClick={() => setNavOpen(false)} aria-label="Close navigation"><X size={16}/></button></div>
           <button onClick={() => { setRoute('gallery'); setActiveId(''); setNavOpen(false); }}><LayoutGrid size={16}/> All work</button>
           <div className="dcx-library-nav-label">Create</div>
-          <button onClick={() => selectCreation('slides')}><Presentation size={16}/> Presentation</button>
-          <button onClick={createBrandGuidelines}><FileText size={16}/> Brand Guidelines template</button>
+          <button onClick={openTemplateBrowser}><Plus size={16}/> Create from templates</button>
           <button onClick={() => selectCreation('design')}><Shapes size={16}/> Design</button>
           <button onClick={() => selectCreation('system')}><Settings2 size={16}/> Design system</button>
           <button onClick={() => selectCreation('whiteboard')}><StickyNote size={16}/> Whiteboard</button>
@@ -1426,8 +1616,29 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
           <button onClick={() => { setRoute('references'); setNavOpen(false); }}><Library size={16}/> Reference library</button>
         </nav>
       </div> : null}
-      {storageInfoOpen && active ? <div className="dcx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStorageInfoOpen(false); }}><div className="dcx-modal" role="dialog" aria-modal="true" aria-labelledby="dcx-storage-title"><div className="dcx-modal-heading"><strong id="dcx-storage-title">Document storage</strong><button type="button" aria-label="Close storage details" onClick={() => setStorageInfoOpen(false)}><X size={16}/></button></div><p>This document is currently stored in the Design workspace's browser-backed document store.</p><Field label="Storage key"><input readOnly value={STORAGE_KEY}/></Field><Field label="Document"><input readOnly value={active.name}/></Field><Field label="Approximate record size"><input readOnly value={(JSON.stringify(active).length).toLocaleString() + ' characters'}/></Field><div className="dcx-modal-actions"><button type="button" className="dcx-secondary-button" onClick={() => setStorageInfoOpen(false)}>Close</button><button type="button" className="dcx-primary-button" onClick={() => { download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active); setStorageInfoOpen(false); }}>Export backup</button></div></div></div> : null}
+      {storageInfoOpen && active ? <div className="dcx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStorageInfoOpen(false); }}><div className="dcx-modal" role="dialog" aria-modal="true" aria-labelledby="dcx-storage-title"><div className="dcx-modal-heading"><strong id="dcx-storage-title">Document storage</strong><button type="button" aria-label="Close storage details" onClick={() => setStorageInfoOpen(false)}><X size={16}/></button></div><p>{onArtifactsChange ? 'This document is stored in your AgentSam Creative Workspace and synchronized through the host artifact service.' : 'This document is stored in this browser’s local Design Canvas workspace.'}</p>{onArtifactsChange ? <Field label="Persistence"><input readOnly value="AgentSam Creative Workspace"/></Field> : <Field label="Storage key"><input readOnly value={STORAGE_KEY}/></Field>}<Field label="Document"><input readOnly value={active.name}/></Field><Field label="Artifact ID"><input readOnly value={active.id}/></Field><Field label="Approximate record size"><input readOnly value={(JSON.stringify(active).length).toLocaleString() + ' characters'}/></Field><div className="dcx-modal-actions"><button type="button" className="dcx-secondary-button" onClick={() => setStorageInfoOpen(false)}>Close</button><button type="button" className="dcx-primary-button" onClick={() => { download(active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', active); setStorageInfoOpen(false); }}>Export backup</button></div></div></div> : null}
       {renameId ? <div className="dcx-modal-backdrop"><form className="dcx-modal" onSubmit={(event) => { event.preventDefault(); setArtifacts((items) => items.map((item) => item.id === renameId ? { ...item, name: renameValue, updatedAt: new Date().toISOString() } : item)); setRenameId(''); }}><div className="dcx-modal-heading"><strong>Rename</strong><button type="button" onClick={() => setRenameId('')}><X size={16}/></button></div><Field label="Name"><input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} autoFocus/></Field><div className="dcx-modal-actions"><button type="button" className="dcx-secondary-button" onClick={() => setRenameId('')}>Cancel</button><button className="dcx-primary-button">Save</button></div></form></div> : null}
+      <input ref={presentationImportInput} hidden type="file" accept=".json,application/json" onChange={(event) => { void importPresentationFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''; }}/>
+      <input ref={presentationUploadInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => { void uploadPresentationImage(event.currentTarget.files?.[0]); event.currentTarget.value = ''; }}/>
+      <input ref={templateReferenceInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => { void uploadTemplateReference(event.currentTarget.files?.[0]); event.currentTarget.value = ''; }}/>
+      <TemplateBrowserDialog
+        open={templateBrowserOpen}
+        templates={studioTemplates.map((template): TemplateBrowserItem => ({
+          ...template,
+          cover: template.title.trim().toLowerCase() === 'brand guidelines' ? CREATIVE_WIDGET_COVERS['brand-guidelines'] : undefined,
+        }))}
+        loading={templatesLoading}
+        error={templatesError}
+        actionError={templateActionError}
+        busyId={templateBusyId}
+        embedded={embedded}
+        onClose={() => { setTemplateBrowserOpen(false); setPendingImageTemplate(null); setPendingImagePrompt(''); }}
+        onStartFromScratch={createFromScratch}
+        onImportFile={() => presentationImportInput.current?.click()}
+        onUploadImage={() => presentationUploadInput.current?.click()}
+        onCreateOther={selectCreation}
+        onSelectTemplate={applyStudioTemplate}
+      />
       {deleteId ? (
         <div className="dcx-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setDeleteId(''); }}>
           <div className="dcx-modal" role="alertdialog" aria-modal="true" aria-labelledby="dcx-delete-title" aria-describedby="dcx-delete-description">

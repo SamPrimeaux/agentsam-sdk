@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="22" fill="#e9edf3"/>
+  <rect x="42" y="36" width="556" height="348" rx="14" fill="#fff" stroke="#d6dce5"/>
+  <text x="72" y="82" fill="#172033" font-family="Arial,sans-serif" font-size="28" font-weight="700">Project Tracker</text>
+  <text x="72" y="106" fill="#667085" font-family="Arial,sans-serif" font-size="13">Editable rows, status fields and formulas</text>
+  <g stroke="#d5dce6" stroke-width="1">
+    <rect x="72" y="132" width="496" height="42" fill="#eef3fb"/>
+    <path d="M220 132 V342 M306 132 V342 M390 132 V342 M472 132 V342"/>
+    <path d="M72 174 H568 M72 216 H568 M72 258 H568 M72 300 H568 M72 342 H568"/>
+  </g>
+  <g fill="#344054" font-family="Arial,sans-serif" font-size="12" font-weight="700">
+    <text x="84" y="158">Task</text><text x="232" y="158">Owner</text><text x="318" y="158">Status</text><text x="402" y="158">Priority</text><text x="484" y="158">Due date</text>
+  </g>
+  <text x="72" y="366" fill="#667085" font-family="Arial,sans-serif" font-size="11" letter-spacing="1.5">EDITABLE SPREADSHEET · FORMULAS</text>
+</svg>

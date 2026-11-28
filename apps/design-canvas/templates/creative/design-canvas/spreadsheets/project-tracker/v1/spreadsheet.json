@@ -1,0 +1,30 @@
+{
+  "type": "spreadsheet",
+  "data": {
+    "activeSheetId": "sheet_project_tracker",
+    "sheets": [
+      {
+        "id": "sheet_project_tracker",
+        "name": "Project Tracker",
+        "columns": [
+          { "id": "column_task", "label": "Task", "width": 280, "type": "text" },
+          { "id": "column_owner", "label": "Owner", "width": 150, "type": "text" },
+          { "id": "column_status", "label": "Status", "width": 145, "type": "status" },
+          { "id": "column_priority", "label": "Priority", "width": 120, "type": "priority" },
+          { "id": "column_due_date", "label": "Due date", "width": 140, "type": "date" },
+          { "id": "column_notes", "label": "Notes", "width": 240, "type": "text" }
+        ],
+        "rows": [
+          { "id": "row_01", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_02", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_03", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_04", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_05", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_06", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_07", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } },
+          { "id": "row_08", "cells": { "column_task": "", "column_owner": "", "column_status": "", "column_priority": "", "column_due_date": "", "column_notes": "" } }
+        ]
+      }
+    ]
+  }
+}

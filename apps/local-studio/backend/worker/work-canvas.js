@@ -39,15 +39,76 @@ function validStyle(style){
  if(!obj(style)||Object.keys(style).length>60)return false;
  return Object.entries(style).every(([k,v])=>STYLE.has(k)&&(typeof v==='number'?Number.isFinite(v):typeof v==='string'&&v.length<500&&!/url\s*\(|expression\s*\(|@import|javascript:/i.test(v)));
 }
+function validCreativeId(value, ids) {
+ if(typeof value!=='string'||!ID.test(value)||ids.has(value))return false;
+ ids.add(value);return true;
+}
+function validPageData(data){
+ if(!obj(data)||!clean(data.title)||data.title.length>160||!Array.isArray(data.blocks)||data.blocks.length>1000)return false;
+ if(data.subtitle!==undefined&&(typeof data.subtitle!=='string'||data.subtitle.length>2000))return false;
+ const ids=new Set();
+ for(const block of data.blocks){
+  if(!obj(block)||!validCreativeId(block.id,ids))return false;
+  if(block.type==='heading'||block.type==='paragraph') { if(typeof block.text!=='string'||block.text.length>50000)return false; }
+  else if(block.type==='task_list'){
+   if(typeof block.title!=='string'||block.title.length>200||!Array.isArray(block.items)||block.items.length>1000)return false;
+   for(const item of block.items)if(!obj(item)||!validCreativeId(item.id,ids)||typeof item.text!=='string'||item.text.length>2000||typeof item.checked!=='boolean')return false;
+  } else if(block.type==='bullet_list'){
+   if(block.title!==undefined&&(typeof block.title!=='string'||block.title.length>200))return false;
+   if(!Array.isArray(block.items)||block.items.length>1000||!block.items.every(item=>typeof item==='string'&&item.length<=5000))return false;
+  } else if(block.type==='callout'){
+   if(!['info','success','warning'].includes(block.tone)||typeof block.text!=='string'||block.text.length>12000)return false;
+  } else if(block.type!=='divider')return false;
+ }
+ return true;
+}
+function validTextDocument(data){
+ if(!obj(data)||!clean(data.title)||data.title.length>160||typeof data.subtitle!=='string'||data.subtitle.length>2000||!Array.isArray(data.blocks)||data.blocks.length>1000)return false;
+ const ids=new Set();
+ for(const block of data.blocks){
+  if(!obj(block)||!validCreativeId(block.id,ids))return false;
+  if(block.type==='heading'||block.type==='paragraph'){if(typeof block.text!=='string'||block.text.length>50000)return false;}
+  else if(block.type==='bullet_list'){if(!Array.isArray(block.items)||block.items.length>1000||!block.items.every(item=>typeof item==='string'&&item.length<=5000))return false;}
+  else if(block.type==='callout'){if(!['info','success','warning'].includes(block.tone)||typeof block.text!=='string'||block.text.length>12000)return false;}
+  else if(block.type!=='divider')return false;
+ }
+ return true;
+}
+function validSpreadsheetDocument(data){
+ if(!obj(data)||!Array.isArray(data.sheets)||data.sheets.length<1||data.sheets.length>20||typeof data.activeSheetId!=='string')return false;
+ const ids=new Set();let totalCells=0,active=false;
+ for(const sheet of data.sheets){
+  if(!obj(sheet)||!validCreativeId(sheet.id,ids)||!clean(sheet.name)||sheet.name.length>120||!Array.isArray(sheet.columns)||sheet.columns.length<1||sheet.columns.length>100||!Array.isArray(sheet.rows)||sheet.rows.length>10000)return false;
+  if(sheet.id===data.activeSheetId)active=true;
+  const columns=new Set();
+  for(const column of sheet.columns){
+   if(!obj(column)||!validCreativeId(column.id,ids)||!clean(column.label)||column.label.length>120)return false;
+   if(column.width!==undefined&&(!number(column.width)||column.width<40||column.width>1000))return false;
+   if(column.type!==undefined&&!['text','number','date','status','priority'].includes(column.type))return false;
+   columns.add(column.id);
+  }
+  for(const row of sheet.rows){
+   if(!obj(row)||!validCreativeId(row.id,ids)||!obj(row.cells)||Object.keys(row.cells).length>100)return false;
+   for(const [key,value] of Object.entries(row.cells)){
+    if(!columns.has(key)||typeof value!=='string'||value.length>20000)return false;
+    if(++totalCells>500000)return false;
+   }
+  }
+ }
+ return active;
+}
 export function validateCanvasDocument(doc){
  if(!obj(doc)||doc.version!==1||!clean(doc.name)||doc.name.length>160||!clean(doc.host)||doc.host.length>80||typeof doc.brief!=='string'||doc.brief.length>12000||!Array.isArray(doc.artboards)||doc.artboards.length>64)return false;
  if(!obj(doc.tokens)||!Array.isArray(doc.components)||doc.components.length>256||!Array.isArray(doc.assets)||doc.assets.length>1000||!Array.isArray(doc.dataRequirements)||doc.dataRequirements.length>200||!obj(doc.provenance))return false;
  if(doc.creativeWorkspace!==undefined){
   const workspace=doc.creativeWorkspace,artifact=workspace?.artifact;
   if(!obj(workspace)||workspace.schema!==CREATIVE_SCHEMA||!obj(artifact)||
-     !ID.test(artifact.id)||!['slides','design','code','system','whiteboard'].includes(artifact.type)||
+     !ID.test(artifact.id)||!['page','document','spreadsheet','slides','design','code','system','whiteboard'].includes(artifact.type)||
      !clean(artifact.name)||artifact.name.length>160||typeof artifact.createdAt!=='string'||
      typeof artifact.updatedAt!=='string'||!obj(artifact.data))return false;
+  if(artifact.type==='page'&&!validPageData(artifact.data))return false;
+  if(artifact.type==='document'&&!validTextDocument(artifact.data))return false;
+  if(artifact.type==='spreadsheet'&&!validSpreadsheetDocument(artifact.data))return false;
   if(artifact.type==='slides'&&(!Array.isArray(artifact.data.slides)||artifact.data.slides.length>256))return false;
   if((artifact.type==='design'||artifact.type==='whiteboard')&&(!Array.isArray(artifact.data.artboards)||artifact.data.artboards.length>256))return false;
   if(artifact.type==='system'&&(!Array.isArray(artifact.data.colors)||!Array.isArray(artifact.data.typography)))return false;

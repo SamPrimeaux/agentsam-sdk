@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/design-canvas/spreadsheet/v1.schema.json",
+  "title": "AgentSam Spreadsheet Document v1",
+  "type": "object",
+  "required": ["activeSheetId", "sheets"],
+  "additionalProperties": false,
+  "properties": {
+    "activeSheetId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "sheets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "columns", "rows"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["id", "label"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+                "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "width": { "type": "number", "minimum": 40, "maximum": 1000 },
+                "type": { "type": "string", "enum": ["text", "number", "date", "status", "priority"] }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "type": "object",
+              "required": ["id", "cells"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+                "cells": { "type": "object", "maxProperties": 100, "additionalProperties": { "type": "string", "maxLength": 20000 } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

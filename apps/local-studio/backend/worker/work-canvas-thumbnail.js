@@ -34,6 +34,47 @@ function nodeSvg(node,x,y,scale,depth=0,counter={count:0}){
 }
 
 export function renderCanvasThumbnailSvg(document){
+ const creative=document?.creativeWorkspace?.artifact;
+ if((!Array.isArray(document?.artboards)||!document.artboards.length)&&creative&&['page','document','spreadsheet'].includes(creative.type)){
+  const title=text(creative.data?.title||creative.name||document.name||'Untitled');
+  let content='';
+  if(creative.type==='page'){
+   const tasks=(creative.data?.blocks||[]).filter(block=>block?.type==='task_list').flatMap(block=>block.items||[]).slice(0,5);
+   content+='<text x="44" y="76" font-size="24" font-weight="700" fill="#202938">'+title+'</text>';
+   content+='<text x="44" y="102" font-size="10" letter-spacing="1.5" fill="#667085">PAGE / CHECKLIST</text>';
+   for(let i=0;i<tasks.length;i++){
+    const y=142+i*31;
+    content+='<rect x="46" y="'+(y-11)+'" width="13" height="13" rx="3" fill="none" stroke="#98a2b3"/>';
+    content+='<path d="M70 '+(y-4)+' H'+(i===0?330:390)+'" stroke="#d0d5dd" stroke-width="5" stroke-linecap="round"/>';
+   }
+   if(!tasks.length)for(let i=0;i<4;i++)content+='<path d="M46 '+(150+i*34)+' H'+(390-i*18)+'" stroke="#d0d5dd" stroke-width="5" stroke-linecap="round"/>';
+  } else if(creative.type==='document'){
+   const blocks=creative.data?.blocks||[];
+   content+='<text x="44" y="76" font-size="24" font-weight="700" fill="#202938">'+title+'</text>';
+   content+='<text x="44" y="102" font-size="10" letter-spacing="1.5" fill="#667085">DOCUMENT / SECTIONS</text>';
+   let y=144;
+   for(const block of blocks.slice(0,5)){
+    if(block.type==='heading'){content+='<text x="46" y="'+y+'" font-size="13" font-weight="700" fill="#344054">'+text(block.text).slice(0,44)+'</text>';y+=16;}
+    else {content+='<path d="M46 '+y+' H'+Math.min(440,46+Math.max(80,String(block.text||'').length*3))+'" stroke="#d0d5dd" stroke-width="4" stroke-linecap="round"/>';y+=20;}
+   }
+   if(!blocks.length)for(let i=0;i<5;i++)content+='<path d="M46 '+(146+i*26)+' H'+(410-i*24)+'" stroke="#d0d5dd" stroke-width="4" stroke-linecap="round"/>';
+  } else {
+   const sheet=creative.data?.sheets?.find(item=>item.id===creative.data.activeSheetId)||creative.data?.sheets?.[0];
+   const columns=sheet?.columns||[],rows=sheet?.rows||[];
+   content+='<text x="30" y="46" font-size="18" font-weight="700" fill="#202938">'+text(sheet?.name||title)+'</text>';
+   const count=Math.min(6,columns.length),cellW=452/Math.max(1,count);
+   for(let c=0;c<count;c++){
+    const x=30+c*cellW;
+    content+='<rect x="'+x+'" y="68" width="'+cellW+'" height="28" fill="#e8eef8" stroke="#cbd5e1"/>';
+    content+='<text x="'+(x+6)+'" y="86" font-size="9" font-weight="700" fill="#344054">'+text(columns[c].label).slice(0,14)+'</text>';
+   }
+   for(let r=0;r<Math.min(5,rows.length);r++)for(let c=0;c<count;c++){
+    const x=30+c*cellW,y=96+r*35;
+    content+='<rect x="'+x+'" y="'+y+'" width="'+cellW+'" height="35" fill="#fff" stroke="#e4e7ec"/>';
+   }
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+WIDTH+'" height="'+HEIGHT+'" viewBox="0 0 '+WIDTH+' '+HEIGHT+'"><rect width="'+WIDTH+'" height="'+HEIGHT+'" rx="12" fill="#e7eaf0"/><rect x="18" y="18" width="476" height="284" rx="9" fill="#fff" stroke="#d5dae1"/>'+content+'</svg>';
+ }
  if(!Array.isArray(document?.artboards)||!document.artboards.length)return null;
  const boards=document.artboards.slice(0,4);
  const columns=boards.length===1?1:2,rows=Math.ceil(boards.length/columns),gap=12,margin=16;

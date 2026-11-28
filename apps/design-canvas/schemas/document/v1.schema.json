@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/design-canvas/document/v1.schema.json",
+  "title": "AgentSam Text Document v1",
+  "type": "object",
+  "required": ["title", "subtitle", "blocks"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "subtitle": { "type": "string", "maxLength": 2000 },
+    "blocks": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "oneOf": [
+          { "type": "object", "required": ["id", "type", "text"], "additionalProperties": false, "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }, "type": { "const": "heading" }, "text": { "type": "string", "maxLength": 50000 }, "level": { "type": "integer", "enum": [1, 2, 3] } } },
+          { "type": "object", "required": ["id", "type", "text"], "additionalProperties": false, "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }, "type": { "const": "paragraph" }, "text": { "type": "string", "maxLength": 50000 } } },
+          { "type": "object", "required": ["id", "type", "items"], "additionalProperties": false, "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }, "type": { "const": "bullet_list" }, "items": { "type": "array", "maxItems": 1000, "items": { "type": "string", "maxLength": 5000 } } } },
+          { "type": "object", "required": ["id", "type", "tone", "text"], "additionalProperties": false, "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }, "type": { "const": "callout" }, "tone": { "type": "string", "enum": ["info", "success", "warning"] }, "text": { "type": "string", "maxLength": 12000 } } },
+          { "type": "object", "required": ["id", "type"], "additionalProperties": false, "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }, "type": { "const": "divider" } } }
+        ]
+      }
+    }
+  }
+}

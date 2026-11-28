@@ -411,6 +411,10 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(workbenchSource, "agent/capability-catalog.ts"),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-workbench\/creative-covers$/,
+        replacement: resolvePath(workbenchSource, "widgets/creative-covers.ts"),
+      },
+      {
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,
       },

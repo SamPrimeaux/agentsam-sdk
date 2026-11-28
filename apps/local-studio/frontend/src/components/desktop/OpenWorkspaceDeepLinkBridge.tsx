@@ -3,6 +3,7 @@ import { isPackagedDesktop, listenDeepLinks, openDesktopWorkspace } from "@/lib/
 import {
   OPEN_WORKSPACE_EVENT,
   OPEN_WORKSPACE_FAILED_EVENT,
+  parseNavigateDeepLink,
   parseOpenDeepLink,
 } from "@/lib/desktop/open-deep-link";
 
@@ -16,6 +17,11 @@ export function OpenWorkspaceDeepLinkBridge() {
     let cancelled = false;
     let stop: (() => void) | null = null;
     void listenDeepLinks((value) => {
+      const route = parseNavigateDeepLink(value);
+      if (route) {
+        window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: route } }));
+        return;
+      }
       const path = parseOpenDeepLink(value);
       if (!path) return;
       openDesktopWorkspace(path)

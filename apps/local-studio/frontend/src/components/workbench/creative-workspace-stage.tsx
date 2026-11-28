@@ -2,6 +2,7 @@ import { WorkspaceOpeningField } from "@/components/runtime/LocalStudioRuntimeFi
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Check, LoaderCircle, RefreshCw } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
+import { useNav } from "@inneranimalmedia/agentsam-nav";
 import {
   DesignCanvasApp,
   type CreativeArtifact,
@@ -145,6 +146,7 @@ export function CreativeWorkspaceStage({ tab }: { tab: SideTab }) {
 }
 
 function CreativeDocumentStage({ tab }: { tab: SideTab }) {
+  const { data: navData } = useNav();
   const setTabUrl = useWorkStore((state) => state.setTabUrl);
   const outputsOpen = useWorkStore((state) => state.sideTabs.find((item) => item.id === state.activeSideTabId)?.kind === "files");
   const project = useWorkStore((state) => {
@@ -490,23 +492,29 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       onOpenCode={(context) => {
         const store = useWorkStore.getState();
         const project = store.projects.find((item) => item.id === store.activeProjectId && item.kind === "filesystem");
-        const chatId = tab.parentChatId || store.activeChatId;
-        if (chatId && store.chats.some((chat) => chat.id === chatId)) {
-          store.setActiveChat(chatId);
-          const workspace = project
-            ? "Use the selected AgentSam Work repository \"" + project.name + "\" at " + (project.workspaceRoot || "its connected filesystem root") + " as the working context."
-            : "No filesystem-backed repository is selected. Ask the user to open an existing repository before making code changes.";
-          const annotation = {
-            id: crypto.randomUUID(),
-            label: context?.title || "Design artifact",
-            page: "Design Canvas",
-            tag: "design-code-handoff",
-            text: [workspace, context?.artifactId ? "Artifact " + context.artifactId + " (" + context.artifactType + ")" : "", context?.title || ""].filter(Boolean).join(" · "),
-          };
-          store.setPendingAnnotations(chatId, items => [...items.filter(item => item.tag !== "design-code-handoff"), annotation].slice(-8));
-        }
-        // Keep the existing Work repository and lead composer as the work context.
-        // The embedded Design Canvas never opens a second code editor.
+        // Code is a new Work conversation, not a continuation of the canvas' parent chat.
+        const chatId = store.startChat();
+        store.renameChat(chatId, "New session");
+        store.setActiveChat(chatId);
+        navData.onModeChange?.("work");
+        const workspace = project
+          ? "Use the currently selected filesystem-backed AgentSam Work project \"" + project.name + "\" at " + (project.workspaceRoot || "its connected filesystem root") + " when repository access is needed."
+          : "No filesystem-backed project is currently selected. Ask the user which existing repository to connect before making code changes.";
+        const annotation = {
+          id: crypto.randomUUID(),
+          label: "Design",
+          page: "Design Canvas",
+          tag: "design-code-handoff",
+          text: [
+            "The user entered this conversation from Design Canvas. Treat this as a design-aware Code session.",
+            workspace,
+            "Do not ingest, clone, or summarize the entire repository. Search selectively for relevant design tokens, components, styles, and assets, and read only the files needed for the requested work. Keep unrelated code out of context and confirm before broad refactors.",
+            context?.artifactId ? "Design artifact " + context.artifactId + " (" + context.artifactType + ")" : "",
+            context?.title || "",
+          ].filter(Boolean).join("\n\n"),
+        };
+        store.setPendingAnnotations(chatId, items => [...items.filter(item => item.tag !== "design-code-handoff"), annotation].slice(-8));
+        // The one shared Work composer becomes the focused Code session; no second editor or assistant is mounted.
         store.setWorkSurface("chat");
       }}
       outputsOpen={outputsOpen}

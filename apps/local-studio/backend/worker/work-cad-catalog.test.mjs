@@ -13,6 +13,21 @@ test('tab comes from specs.tab, else a structural rule, and no kind is dropped',
   assert.deepEqual(toCatalogItem({ ...base, resource_kind: 'x', compatible_apps_json: '["*","a"]' }).compatibleApps, ['*', 'a']);
 });
 
+test('Page, Document, Spreadsheet, Slides and Image templates all use the template catalog tab', () => {
+  for (const kind of [
+    'page_template', 'page', 'document_template', 'spreadsheet_template',
+    'sheet_template', 'presentation_template', 'slide_template',
+    'image_generation_template', 'image_template',
+  ]) {
+    const item = toCatalogItem({
+      id: 'tpl_example', app_id: 'design-canvas', resource_kind: kind,
+      category: 'creative', title: 'Example', payload_bucket_id: 'r2_platform_theme_store',
+      payload_r2_key: 'templates/example.json', specs_json: '{}',
+    });
+    assert.equal(item.tab, 'templates', kind);
+  }
+});
+
 test('payload slug and preview url come from the row', () => {
   assert.equal(payloadSlug('studio-templates/cad-creator/platform/modern_villa/v1/project.json'), 'modern_villa');
   const item = toCatalogItem({ id: 'tpl_x', app_id: 'samsketch', resource_kind: 'source_part', category: 'p', title: 'T', preview_bucket_id: 'r2_cad', preview_r2_key: 'k.webp', specs_json: 'not json' });
@@ -143,4 +158,44 @@ test('OAuth catalog payloads honor recorded access mode and never use an ambient
   });
   assert.equal(denied.status, 403);
   assert.equal((await handleWorkCadCatalogRequest(request, env)).status, 401);
+});
+
+test('creative template payloads in theme-store use the connected Cloudflare OAuth R2 reader', async () => {
+  const accountId = 'a'.repeat(32);
+  const owner = 'owner_platform_templates';
+  let requestedUrl = '', authorization = '';
+  const env = {
+    DB: { prepare: () => ({ bind: () => ({ first: async () => ({
+      resource_kind: 'page_template',
+      payload_r2_key: 'templates/creative/design-canvas/pages/to-do-list/v1/page.json',
+      payload_binding_name: null,
+      payload_bucket_name: 'theme-store',
+      payload_access_mode: 'oauth_api',
+      payload_connection_user_id: owner,
+      payload_account: accountId,
+      payload_ownership: 'platform',
+      payload_owner: 'platform',
+    }) }) }) },
+  };
+  const options = {
+    listConnections: async (_env, requestedOwner) => {
+      assert.equal(requestedOwner, owner);
+      return [{ status: 'connected', cloudflareAccountId: accountId }];
+    },
+    resolveCredential: async ({ ownerId, explicitAccountId }) => {
+      assert.equal(ownerId, owner);
+      assert.equal(explicitAccountId, accountId);
+      return { status: 'ready', bearerToken: 'oauth-test-token', accountId, grantedScopes: ['workers-r2-bucket-item.read'] };
+    },
+    fetchImpl: async (url, init) => {
+      requestedUrl = String(url);
+      authorization = init.headers.authorization;
+      return new Response('{"type":"page","data":{"title":"To-do List","blocks":[]}}', { status: 200, headers: { 'content-type': 'application/json' } });
+    },
+  };
+  const response = await handleWorkCadCatalogRequest(new Request('https://x/api/work/cad/catalog/tpl_page_todo/payload'), env, owner, options);
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /To-do List/);
+  assert.equal(authorization, 'Bearer oauth-test-token');
+  assert.equal(requestedUrl, 'https://api.cloudflare.com/client/v4/accounts/' + accountId + '/r2/buckets/theme-store/objects/templates/creative/design-canvas/pages/to-do-list/v1/page.json');
 });

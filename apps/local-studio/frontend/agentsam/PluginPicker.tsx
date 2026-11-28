@@ -1,6 +1,7 @@
 import { IconAction } from "@/components/ui/icon-action";
+import { AddKeyModal } from "@/components/settings/AddKeyModal";
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Box, Check, Database, FileCode, Film, Folder, Globe, ImagePlus, Layers, Plug, Plus, Search, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
+import { Bot, Box, Check, ChevronRight, Command as CommandIcon, Database, FileCode, Film, Folder, FolderOpen, Globe, ImagePlus, KeyRound, Layers, Library, PanelsTopLeft, Plug, Plus, Search, Settings2, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
 import type { AgentRunMode } from '@inneranimalmedia/agentsam-contracts';
 import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
@@ -9,13 +10,17 @@ import { useWorkStore } from '@/lib/work/store';
 import { openBrowserSideStage } from '@/lib/work/open-browser-side-stage';
 import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
 import { resolveComposerPopoverLayout } from './composer-popover-layout';
+import { COMMANDS, runCommand } from '@/lib/commands/native-commands';
+import { toast } from 'sonner';
+import { announceModelInventoryChanged } from '@/lib/work/model-inventory';
 
 /** A single compact capability/context picker for both + and typed @. */
-function PlusMenuRow({ icon, title, hint, onClick, meta, desktopOnly = false }: { icon: ReactNode; title: string; hint: string; onClick: () => void; meta?: string; desktopOnly?: boolean }) {
+function PlusMenuRow({ icon, title, hint, onClick, meta, desktopOnly = false, chevron = false }: { icon: ReactNode; title: string; hint: string; onClick: () => void; meta?: string; desktopOnly?: boolean; chevron?: boolean }) {
   return <button type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" data-desktop-only={desktopOnly || undefined} onClick={onClick}>
     <span className="agentsam-plus-action-icon">{icon}</span>
     <span className="agentsam-plugin-row-copy"><strong>{title}</strong><small>{hint}</small></span>
     {meta ? <small className="agentsam-plugin-row-meta">{meta}</small> : null}
+    {chevron ? <ChevronRight className="agentsam-plugin-row-chevron" size={16} aria-hidden="true"/> : null}
   </button>;
 }
 
@@ -49,19 +54,21 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
   const [cursor,setCursor] = useState(value.length);
   const [active,setActive] = useState(0);
   const [revision,setRevision] = useState(0);
-  const [section,setSection] = useState<'root'|'mention'|'skills'|'modes'|'browser-tabs'>('root');
+  const [section,setSection] = useState<'root'|'mention'|'skills'|'modes'|'browser-tabs'|'commands'|'credentials'>('root');
   const [placement,setPlacement] = useState<'above'|'below'>('above');
   const [menuMaxHeight,setMenuMaxHeight] = useState(0);
   const [browserTabs,setBrowserTabs] = useState<Array<{id:string;title:string;url:string}>>([]);
   const [query,setQuery] = useState('');
   const [mentionFromComposer,setMentionFromComposer] = useState(false);
+  const [commandFromComposer,setCommandFromComposer] = useState(false);
+  const [addProviderSecretOpen,setAddProviderSecretOpen] = useState(false);
   const [skills,setSkills] = useState<Array<{id:string;name:string;trigger:string;description?:string}>>([]);
   const [skillsError,setSkillsError] = useState('');
   const [skillsLoading,setSkillsLoading] = useState(false);
   useEffect(() => {
     const openForChat = (event: Event) => {
       if (!targetChatId || (event as CustomEvent).detail?.chatId !== targetChatId) return;
-      setOpen(true); setMentionFromComposer(false); setSection('mention'); setQuery(''); setActive(0); setRevision(n=>n+1);
+      setOpen(true); setMentionFromComposer(false); setCommandFromComposer(false); setSection('mention'); setQuery(''); setActive(0); setRevision(n=>n+1);
     };
     window.addEventListener('agentsam:conversation-plugins', openForChat);
     return () => window.removeEventListener('agentsam:conversation-plugins', openForChat);
@@ -78,8 +85,11 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
     return () => controller.abort();
   }, [open,section,revision]);
   const match=mentionFromComposer ? value.slice(0,cursor).match(/(?:^|\s)@([\w-]*)$/) : null;
+  const commandMatch=commandFromComposer ? value.slice(0,cursor).match(/(?:^|\s)\/([\w-]*)$/) : null;
   const filtered=filterComposerCatalog(entries,match ? match[1] : query);
   const shown=filtered.slice(0,60);
+  const commandQuery=(commandMatch?.[1] ?? query).toLowerCase();
+  const shownCommands=COMMANDS.filter(command=>command.palette && (command.title+' '+command.group+' '+command.id).toLowerCase().includes(commandQuery)).slice(0,60);
 
   useEffect(() => {
     let cancelled=false;
@@ -195,6 +205,23 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
     }
     setOpen(false);
   }
+  function chooseCommand(command: (typeof COMMANDS)[number]) {
+    const start=commandMatch ? cursor-commandMatch[1].length-1 : cursor;
+    const end=commandMatch ? cursor : cursor;
+    if(commandMatch) onChange(value.slice(0,start)+value.slice(end));
+    setOpen(false);
+    setCommandFromComposer(false);
+    requestAnimationFrame(()=>{
+      if(commandMatch) {
+        const textarea=root.current?.querySelector('textarea');
+        textarea?.focus();
+        textarea?.setSelectionRange(start,start);
+      }
+      void runCommand(command.id).then(result=>{
+        if(result==='unhandled') toast.error(command.title+' is not available in this session.');
+      }).catch(error=>toast.error(error instanceof Error?error.message:'The command could not run.'));
+    });
+  }
   function safeBrowserTabUrl(raw: string): string | null {
     try {
       const url = new URL(raw);
@@ -223,7 +250,13 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
   }
   function onKeyDown(event:KeyboardEvent<HTMLTextAreaElement>) {
     if(!open)return;
-    if(section==='root'||section==='skills'||section==='modes') { if(event.key==='Escape'){event.preventDefault();setOpen(false);} return; }
+    if(section==='root'||section==='skills'||section==='modes'||section==='credentials') { if(event.key==='Escape'){event.preventDefault();setOpen(false);} return; }
+    if(section==='commands') {
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}
+      else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setActive(index=>Math.max(0,Math.min(shownCommands.length-1,index+(event.key==='ArrowDown'?1:-1))));}
+      else if(event.key==='Enter'&&shownCommands[active]){event.preventDefault();event.stopPropagation();chooseCommand(shownCommands[active]);}
+      return;
+    }
     if(section==='browser-tabs') {
       if(event.key==='Escape') { event.preventDefault(); event.stopPropagation(); setOpen(false); }
       else if(event.key==='ArrowDown'||event.key==='ArrowUp') {
@@ -263,41 +296,48 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
       trigger:<IconAction type="button" className="as-nav-button" label="Add tools and plugins" hint="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setMentionFromComposer(false);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></IconAction>,
+        onClick={()=>{setOpen(!open);setMentionFromComposer(false);setCommandFromComposer(false);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></IconAction>,
       onKeyDown,
-      openPlugins:()=>{setOpen(true);setMentionFromComposer(false);setSection('mention');setQuery('');setActive(0);setRevision(n=>n+1);},
+      openPlugins:()=>{setOpen(true);setMentionFromComposer(false);setCommandFromComposer(false);setSection('mention');setQuery('');setActive(0);setRevision(n=>n+1);},
       onSelect:(position)=>{
         setCursor(position);
         setActive(0);
         const textarea=root.current?.querySelector('textarea');
-        const typingMention=Boolean(textarea?.value.slice(0,position).match(/(?:^|\s)@([\w-]*)$/));
+        const before=textarea?.value.slice(0,position) ?? value.slice(0,position);
+        const typingMention=Boolean(before.match(/(?:^|\s)@([\w-]*)$/));
+        const typingCommand=!typingMention&&Boolean(before.match(/(?:^|\s)\/([\w-]*)$/));
         if(typingMention&&!open)setRevision(n=>n+1);
         setMentionFromComposer(typingMention);
+        setCommandFromComposer(typingCommand);
         if(typingMention)setSection('mention');
-        setOpen(typingMention);
+        else if(typingCommand)setSection('commands');
+        setOpen(typingMention||typingCommand);
       },
     })}
-    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} data-typed-mention={Boolean(match)} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
+    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} data-typed-mention={Boolean(match)} data-typed-command={Boolean(commandMatch)} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
       {section!=='root'&&<div className="agentsam-plugin-heading">
-        {!(section==='mention' && match) && <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setActive(0);}}>Back</button>}
-        <strong>{section==='skills'?'Skills':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Plugins and tools'}</strong>
+        {!(section==='mention' && match) && !(section==='commands' && commandMatch) && <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setMentionFromComposer(false);setCommandFromComposer(false);setActive(0);}}>Back</button>}
+        <strong>{section==='skills'?'Skills':section==='commands'?'Slash commands':section==='credentials'?'Keys & secrets':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Plugins and tools'}</strong>
         <IconAction type="button" className="as-nav-button" label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></IconAction>
       </div>}
       {section==='root' ? <div className="agentsam-plugin-sections agentsam-plugin-root-list" data-work-plus-menu="">
         {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
-        {onLibrary&&<PlusMenuRow icon={<Folder size={17}/>} title="Add from Library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
+        {onLibrary&&<PlusMenuRow icon={<Library size={17}/>} title="Add from Library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
         {onImage&&<PlusMenuRow icon={<ImagePlus size={17}/>} title="Create image" hint="Visualize anything" onClick={()=>{setOpen(false);onImage();}}/>}
-        <PlusMenuRow icon={<Globe size={17}/>} desktopOnly title="Add browser tabs" hint="Use open browser tabs" onClick={openBrowserTabPicker}/>
-        {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Find current information" onClick={()=>{setOpen(false);onWebSearch();}}/>}
-        {onProject&&<PlusMenuRow icon={<Folder size={17}/>} title="Work in a project" hint="Start or continue work in a project" onClick={()=>{setOpen(false);onProject();}}/>}
+        <PlusMenuRow icon={<PanelsTopLeft size={17}/>} desktopOnly title="Add browser tabs" hint="Use open browser tabs" onClick={openBrowserTabPicker}/>
+        {onWebSearch&&<PlusMenuRow icon={<Search size={17}/>} title="Web search" hint="Find current information" onClick={()=>{setOpen(false);onWebSearch();}}/>}
+        {onProject&&<PlusMenuRow icon={<FolderOpen size={17}/>} title="Work in a project" hint="Start or continue work in a project" onClick={()=>{setOpen(false);onProject();}}/>}
         <div className="agentsam-plugin-section-divider" />
-        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins" hint="Search installed tools and connected services"
-          onClick={()=>{setMentionFromComposer(false);setSection('mention');setQuery('');setActive(0);}}/>
+        <PlusMenuRow icon={<CommandIcon size={17}/>} title="Slash commands" hint="Search actions and commands" chevron onClick={()=>{setCommandFromComposer(false);setMentionFromComposer(false);setSection('commands');setQuery('');setActive(0);}}/>
+        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins" hint="Search installed tools and connected services" chevron
+          onClick={()=>{setMentionFromComposer(false);setCommandFromComposer(false);setSection('mention');setQuery('');setActive(0);}}/>
         <div className="agentsam-plugin-section-divider" />
         {onModeChange&&<PlusMenuRow icon={<Bot size={17}/>} title={`Mode · ${(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}`}
-          hint="Agent, Ask, Plan, Debug or Multitask" onClick={()=>setSection('modes')}/>}
-        <PlusMenuRow icon={<Sparkles size={17}/>} title="Skills" hint="Private instructions and knowledge" onClick={()=>setSection('skills')}/>
-        <PlusMenuRow icon={<Plug size={17}/>} title="Manage plugins" hint="Install, enable and connect plugins"
+          hint="Agent, Ask, Plan, Debug or Multitask" chevron onClick={()=>setSection('modes')}/>}
+        <PlusMenuRow icon={<Sparkles size={17}/>} title="Skills" hint="Private instructions and knowledge" chevron onClick={()=>setSection('skills')}/>
+        <PlusMenuRow icon={<KeyRound size={17}/>} title="Keys & secrets" hint="Use saved provider credentials" chevron
+          onClick={()=>{setMentionFromComposer(false);setCommandFromComposer(false);setSection('credentials');setQuery('');setActive(0);}}/>
+        <PlusMenuRow icon={<Settings2 size={17}/>} title="Manage plugins" hint="Install, enable and connect plugins"
           onClick={()=>{setOpen(false);window.dispatchEvent(new CustomEvent('agentsam:navigate',{detail:{to:'/admin/settings/customize?view=plugins'}}));}}/>
       </div> : section==='modes' ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
         {([['agent','Execute and open surfaces'],['plan','Design technical plans'],['debug','Inspect, prove and fix'],['multitask','Coordinate managed workflows'],['ask','Answer questions']] as const).map(([mode,description])=><button key={mode} type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" aria-pressed={activeMode===mode} onClick={()=>{onModeChange?.(mode);setOpen(false);}}><Bot size={16}/><span className="agentsam-plugin-row-copy"><strong>{mode[0].toUpperCase()+mode.slice(1)}</strong><small>{description}</small></span>{activeMode===mode?<Check size={16}/>:null}</button>)}
@@ -309,22 +349,42 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
           <PlusMenuRow icon={<Globe size={17}/>} title="Open Browser" hint="Open a browser workspace" onClick={()=>{setOpen(false);openBrowserSideStage();}}/>
         </>}
       </div> : <>
-        {!(section==='mention' && match) && <input type="search" aria-label={'Search '+section} placeholder={section==='mention'?'Search plugins and tools…':'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search" onKeyDown={event=>{
-          if(event.key==='Escape'){event.preventDefault();setOpen(false);}
-          if(section==='mention'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
-            event.preventDefault();setActive(index=>Math.max(0,Math.min(shown.length-1,index+(event.key==='ArrowDown'?1:-1))));
-          }
-          if(section==='mention'&&event.key==='Enter'&&shown[active]){
-            event.preventDefault();choose(shown[active]);
-          }
-        }}/>}
-        {section==='skills' ? <>
+        {section!=='credentials' && !(section==='mention' && match) && !(section==='commands' && commandMatch) && <div className="agentsam-plugin-search-wrap">
+          <Search size={16} aria-hidden="true"/>
+          <input type="search" aria-label={'Search '+section} placeholder={section==='mention'?'Search plugins and tools…':section==='commands'?'Search commands…':'Search '+section+'…'} value={query} autoFocus onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search" onKeyDown={event=>{
+            if(event.key==='Escape'){event.preventDefault();setOpen(false);}
+            if(section==='mention'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
+              event.preventDefault();setActive(index=>Math.max(0,Math.min(shown.length-1,index+(event.key==='ArrowDown'?1:-1))));
+            }
+            if(section==='mention'&&event.key==='Enter'&&shown[active]){
+              event.preventDefault();choose(shown[active]);
+            }
+            if(section==='commands'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
+              event.preventDefault();setActive(index=>Math.max(0,Math.min(shownCommands.length-1,index+(event.key==='ArrowDown'?1:-1))));
+            }
+            if(section==='commands'&&event.key==='Enter'&&shownCommands[active]){
+              event.preventDefault();chooseCommand(shownCommands[active]);
+            }
+          }}/>
+        </div>}
+        {section==='credentials' ? <div className="agentsam-plugin-results" aria-label="Account vault actions">
+          <PlusMenuRow icon={<Plus size={17}/>} title="Add provider secret" hint="Save a BYOK credential to your account vault" onClick={()=>{setOpen(false);setAddProviderSecretOpen(true);}}/>
+          <PlusMenuRow icon={<KeyRound size={17}/>} title="Manage provider secrets" hint="Review and manage saved provider credentials" onClick={()=>{setOpen(false);window.dispatchEvent(new CustomEvent('agentsam:navigate',{detail:{to:'/admin/settings/keys?view=secrets'}}));}}/>
+          <PlusMenuRow icon={<ShieldCheck size={17}/>} title="Manage AgentSam keys" hint="CLI, SDK and machine credentials" onClick={()=>{setOpen(false);window.dispatchEvent(new CustomEvent('agentsam:navigate',{detail:{to:'/admin/settings/keys'}}));}}/>
+        </div> : section==='commands' ? <div className="agentsam-plugin-results" role="listbox" aria-label="Slash commands">
+          {!shownCommands.length&&<p className="agentsam-plugin-notice">No matching commands.</p>}
+          {shownCommands.map((command,index)=><button type="button" key={command.id} role="option" aria-selected={index===active} data-active={index===active} className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>chooseCommand(command)}>
+            <span className="agentsam-plus-action-icon"><CommandIcon size={17}/></span>
+            <span className="agentsam-plugin-row-copy"><strong>{command.title}</strong><small>{command.id}</small></span>
+            <small className="agentsam-plugin-row-meta">{command.group}</small>
+          </button>)}
+        </div> : section==='skills' ? <div className="agentsam-plugin-results" role="listbox" aria-label="Your skills">
           {skillsLoading&&<p role="status" className="agentsam-plugin-notice">Loading your skills…</p>}
           {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
           {!skillsLoading&&!skillsError&&!skills.length&&<p className="agentsam-plugin-notice">No private skills yet. Create one in Settings.</p>}
           {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} aria-label={skill.name} className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="agentsam-plugin-row-copy">{skill.name}<small>{skill.description||skill.trigger}</small></span></button>)}
           <a className="agentsam-plugin-row agentsam-plugin-row--compact" href="/admin/settings/skills"><Wrench size={17}/><span className="agentsam-plugin-row-copy"><strong>Manage skills</strong></span></a>
-        </> : <>
+        </div> : <>
           <div className="agentsam-plugin-results" role="listbox" aria-label="Available plugins and tools">
             {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
             {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}
@@ -333,10 +393,16 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
               {rowIcon(entry)}<span className="agentsam-plugin-row-copy"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
               {<small className="agentsam-plugin-row-meta">{!entry.ready?(entry.status==='enable'?'Enable':entry.status==='reconnect'?'Reconnect':'Set up'):({plugin:'Plugin',connection:'Connection',mcp:'MCP',widget:'App',skill:'Skill',agent:'Agent',command:'Command'} as const)[entry.kind]}</small>}
             </button>)}
+            <div className="agentsam-plugin-section-divider" />
+            <button type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>{setOpen(false);window.dispatchEvent(new CustomEvent('agentsam:navigate',{detail:{to:'/admin/settings/keys?view=secrets'}}));}}>
+              <KeyRound size={17}/><span className="agentsam-plugin-row-copy"><strong>Manage keys &amp; secrets</strong><small>Open your account vault</small></span><ChevronRight size={15}/>
+            </button>
           </div>
         </>}
       </>}
     </div>}
+    <AddKeyModal open={addProviderSecretOpen} onOpenChange={setAddProviderSecretOpen}
+      onSaved={announceModelInventoryChanged} />
 
   </div>;
 }

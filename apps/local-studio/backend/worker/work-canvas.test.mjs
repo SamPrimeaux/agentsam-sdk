@@ -167,3 +167,28 @@ test('cancellation during R2 write atomically prevents publishing the new revisi
  assert.equal((await readCanvas(h.env,'owner_a',id)).canvas.revision,1);
  assert.equal(h.objects.size,1);
 });
+
+
+test('Page, Document and Spreadsheet artifacts persist through the shared creative Canvas lifecycle',async t=>{
+ const h=canvasStorageFixture();t.after(h.close);
+ const artifacts=[
+  {id:'canvas_page-aaaaaaaaaaaa',type:'page',name:'To-do List',workspace:'page',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),data:{title:'To-do List',subtitle:'A living task list',blocks:[{id:'pageblock_aaaaaaaa',type:'task_list',title:'To do',items:[{id:'task_aaaaaaaa',text:'Review the template',checked:false}]}]}},
+  {id:'canvas_document-bbbbbbbbbbbb',type:'document',name:'Project Brief',workspace:'document',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),data:{title:'Project Brief',subtitle:'Working brief',blocks:[{id:'docblock_bbbbbbbb',type:'heading',text:'Overview'},{id:'docblock_bbbbbbbc',type:'paragraph',text:'Describe the project.'}]}},
+  {id:'canvas_spreadsheet-cccccccccccc',type:'spreadsheet',name:'Project Tracker',workspace:'spreadsheet',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),data:{activeSheetId:'sheet_cccccccc',sheets:[{id:'sheet_cccccccc',name:'Tracker',columns:[{id:'column_cccccccc',label:'Task',type:'text'}],rows:[{id:'row_cccccccc',cells:{column_cccccccc:'Review the template'}}]}]}}
+ ];
+ for(const artifact of artifacts){
+  const document={...blankCanvasDocument(),name:artifact.name,host:artifact.type,creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact}};
+  const response=await call(h,'POST','',{id:artifact.id,document});
+  assert.equal(response.status,201,artifact.type);
+  const payload=await response.json();
+  assert.equal(payload.canvas.creativeType,artifact.type);
+  const reopened=await call(h,'GET','/'+artifact.id);
+  assert.equal(reopened.status,200);
+  assert.deepEqual((await reopened.json()).document.creativeWorkspace.artifact,artifact);
+ }
+ const list=await (await call(h,'GET','?workspace=creative')).json();
+ assert.deepEqual(new Set(list.canvases.map(item=>item.id)),new Set(artifacts.map(item=>item.id)));
+ const page=artifacts[0];
+ const invalid={...blankCanvasDocument(),name:page.name,host:'page',creativeWorkspace:{schema:'agentsam.creative-workspace.v1',artifact:{...page,data:{...page.data,blocks:[{id:'pageblock_bad',type:'task_list',title:'To do',items:[{id:'task_bad',text:'Bad item',checked:'no'}]}]}}}};
+ assert.equal(validateCanvasDocument(invalid),false);
+});
