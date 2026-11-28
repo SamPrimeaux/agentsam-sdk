@@ -25,7 +25,16 @@ if(write) {
   }
 } else if(check) {
   for(const [name,content] of Object.entries(files)){
-    if(!fs.existsSync(path.join(root,name)) || fs.readFileSync(path.join(root,name),'utf8')!==content) {
+    const target=path.join(root,name);
+    const actual=fs.existsSync(target)?fs.readFileSync(target,'utf8'):'';
+    if(actual!==content) {
+      let offset=0;
+      while(offset<actual.length && offset<content.length && actual[offset]===content[offset]) offset++;
+      const start=Math.max(0,offset-96),end=offset+160;
+      console.error('[universal-registry] drift detail '+JSON.stringify({
+        file:name,offset,actualLength:actual.length,generatedLength:content.length,
+        committed:actual.slice(start,end),generated:content.slice(start,end),
+      }));
       throw new Error('universal_registry_generated_artifact_drift:'+name);
     }
   }
