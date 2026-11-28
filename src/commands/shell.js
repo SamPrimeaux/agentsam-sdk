@@ -29,7 +29,7 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { createMcpD1Bridge } from '../capabilities/mcp-d1-bridge.js';
-import { createPrimeTechProcedureHandler, createProcedureCatalog } from '../../packages/primetech-procedures/src/index.js';
+import { createPrimeTechProcedureHandler, createProcedureCatalog } from '@inneranimalmedia/primetech-procedures';
 import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
