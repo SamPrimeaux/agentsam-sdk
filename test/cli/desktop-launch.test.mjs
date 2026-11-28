@@ -68,15 +68,19 @@ test('workspace handoff creation prunes expired unredeemed token files', () => {
   assert.equal(fs.existsSync(next.filePath), true);
 });
 
-test('findDesktopApp ignores backups/installers and prefers /Applications', () => {
+test('findDesktopApp prefers canonical installs and ignores versioned/build/backup copies', () => {
+  const versioned = '/Users/u/Applications/AgentSam Local Studio 2.6.18.app';
   const out = [
-    '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio-pre.app',
+    '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio.app',
     '/Users/u/iam-workspaces/x/installers/AgentSam Local Studio.app',
+    versioned,
+    '/Users/u/worktrees/sdk/packages/agentsam-desktop-shell/target/release/bundle/macos/AgentSam Local Studio.app',
     '/Applications/AgentSam Local Studio.app',
   ].join('\n');
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => out, exists: () => false }), '/Applications/AgentSam Local Studio.app');
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => out.split('\n').slice(0, 2).join('\n'), exists: () => false }), null);
-  assert.equal(findDesktopApp({ platform: 'darwin', exec: () => { throw new Error('no spotlight'); }, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => out, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => [versioned, '/Users/u/Library/Application Support/com.inneranimalmedia.local-studio/backups/AgentSam Local Studio.app'].join('\n'), exists: () => false }), null);
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => '/Users/u/Tools/AgentSam Local Studio.app', exists: (p) => p === '/Users/u/Tools/AgentSam Local Studio.app' }), '/Users/u/Tools/AgentSam Local Studio.app');
+  assert.equal(findDesktopApp({ platform: 'darwin', home: '/Users/u', exec: () => { throw new Error('no spotlight'); }, exists: (p) => p === '/Applications/AgentSam Local Studio.app' }), '/Applications/AgentSam Local Studio.app');
   assert.equal(findDesktopApp({ platform: 'linux' }), null);
 });
 

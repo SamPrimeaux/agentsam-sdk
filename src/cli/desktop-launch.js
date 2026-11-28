@@ -97,7 +97,7 @@ export function buildOpenUrl(token) {
   return `${DESKTOP_URL_SCHEME}://open?handoff=${token}`;
 }
 
-const IGNORED_APP_PATH = /\/(backups|installers|\.Trash|Trash)\//i;
+const IGNORED_APP_PATH = /\/(backups|installers|\.Trash|Trash|target|node_modules|agent-worktrees|worktrees)\//i;
 
 export function findDesktopApp({
   platform = process.platform,
@@ -106,15 +106,18 @@ export function findDesktopApp({
   exists = fs.existsSync,
 } = {}) {
   if (platform !== 'darwin') return null;
+  // Prefer the canonical install locations even when Spotlight has not indexed
+  // a newly copied app yet. Never launch version-stamped test copies.
   const preferred = ['/Applications', path.join(home, 'Applications')].map((d) => path.join(d, APP_NAME));
+  for (const candidate of preferred) if (exists(candidate)) return candidate;
+
   let found = [];
   try {
     const out = String(exec('mdfind', [`kMDItemCFBundleIdentifier == '${DESKTOP_BUNDLE_ID}'`], { encoding: 'utf8', timeout: 5000 }));
-    found = out.split('\n').map((s) => s.trim()).filter((p) => p.endsWith('.app') && !IGNORED_APP_PATH.test(p));
-  } catch { /* Spotlight disabled or unavailable: fall back to standard locations */ }
-  for (const p of preferred) if (found.includes(p)) return p;
-  if (found.length) return found[0];
-  return preferred.find((p) => exists(p)) || null;
+    found = out.split('\n').map((s) => s.trim()).filter((candidate) =>
+      path.basename(candidate) === APP_NAME && !IGNORED_APP_PATH.test(candidate) && exists(candidate));
+  } catch { /* Spotlight disabled or unavailable: canonical locations were already checked. */ }
+  return found[0] || null;
 }
 
 export function launchDesktop({
