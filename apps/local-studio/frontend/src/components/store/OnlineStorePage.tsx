@@ -424,7 +424,7 @@ export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;vi
 
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-3 pt-4 pb-28 sm:gap-8 sm:px-6 sm:py-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-3 pt-4 pb-4 sm:gap-8 sm:px-6 sm:py-8">
       <header className="flex min-h-12 items-center justify-between gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild><button className="flex min-w-0 items-center gap-1 text-left" type="button" aria-label="Online Store destinations"><h1 className="truncate text-[30px] font-semibold tracking-tight">{themesView?'Themes':'Online Store'}</h1><span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted"><ChevronDown className="size-4"/></span></button></DropdownMenuTrigger>

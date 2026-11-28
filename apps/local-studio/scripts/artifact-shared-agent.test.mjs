@@ -25,7 +25,7 @@ test('native Data creation stays in Side Stage and shares the existing conversat
 test('phone shell reserves a dock band only when a dock is mounted', () => {
   const css = source('frontend/agentsam/shell.css');
   assert.match(css, /\.agentsam-shell \.agentsam-main\s*\{\s*padding-bottom: env\(safe-area-inset-bottom, 0px\);/);
-  assert.match(css, /\.agentsam-shell \.agentsam-main:has\(\.as-nav-launch-dock\)\s*\{\s*padding-bottom: calc\(77px \+ env\(safe-area-inset-bottom, 0px\)\);/);
+  assert.match(css, /\.agentsam-shell \.agentsam-main:has\(\.as-nav-launch-dock\)\s*\{\s*padding-bottom: calc\(62px \+ max\(9px, env\(safe-area-inset-bottom, 0px\)\)\);/);
 });
 
 test('Slides creation opens the existing creative editor and retains the active conversation', () => {
@@ -82,4 +82,17 @@ test('artifact layouts use one filter state, and Slides use the existing lead co
   assert.ok(composer.includes('Ask about these slides'));
   assert.ok(composer.includes("'artifact:slides:' + artifactContext.id"));
   assert.ok(composer.includes('setPendingAnnotations(targetId'));
+});
+
+test('phone geometry shares a compact header and accounts for the safe area once', () => {
+  const shell = source('frontend/agentsam/shell.css');
+  const host = source('frontend/agentsam/shared-nav-host.css');
+  const store = source('frontend/src/components/store/OnlineStorePage.tsx');
+  assert.match(shell, /\.platform-console-topbar:has\(\.agentsam-mobile-companion-identity\)\s*\{\s*height:56px; min-height:56px;/);
+  assert.match(host, /--c-topbar-h:calc\(56px \+ env\(safe-area-inset-top,0px\)\)/);
+  assert.match(host, /data-mobile-header-state="start"\]\) \.console-topbar-center\s*\{\s*top:calc\(50% \+ env\(safe-area-inset-top,0px\) \/ 2\)!important/);
+  assert.match(host, /agentsam-native-store-route \.console-body\s*\{\s*box-sizing:border-box; padding-top:env\(safe-area-inset-top,0px\)/);
+  assert.match(host, /\/\* A zero transform still creates a containing block for fixed docks\. \*\/\s*transform: none;/);
+  assert.match(shell, /aria-label="Merchant navigation"\]\)\s*\{\s*padding-bottom: calc\(66px \+ max\(9px, env\(safe-area-inset-bottom, 0px\)\)\);/);
+  assert.doesNotMatch(store, /gap-6 px-3 pt-4 pb-28/);
 });
