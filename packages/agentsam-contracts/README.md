@@ -111,3 +111,8 @@ IAMScene owns the actual v2 document schema and authoring implementation.
 An app must bind and test the renderer, simulator and inspector before those
 operations can be declared implemented. A file loading successfully or a
 form being rendered is not evidence of an executable tool.
+
+
+## Agent run, spawn and approval contracts
+
+The run contract distinguishes public waiting projections from persisted storage status. `automatic` is the public model-selection vocabulary; the production `selected_by` column records `thompson` as its implementation provenance. Parent/child relationships are persisted through `agentsam_agent_run.parent_run_id`, with orchestration in `agentsam_spawn_job`. Durable approvals are represented by `AgentApprovalV1` and `agentsam_approval_queue`; they are not a parallel suspension record. See the exported `run-spawn.v1`, `approval.v1`, and `approval-decision.v1` JSON Schemas.
