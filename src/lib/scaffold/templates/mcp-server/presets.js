@@ -1,21 +1,20 @@
 export const MCP_SERVER_PRESETS = Object.freeze({
   heuristics: Object.freeze({
     key: 'heuristics',
-    displayName: 'Heuristics MCP',
-    description: 'Machine-first MCP starter with portable OAuth, identity branding, and deterministic diagnostics.',
-    companyName: 'Your Company',
-    companySlug: 'default',
-    homepageUrl: 'https://example.com',
-    audience: 'https://example.com/mcp',
-    issuer: 'https://example.com',
+    displayName: 'MCP Server',
+    description: 'Runnable Streamable HTTP MCP with scoped tools, fail-closed OAuth, and protocol tests.',
+    homepageUrl: '',
+    audience: '',
+    issuer: '',
     authMode: 'oauth',
     scopes: [
       {
         scope: 'mcp:read',
-        label: 'MCP resources',
-        description: 'Read approved MCP resources.',
+        label: 'MCP read access',
+        description: 'Use read-only tools exposed by this MCP server.',
         category: 'mcp',
         sensitivity: 'normal',
+        required: true,
       },
     ],
   }),
@@ -33,7 +32,6 @@ export function listMcpServerPresets() {
     key: preset.key,
     display_name: preset.displayName,
     description: preset.description,
-    company_name: preset.companyName,
     audience: preset.audience,
   }));
 }

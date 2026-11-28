@@ -24,6 +24,13 @@ test('status --help is catalog-backed and does not collect runtime state', async
   assert.match(output, /--json/);
 });
 
+test('MCP command help exposes the server factory and its OAuth configuration', () => {
+  const usage = getCliCommand('mcp')?.usage || [];
+  assert.ok(usage.some((line) => line.includes('agentsam mcp create <name>')));
+  assert.ok(usage.some((line) => line.includes('--issuer <url>') && line.includes('--audience <url>')));
+  assert.ok(usage.some((line) => line.includes('agentsam mcp connect inneranimalmedia')));
+});
+
 test('setup next-actions only reference catalogued top-level commands', () => {
   const commands = setupNextCommands(['google.cloud', 'image.vectorize']);
   assert.ok(commands.includes('agentsam status'));
