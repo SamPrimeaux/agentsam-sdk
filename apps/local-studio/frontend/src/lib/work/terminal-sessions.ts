@@ -8,6 +8,7 @@ export type StudioTerminalSession = {
   instanceId?: string;
   lane: "local" | "remote" | "sandbox";
   cwd?: string;
+  cwdMode?: "machine" | "project";
   ptySlot: number;
   state: "connecting" | "connected" | "exited" | "disconnected" | "error" | "degraded";
   shell?: string;
@@ -35,7 +36,7 @@ type TerminalSessionState = {
   setGridSession(slot: number, id: string): void;
   setSplitView(enabled: boolean): void;
   setSecondarySession(id: string | null): void;
-  createSession(input?: Partial<Pick<StudioTerminalSession, "title" | "cwd" | "connectionId" | "instanceId" | "lane" | "runtimeLabel" | "companionId" | "animationStateId" | "sceneId">>): string;
+  createSession(input?: Partial<Pick<StudioTerminalSession, "title" | "cwd" | "cwdMode" | "connectionId" | "instanceId" | "lane" | "runtimeLabel" | "companionId" | "animationStateId" | "sceneId">>): string;
   closeSession(id: string): void;
   renameSession(id: string, title: string): void;
   duplicateSession(id: string): string;
@@ -122,6 +123,7 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
           instanceId: input.instanceId,
           lane: input.lane || "local",
           cwd: input.cwd,
+          cwdMode: input.cwdMode,
           ptySlot: slot,
           state: "connecting",
           runtimeLabel: input.runtimeLabel || "Resolving runtime",
@@ -164,6 +166,7 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
         const source = get().sessions.find((item) => item.id === id);
         return get().createSession({
           cwd: source?.cwd,
+          cwdMode: source?.cwdMode,
           connectionId: source?.connectionId,
           instanceId: source?.instanceId,
           lane: source?.lane,

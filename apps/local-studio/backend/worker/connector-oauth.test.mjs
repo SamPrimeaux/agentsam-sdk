@@ -3,6 +3,7 @@ import test from "node:test";
 import { oauthAad, sealOauthToken } from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
 import {
   listGitHubConnectionRepositories,
+  resolveGithubConnectorAccess,
   beginConnectorOAuth,
   completeConnectorOAuth,
   connectorForCallback,
@@ -117,6 +118,7 @@ for (const [key, authHost, cb, prefix] of [
     const state = auth.searchParams.get("state");
     assert.ok(state.startsWith(prefix));
     assert.ok(auth.searchParams.get("code_challenge"));
+    if (key === "github") { assert.equal(auth.searchParams.get("client_id"), e.GITHUB_CLIENT_ID); assert.equal(auth.searchParams.has("scope"), false); }
 
     const callback = new Request("https://agentsam.inneranimalmedia.com" + cb + "?code=abc&state=" + state);
     assert.equal(connectorForCallback(callback)?.provider, key);
@@ -177,7 +179,7 @@ test("GitHub repository read uses only the account-bound sealed grant and never 
     assert.match(sql,/account_id\s*=\s*\?/);
     return {bind(...args){lookedUpAccount=args[0];lookedUpUser=args[1];return {async first(){
       if(args[0]!==account||args[1]!=="user23")return null;
-      return {account_identifier:"user23",access_token_encrypted:encoded,expires_at:null};
+      return {account_identifier:"user23",access_token_encrypted:encoded,expires_at:null,metadata_json:JSON.stringify({scope_provenance:"github_installation_permissions"})};
     }};}};
   }};
   const read=async (url, options)=>{
@@ -208,7 +210,7 @@ test("GitHub repository read rejects missing grants and revoked provider respons
   const missing=await listGitHubConnectionRepositories(new Request("https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Anope"),e,"au_missing",async()=>{throw new Error("network should not be called");});
   assert.equal(missing.status,404);
   const encoded=await sealOauthToken(e.VAULT_MASTER_KEY,"test_revoke_token",oauthAad("github","au_one","owner"));
-  e.DB={prepare(sql){return {bind(){return {async first(){return {account_identifier:"owner",access_token_encrypted:encoded,expires_at:null};}};}};}};
+  e.DB={prepare(sql){return {bind(){return {async first(){return {account_identifier:"owner",access_token_encrypted:encoded,expires_at:null,metadata_json:JSON.stringify({scope_provenance:"github_installation_permissions"})};}};}};}};
   const revoked=await listGitHubConnectionRepositories(new Request("https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Aowner"),e,"au_one",async()=>Response.json({message:"Requires reauthorization"},{status:401}));
   assert.equal(revoked.status,403);
   assert.equal((await revoked.json()).error,"github_repository_access_denied");
@@ -226,7 +228,7 @@ test("expired GitHub App user token refreshes before the account-scoped reposito
     async first(){
       assert.match(sql,/account_id=\?/);
       assert.deepEqual(args,[owner,account]);
-      return {account_identifier:account,access_token_encrypted:oldAccess,refresh_token_encrypted:refresh,expires_at:oldExpiry};
+      return {account_identifier:account,access_token_encrypted:oldAccess,refresh_token_encrypted:refresh,expires_at:oldExpiry,metadata_json:JSON.stringify({scope_provenance:"github_installation_permissions"})};
     },
     async run(){
       events.push({sql,args});
@@ -249,14 +251,14 @@ test("expired GitHub App user token refreshes before the account-scoped reposito
   assert.equal(response.status,200);
   const json=await response.json();
   assert.equal(json.repositories[0].fullName,"ExampleOwner/repo");
-  assert.equal(events.length,1,"refreshed token persisted to account row");
+  assert.equal(events.length,2,"refresh lease and rotated token persisted to account row");
   assert.ok(!JSON.stringify(json).includes("fresh-access"),"no secret returned to browser");
 });
 
 test("repository transport failure is redacted but distinguishes timeout",async()=>{
   const e=env(),owner="au_timeout",account="ExampleOwner";
   const encrypted=await sealOauthToken(e.VAULT_MASTER_KEY,"existing-account-token",oauthAad("github",owner,account));
-  e.DB={prepare(){return {bind(){return {async first(){return {access_token_encrypted:encrypted,expires_at:null};}};}};}};
+  e.DB={prepare(){return {bind(){return {async first(){return {access_token_encrypted:encrypted,expires_at:null,metadata_json:JSON.stringify({scope_provenance:"github_installation_permissions"})};}};}};}};
   const response=await listGitHubConnectionRepositories(new Request(
     "https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3AExampleOwner"
   ),e,owner,async()=>{const error=new Error("sensitive upstream URL and bearer text");error.name="TimeoutError";throw error;});
@@ -373,4 +375,20 @@ test('OAuth account mismatch cannot inherit unrelated provider permissions',asyn
   }),env(),'au_test','google_drive');
   assert.equal(response.status,503);
   assert.equal((await response.json()).error,'oauth_account_provider_mismatch');
+});
+
+test('GitHub connector rejects a sign-in grant or a different app client', async () => {
+  for (const metadata_json of ['{}', JSON.stringify({scope_provenance:'github_installation_permissions',oauth_client_id:'other-client'})]) {
+    const e=env(); e.DB={prepare(){return {bind(){return {async first(){return {metadata_json,expires_at:null}}}}}}};
+    const result=await resolveGithubConnectorAccess(e,'au_fixture','owner',{fetchImpl:async()=>{throw Error('unexpected provider call')}});
+    assert.deepEqual(result,{ok:false,code:'github_oauth_reconnect_required'});
+  }
+});
+
+test('GitHub refresh lease contention prevents replaying a rotating refresh token',async()=>{
+  const e=env(),aad=oauthAad('github','au_fixture','owner');
+  const row={metadata_json:JSON.stringify({scope_provenance:'github_installation_permissions'}),expires_at:Math.floor(Date.now()/1000)-60,refresh_token_encrypted:await sealOauthToken(e.VAULT_MASTER_KEY,'fixture-refresh',aad)};
+  e.DB={prepare(){return {bind(){return {async first(){return row},async run(){return {meta:{changes:0}}}}}}}};
+  const result=await resolveGithubConnectorAccess(e,'au_fixture','owner',{fetchImpl:async()=>{throw Error('refresh token must not be replayed')}});
+  assert.equal(result.code,'github_oauth_refresh_concurrent_retry');
 });

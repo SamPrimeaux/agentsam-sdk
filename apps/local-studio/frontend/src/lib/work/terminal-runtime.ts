@@ -399,7 +399,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   const browserHost = typeof window !== "undefined" ? window.location.hostname : "";
   const isLoopbackBrowser = ["localhost", "127.0.0.1", "::1"].includes(browserHost);
   const isHostedWeb = !tauriInvoke && !isLoopbackBrowser;
-  const terminalSession = activeTerminalSession();
+  const terminalSession = useTerminalSessionStore.getState().sessions.find(s => s.id === sessionId) ?? activeTerminalSession();
 
   // Terminal authorization is machine/session-scoped. A project grants filesystem
   // access and a preferred cwd; it is not required to open a shell on a paired host.
@@ -566,11 +566,8 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   if (useRealPty && (runtimeBase || hostedConnect?.ws_url)) {
     const base = String(runtimeBase || "").replace(/\/$/, "");
     const wsUrl = hostedConnect?.ws_url || base.replace(/^http/, "ws");
-    const persistedCwd = activeTerminalSession().cwd;
-    let resolvedCwd =
-      hostedConnect?.cwd ||
-      project0?.workspaceRoot ||
-      (persistedCwd && persistedCwd !== "/" ? persistedCwd : "");
+    let resolvedCwd = hostedConnect?.cwd || terminalSession.cwd ||
+      (terminalSession.cwdMode === "machine" ? "" : project0?.workspaceRoot || "");
     if (!resolvedCwd && usingAgentsamd) {
       const nativeContext = await getDesktopWorkspaceContext();
       resolvedCwd = nativeContext?.default_cwd || "";
