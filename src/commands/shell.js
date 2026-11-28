@@ -710,17 +710,17 @@ async function runInteractiveModelTurn(prompt, state) {
     projectRoot: procedureProjectRoot,
     receiptDir: path.join(procedureProjectRoot, '.agentsam', 'receipts'),
     invokeSamOperation: async (operation, input) => {
-      if (!samAdapter.canInvoke(operation)) return { ok: false, error: { code: 'sam_tool_unavailable' } };
-      return samAdapter.invoke(operation, input);
+      if (!samAdapter.canInvokeProcedureOperation?.(operation)) return { ok: false, error: { code: 'sam_tool_unavailable' } };
+      return samAdapter.invokeProcedureOperation(operation, input);
     },
-    isCapabilityAvailable: operation => samAdapter.canInvoke(operation) === true,
+    isCapabilityAvailable: operation => samAdapter.canInvokeProcedureOperation?.(operation) === true,
     invokeNativeTool: async (tool, input) => {
       if (!samAdapter.canInvoke(tool)) return { ok: false, error: { code: 'native_tool_unavailable' } };
       return samAdapter.invoke(tool, input);
     },
     isNativeToolAvailable: tool => samAdapter.canInvoke(tool) === true,
     authorizeProcedure: async request => (await approveToolExecution({
-      capability_id: 'primetech.procedure.run',
+      capability_id: 'workflow.execute',
       input: { id: request.id, version: request.version, input_sha256: request.input_sha256 },
       descriptor: { side_effects: request.effect === 'read' ? 'none' : 'project-write' },
     }, state)) === true,

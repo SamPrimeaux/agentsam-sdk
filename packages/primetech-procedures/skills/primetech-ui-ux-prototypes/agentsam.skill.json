@@ -1,0 +1,64 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-ui-ux-prototypes",
+  "name": "PrimeTech \u00b7 High-fidelity UX flows and demos",
+  "description": "Research, map, implement and verify complete responsive product flows and working demos in the actual application codebase.",
+  "icon": "layout",
+  "slash": {
+    "suggested": "/primetech-ui-ux-prototypes"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "agentsam_excalidraw",
+      "excalidraw_export",
+      "excalidraw_plan_map_create",
+      "agentsam_codebase_retrieve",
+      "agentsam_terminal_local",
+      "browser_navigate",
+      "browser_screenshot",
+      "browser_run_snapshot",
+      "browser_evaluate_script"
+    ],
+    "operations": [
+      "primetech.production-board.manage",
+      "primetech.visuals.compare",
+      "primetech.assets.package"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "design.read",
+      "design.write",
+      "repository.read",
+      "terminal.execute",
+      "browser.navigate",
+      "browser.capture",
+      "browser.execute",
+      "workflow.execute"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "design",
+    "task_types": [
+      "ux_flow",
+      "ui_prototype",
+      "interactive_demo",
+      "product_experience"
+    ],
+    "route_keys": [
+      "primetech_ui_ux_prototypes",
+      "ux_flow",
+      "interactive_demo"
+    ]
+  }
+}

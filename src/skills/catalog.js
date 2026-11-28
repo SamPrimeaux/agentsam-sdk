@@ -3,7 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const skillsRoot = path.resolve(moduleDir, '..', '..', 'skills');
+const repoRoot = path.resolve(moduleDir, '..', '..');
+const skillsRoot = path.join(repoRoot, 'skills');
+const packageSkillRoot = path.join(repoRoot, 'packages', 'primetech-procedures', 'skills');
 const catalogPath = path.join(skillsRoot, 'catalog.json');
 
 function readCatalog() {
@@ -37,10 +39,9 @@ function resolveSkillRecord(idOrAlias) {
 
 function safeSkillPath(relativePath) {
   const resolved = path.resolve(skillsRoot, relativePath);
-  const rootWithSep = `${skillsRoot}${path.sep}`;
-  if (resolved !== skillsRoot && !resolved.startsWith(rootWithSep)) {
-    throw new Error('skill_path_outside_root');
-  }
+  const allowed = [skillsRoot, packageSkillRoot].some((root) =>
+    resolved === root || resolved.startsWith(root + path.sep));
+  if (!allowed) throw new Error('skill_path_outside_root');
   return resolved;
 }
 

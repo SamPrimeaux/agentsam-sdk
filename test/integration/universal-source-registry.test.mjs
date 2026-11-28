@@ -26,7 +26,8 @@ test('one source projection distinguishes npm/pip even when executable and subco
   assert.equal(npm.package_name,'@inneranimalmedia/agentsam-sdk');
   assert.equal(pip.package_name,'agentsam-sdk');
   assert.ok(snapshot.commands.every(c=>c.release_state==='source_only'&&!c.is_active));
-  assert.equal(snapshot.skills.length,39);
+  const skillCatalog=JSON.parse(fs.readFileSync(path.join(root,'skills/catalog.json'),'utf8'));
+  assert.equal(snapshot.skills.length,skillCatalog.skills.length);
   assert.equal(snapshot.workflows.length,0,'a workflow must originate from a verified scoped graph');
   assert.ok(snapshot.tools.length>0);
   assert.ok(snapshot.hooks.every(h=>h.state==='workspace_local_only'&&!h.is_active));

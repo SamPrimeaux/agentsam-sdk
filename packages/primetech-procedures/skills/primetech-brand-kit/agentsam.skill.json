@@ -1,0 +1,64 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-brand-kit",
+  "name": "PrimeTech \u00b7 Brand kit development",
+  "description": "Lead a complete, approval-led brand identity project from a focused brief through concepts, systems, production checks and usable deliverables.",
+  "icon": "palette",
+  "slash": {
+    "suggested": "/primetech-brand-kit"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "imgx_generate_image",
+      "illustration_create",
+      "agentsam_excalidraw",
+      "excalidraw_export",
+      "agentsam_terminal_local",
+      "browser_screenshot",
+      "browser_navigate"
+    ],
+    "operations": [
+      "primetech.production-board.manage",
+      "primetech.icon-family.build",
+      "primetech.typeface.package",
+      "primetech.design-system.package",
+      "primetech.assets.package",
+      "primetech.visuals.compare"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "media.generate",
+      "design.write",
+      "media.export",
+      "workflow.execute",
+      "terminal.execute",
+      "browser.capture",
+      "browser.navigate"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "brand",
+    "task_types": [
+      "brand_identity",
+      "brand_refresh",
+      "brand_kit",
+      "creative_direction"
+    ],
+    "route_keys": [
+      "primetech_brand_kit",
+      "brand_identity",
+      "brand_refresh"
+    ]
+  }
+}

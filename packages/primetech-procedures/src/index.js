@@ -644,3 +644,13 @@ export function createPrimeTechProcedureHandler({
 }
 
 export { DEFAULT_CATALOG_ROOT };
+
+export { buildIconFamily, PRIMETECH_ICON_COLORWAY_IDS, PRIMETECH_ICON_SHAPES, PRIMETECH_ICON_SIZES } from './creative/icon-family.js';
+export { buildTypefacePackage } from './creative/typeface.js';
+export { buildSpriteAtlas } from './creative/sprite-atlas.js';
+export { compareVisuals } from './creative/visual-qa.js';
+export { buildDesignSystemPackage } from './creative/design-system.js';
+export { packageCreativeAssets } from './creative/asset-package.js';
+export { buildEpubPackage } from './creative/ebook.js';
+export { createProductionBoard, getProductionBoard, listProductionBoards, beginGeneration, completeGeneration, failGeneration, resumeProductionBoard, productionBoardContract } from './production-board.js';
+export { loadPrimeTechSkillCatalog, validatePrimeTechSkillPackage, getPrimeTechSkill, PRIMETECH_SKILL_CONTRACT_SECTIONS } from './skills.js';

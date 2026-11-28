@@ -1,0 +1,53 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-type-design",
+  "name": "PrimeTech \u00b7 Custom type and letterform design",
+  "description": "Develop custom lettering and type systems, then turn approved Typeface Studio glyph geometry into verified static font packages.",
+  "icon": "type",
+  "slash": {
+    "suggested": "/primetech-type-design"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "imgx_generate_image",
+      "illustration_create",
+      "agentsam_terminal_local"
+    ],
+    "operations": [
+      "primetech.typeface.package",
+      "primetech.visuals.compare",
+      "primetech.assets.package"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "media.generate",
+      "design.write",
+      "media.export"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "brand",
+    "task_types": [
+      "typeface_design",
+      "letterform_design",
+      "wordmark_typography",
+      "font_production"
+    ],
+    "route_keys": [
+      "primetech_type_design",
+      "typeface_design",
+      "letterform_design"
+    ]
+  }
+}

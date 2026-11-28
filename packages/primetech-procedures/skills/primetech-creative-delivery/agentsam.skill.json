@@ -1,0 +1,57 @@
+{
+  "schema": "agentsam.skill.v1",
+  "package": "@inneranimalmedia/primetech-procedures",
+  "id": "primetech-creative-delivery",
+  "name": "PrimeTech \u00b7 Creative asset packaging and delivery",
+  "description": "Assemble approved creative sources and derivatives into traceable, checksummed delivery packages with explicit formats and handoff status.",
+  "icon": "package",
+  "slash": {
+    "suggested": "/primetech-creative-delivery"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [
+      "agentsam_terminal_local",
+      "moviemode_export",
+      "excalidraw_export"
+    ],
+    "operations": [
+      "primetech.assets.package",
+      "primetech.icon-family.build",
+      "primetech.typeface.package",
+      "primetech.sprite-atlas.build",
+      "primetech.design-system.package",
+      "primetech.ebook.package"
+    ],
+    "capabilities": [
+      "primetech.procedure.run",
+      "media.export",
+      "design.write",
+      "terminal.execute",
+      "design.export"
+    ]
+  },
+  "provenance": {
+    "source": "PrimeTech Creative Production",
+    "status": "authored",
+    "notice": "Original PrimeTech workflow. Tool references are validated against the live AgentSam registry."
+  },
+  "metadata": {
+    "skill_domain": "media",
+    "task_types": [
+      "creative_delivery",
+      "asset_package",
+      "brand_export",
+      "media_handoff"
+    ],
+    "route_keys": [
+      "primetech_creative_delivery",
+      "asset_package",
+      "creative_delivery"
+    ]
+  }
+}
