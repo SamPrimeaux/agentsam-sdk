@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   BarChart3, Check, ChevronDown, Circle, Code2, Copy, Diamond, Download, FileJson,
@@ -161,16 +161,13 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
     role="menu"
     aria-label={label}
     style={{
-      position: 'fixed',
-      left: placement.left,
-      top: placement.top,
-      right: 'auto',
-      bottom: 'auto',
-      minWidth: Math.min(218, placement.maxWidth),
-      maxWidth: placement.maxWidth,
-      maxHeight: placement.maxHeight,
-      visibility: placement.ready ? 'visible' : 'hidden',
-    }}
+      '--dcx-menu-left': `${placement.left}px`,
+      '--dcx-menu-top': `${placement.top}px`,
+      '--dcx-menu-min-width': `${Math.min(218, placement.maxWidth)}px`,
+      '--dcx-menu-max-width': `${placement.maxWidth}px`,
+      '--dcx-menu-max-height': `${placement.maxHeight}px`,
+      '--dcx-menu-visibility': placement.ready ? 'visible' : 'hidden',
+    } as CSSProperties}
     onKeyDown={(event) => {
       const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'));
       const current = items.indexOf(document.activeElement as HTMLButtonElement);

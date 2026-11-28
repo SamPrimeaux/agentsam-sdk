@@ -375,10 +375,10 @@ test('editor dropdowns portal above clipped toolbars while staying inside the em
   assert.match(menus, /useLayoutEffect/);
   assert.match(menus, /createPortal\(popover, document\.body\)/);
   assert.match(menus, /closest\('\.dcx-root'\)/);
-  assert.match(menus, /position: 'fixed'/);
+  assert.match(menus, /'--dcx-menu-left'/);
   assert.match(menus, /menuRef\.current\?\.contains\(target\)/);
   assert.match(css, /\.dcx-root\{[^}]*position:relative;isolation:isolate/);
-  assert.match(css, /\.dcx-menu-popover\{position:fixed;top:0;left:0;z-index:1200/);
+  assert.match(css, /\.dcx-menu-popover\{position:fixed;left:var\(--dcx-menu-left,0px\);top:var\(--dcx-menu-top,0px\);right:auto;bottom:auto;z-index:1200/);
   assert.match(css, /\.dcx-library-nav-backdrop\{position:absolute;z-index:80/);
 });
 

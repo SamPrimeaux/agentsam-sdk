@@ -1140,9 +1140,9 @@ function ArtifactPreview({ artifact }: { artifact: CreativeArtifact }) {
   if (artifact.type === 'system') {
     const system = artifact.data as DesignSystemDocument;
     return <div className="dcx-system-preview-content" aria-hidden="true">
-      <div className="dcx-system-preview-swatches">{system.colors.slice(0, 8).map((item) => <i key={item.id} style={{ background: item.value }} title={item.name}/>)}</div>
+      <div className="dcx-system-preview-swatches">{system.colors.slice(0, 8).map((item) => <i key={item.id} style={{ '--dcx-system-swatch-color': item.value } as CSSProperties} title={item.name}/>)}</div>
       {system.typography.slice(0, 2).map((item) => <div className="dcx-system-preview-type" key={item.id}>
-        <span>{item.role}</span><strong style={{ fontFamily: item.family, fontSize: 'clamp(10px, 1.1vw, 17px)', fontWeight: item.weight }}>{item.family}</strong>
+        <span>{item.role}</span><strong style={{ '--dcx-system-font-family': item.family, '--dcx-system-font-weight': String(item.weight) } as CSSProperties}>{item.family}</strong>
       </div>)}
     </div>;
   }
