@@ -181,9 +181,6 @@ export async function recordAgentRunTimeout(database, {
   const update = database.prepare(updateSql);
   if (owner) await update.bind(code, message, timestamp, timestamp, id, owner).run();
   else await update.bind(code, message, timestamp, timestamp, id).run();
-  await database.prepare(
-    'DELETE FROM agentsam_agent_run_suspension WHERE run_id = ?'
-  ).bind(id).run();
 
   let event = existing;
   let recorded = false;
