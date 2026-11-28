@@ -7,9 +7,9 @@
  *  - Pin the launch to that exact bundle with `open -a <app> [url]`, passed as
  *    an argv array (no shell). LaunchServices starts the app when closed and
  *    delivers the URL to the running instance, so no duplicate windows.
- *  - The project directory is realpath'd, verified to be a directory, then sent
- *    percent-encoded as agentsamstudio://open?path=<abs>. The app must
- *    re-validate it; the CLI never interpolates it into a shell command.
+ *  - A project handoff is written as a short-lived, mode-0600 record in the
+ *    desktop app-data directory. Only its 256-bit one-time token is sent over
+ *    agentsamstudio://open; native redeems and revalidates the path exactly once.
  */
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -55,10 +55,46 @@ export function resolveProjectDir(arg, { cwd = process.cwd(), home = os.homedir(
   return real;
 }
 
-/** `t` makes every launch a distinct URL: the app's deep-link queue drops exact duplicates,
- *  so re-running `agentsam .` (or switching back to a repo) must not look like a repeat. */
-export function buildOpenUrl(realDir, token = randomBytes(6).toString('hex')) {
-  return `${DESKTOP_URL_SCHEME}://open?path=${encodeURIComponent(realDir)}&t=${token}`;
+const HANDOFF_TTL_MS = 60_000;
+const HANDOFF_TOKEN_RE = /^[a-f0-9]{64}$/i;
+
+/** Persist the workspace target outside the URL; the native app atomically redeems this token once. */
+export function writeWorkspaceHandoff(realDir, {
+  home = os.homedir(),
+  fsImpl = fs,
+  token = randomBytes(32).toString('hex'),
+  now = Date.now(),
+} = {}) {
+  if (!HANDOFF_TOKEN_RE.test(token)) {
+    throw new DesktopLaunchError('invalid_handoff_token', 'Invalid desktop workspace handoff token.');
+  }
+  const directory = path.join(home, 'Library', 'Application Support', DESKTOP_BUNDLE_ID, 'handoffs');
+  fsImpl.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const directoryStat = fsImpl.lstatSync(directory);
+  if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) {
+    throw new DesktopLaunchError('invalid_handoff_directory', 'Desktop workspace handoff storage must be a private directory.');
+  }
+  fsImpl.chmodSync(directory, 0o700);
+  // Expired, unredeemed handoffs are harmless, but prune them as the CLI is reused.
+  for (const entry of fsImpl.readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isFile() || !/^[a-f0-9]{64}\.json$/i.test(entry.name)) continue;
+    const stalePath = path.join(directory, entry.name);
+    try {
+      if (fsImpl.statSync(stalePath).mtimeMs < now - HANDOFF_TTL_MS * 2) fsImpl.rmSync(stalePath, { force: true });
+    } catch { /* A stale record is not allowed to block a new handoff. */ }
+  }
+  const filePath = path.join(directory, `${token}.json`);
+  const record = { workspace_path: realDir, expires_at_ms: now + HANDOFF_TTL_MS };
+  fsImpl.writeFileSync(filePath, JSON.stringify(record), { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+  return { token, filePath, expiresAt: record.expires_at_ms };
+}
+
+/** The URL carries no filesystem path; a random single-use token is all the native side receives. */
+export function buildOpenUrl(token) {
+  if (typeof token !== 'string' || !HANDOFF_TOKEN_RE.test(token)) {
+    throw new DesktopLaunchError('invalid_handoff_token', 'Invalid desktop workspace handoff token.');
+  }
+  return `${DESKTOP_URL_SCHEME}://open?handoff=${token}`;
 }
 
 const IGNORED_APP_PATH = /\/(backups|installers|\.Trash|Trash)\//i;
@@ -86,6 +122,9 @@ export function launchDesktop({
   platform = process.platform,
   find = findDesktopApp,
   run = execFileSync,
+  home = os.homedir(),
+  fsImpl = fs,
+  now = Date.now,
   token,
 } = {}) {
   if (platform !== 'darwin') {
@@ -100,8 +139,15 @@ export function launchDesktop({
       '  Terminal agent (no desktop app needed): agentsam');
   }
   const args = ['-a', app];
-  if (projectDir) args.push(buildOpenUrl(projectDir, token));
-  try { run('open', args, { stdio: 'ignore' }); }
-  catch (e) { throw new DesktopLaunchError('launch_failed', `Could not launch ${app}: ${e.message}`); }
-  return { app, projectDir };
+  const handoff = projectDir ? writeWorkspaceHandoff(projectDir, { home, fsImpl, token, now: now() }) : null;
+  if (handoff) args.push(buildOpenUrl(handoff.token));
+  try {
+    run('open', args, { stdio: 'ignore' });
+  } catch (e) {
+    if (handoff) {
+      try { fsImpl.rmSync(handoff.filePath, { force: true }); } catch { /* Keep the launch error authoritative. */ }
+    }
+    throw new DesktopLaunchError('launch_failed', `Could not launch ${app}: ${e.message}`);
+  }
+  return { app, projectDir, handoffToken: handoff?.token ?? null };
 }

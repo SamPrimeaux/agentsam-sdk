@@ -84,7 +84,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   if (url.origin !== 'https://ecommerce-route.invalid' || !resolveLocalStudioEcommerceAdminRoute(url.pathname)) return null;
   const safe = new URLSearchParams();
   const matchedRoute = resolveLocalStudioEcommerceAdminRoute(url.pathname) as unknown as AdminRoute | null;
-  const baseThemeStudioRoute = matchedRoute?.id === 'admin.theme-editor';
+  const baseThemeStudioRoute = matchedRoute?.id === 'admin.theme-editor' || matchedRoute?.id === 'admin.theme-editor.account';
   const siteThemeStudioRoute = Boolean(matchedRoute?.page === 'theme-editor' && matchedRoute.id.startsWith('admin.theme-editor.') && !baseThemeStudioRoute);
   const cleanThemeStudioRoute = Boolean(baseThemeStudioRoute || siteThemeStudioRoute);
   // Site identity is supplied by Local Studio. Query validation is retained at

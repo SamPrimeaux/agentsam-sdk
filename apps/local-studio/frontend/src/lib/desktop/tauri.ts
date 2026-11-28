@@ -234,11 +234,11 @@ export async function getDesktopWorkspaceContext(): Promise<DesktopWorkspaceCont
   }
 }
 
-/** Native re-validates the path (absolute, real directory) and owns the opened workspace. Throws the native reason on rejection. */
-export async function openDesktopWorkspace(path: string): Promise<DesktopWorkspaceContext> {
+/** Native atomically redeems the CLI's one-time workspace handoff and revalidates its path. */
+export async function openDesktopWorkspace(handoffToken: string): Promise<DesktopWorkspaceContext> {
   const invoke = getTauriInvoke();
   if (!invoke) throw new Error("tauri_unavailable");
-  return (await invoke("desktop_open_workspace", { path })) as DesktopWorkspaceContext;
+  return (await invoke("desktop_open_workspace", { token: handoffToken })) as DesktopWorkspaceContext;
 }
 
 export async function openExternalUrl(url: string): Promise<void> {

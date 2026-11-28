@@ -1,7 +1,7 @@
 /**
- * `agentsam .` / `agentsam <dir>` open Local Studio through agentsamstudio://open?path=<abs>.
- * This is only a first filter on an untrusted link; the native side re-validates the path
- * (absolute, real directory) before it becomes the workspace. Pure helpers, no app imports.
+ * `agentsam .` / `agentsam <dir>` open Local Studio through a short-lived,
+ * single-use agentsamstudio://open?handoff=<token> reference. Native redeems the
+ * private app-data record and re-validates the path. Pure helpers, no app imports.
  */
 export const OPEN_WORKSPACE_EVENT = "agentsam:workspace-opened";
 export const OPEN_WORKSPACE_FAILED_EVENT = "agentsam:workspace-open-failed";
@@ -50,8 +50,9 @@ export function parseOpenDeepLink(value: string): string | null {
   }
   if (url.protocol !== "agentsamstudio:" || url.hostname !== "open") return null;
   if (url.pathname !== "" && url.pathname !== "/") return null;
-  const path = url.searchParams.get("path") ?? "";
-  if (!path || path.length > MAX_PATH || path.includes("\0")) return null;
-  if (!/^(\/|[A-Za-z]:[\\/])/.test(path)) return null;
-  return path;
+  // Never accept a filesystem path from the URL. The native command redeems
+  // this high-entropy, short-lived token against the CLI-created app-data file.
+  if (url.searchParams.has("path")) return null;
+  const token = url.searchParams.get("handoff") ?? "";
+  return /^[a-f0-9]{64}$/i.test(token) ? token : null;
 }

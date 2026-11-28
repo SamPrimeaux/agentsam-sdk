@@ -249,9 +249,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     <AgentSamPetTrigger state={streaming ? "working" : "idle"} onActivate={() => window.dispatchEvent(new Event("agentsam:assistant:activate"))}/>
     <div className="agentsam-conversation-companion-label"><strong>AgentSam</strong>{streaming ? <span role="status">Working</span> : null}</div>
   </div> : null;
-  // Work mirrors the reference: stage on the left, chat on the right.
-  // Chat mode keeps the established lead-left / Stage-right layout.
-  const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout;
+  // Preserve the familiar mode defaults, but let the user choose and persist
+  // the Side Stage dock independently of Chat/Work mode.
+  const sideStageDock = state.sideDock === 'auto' ? (data.mode === 'work' ? 'left' : 'right') : state.sideDock;
+  const sideStageFirst = sideStageDock === 'left' && state.sideOpen && !workFocused && !compactWorkLayout;
   const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
   const floatingChatStyle = {
     '--agentsam-chat-left': floatingPosition ? floatingPosition.x + 'px' : 'auto',
@@ -273,7 +274,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </> : null}
     {/* The hosted topbar already owns the one global menu bubble. */}
     {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
-    {data.mode === 'work' && !isMobile ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
   const mobileStageVisible = isMobile && (mobileWorkOpen || state.sideOpen);
@@ -284,6 +284,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       {hasConversation ? <Nav.ConversationActions additionalActions={mobileMoreActions} mobile /> : null}
     </div>
   </div>) : <div className="agentsam-header-utilities">
+    {data.mode === 'work' ? <WorkProjectSelect /> : null}
     <div className="agentsam-topbar-browser-actions" role="group" aria-label="Workspace panel">
       <IconAction
         type="button"
@@ -312,7 +313,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}
-    <div ref={workspaceRef} className={"agentsam-workspace" + (workSplit ? " is-work-stage-first" : "") + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
+    <div ref={workspaceRef} className={"agentsam-workspace" + (sideStageFirst ? " is-side-stage-first" : "") + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         {findChatOpen && <div className="agentsam-chat-find" role="region" aria-label={showChatFiles ? 'Uploaded files' : 'Find in chat'}>
           <div className="agentsam-chat-find-head">
@@ -345,7 +346,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !compactWorkLayout && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !compactWorkLayout && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (sideStageFirst ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage
+          workFocused={workFocused}
+          sideDock={sideStageDock}
+          onDockChange={(dock) => state.setSideDock(dock)}
+          onFocusToggle={() => setWorkFocused(focused => !focused)}
+        /></aside></> : null}
       {leadComposerDetached && workFocused && !compactWorkLayout ? (
         <section
           ref={floatingChatRef}

@@ -8,6 +8,7 @@ import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models"
 import { emptyDeploy, newEmptyProject, newFilesystemProject, newSampleProject } from "@/lib/work/seed";
 import { emptyGit } from "@/lib/work/git";
 import { pickRestoredProjectId } from "@/lib/work/workspace-restore";
+import { normalizeSideDock, reorderSideTabs, type SideDock } from "@/lib/work/side-stage-layout";
 import { streamChat } from "@/lib/work/stream";
 import { selectStudioWorkspaceForTurn } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
@@ -204,6 +205,7 @@ type WorkState = {
   sidebarOpen: boolean;
   mobileNavOpen: boolean;
   sideOpen: boolean;
+  sideDock: SideDock;
   terminalOpen: boolean;
   /** CLI drawer height as a fraction of the viewport (0.22–0.88). */
   terminalHeight: number;
@@ -242,6 +244,7 @@ type WorkState = {
   setSidebarOpen: (open: boolean) => void;
   setMobileNavOpen: (open: boolean) => void;
   setSideOpen: (open: boolean) => void;
+  setSideDock: (dock: SideDock) => void;
   setTerminalOpen: (open: boolean) => void;
   setTerminalHeight: (height: number) => void;
   setSettingsOpen: (open: boolean) => void;
@@ -275,6 +278,7 @@ type WorkState = {
   convertSideTab: (id: string, kind: SideKind, extra?: Partial<SideTab>) => string;
   closeSideTab: (id: string, force?: boolean) => void;
   setActiveSideTab: (id: string) => void;
+  reorderSideTab: (id: string, targetId: string) => void;
   setTabUrl: (id: string, url: string) => void;
   setTabTitle: (id: string, title: string) => void;
   navigateBrowser: (id: string, delta: number) => void;
@@ -304,6 +308,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   | "drafts"
   | "sidebarOpen"
   | "sideOpen"
+  | "sideDock"
   | "terminalOpen"
   | "terminalHeight"
   | "navView"
@@ -351,6 +356,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
     drafts: raw?.drafts ?? {},
     sidebarOpen: raw?.sidebarOpen ?? true,
     sideOpen: raw?.sideOpen ?? false,
+    sideDock: normalizeSideDock(raw?.sideDock),
     terminalOpen: raw?.terminalOpen ?? false,
     terminalHeight:
       typeof raw?.terminalHeight === "number"
@@ -470,6 +476,7 @@ export const useWorkStore = create<WorkState>()(
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),
       setSideOpen: (sideOpen) => set({ sideOpen }),
+      setSideDock: (sideDock) => set({ sideDock }),
       setTerminalOpen: (terminalOpen) => set({ terminalOpen }),
       setTerminalHeight: (terminalHeight) =>
         set({ terminalHeight: Math.min(0.88, Math.max(0.22, terminalHeight)) }),
@@ -1044,6 +1051,10 @@ export const useWorkStore = create<WorkState>()(
         localStudioRuntimeVisuals.releaseSurface(id);
       },
       setActiveSideTab: (id) => set({ activeSideTabId: id, sideOpen: true }),
+      reorderSideTab: (id, targetId) => set((s) => {
+        const sideTabs = reorderSideTabs(s.sideTabs, id, targetId);
+        return sideTabs === s.sideTabs ? {} : { sideTabs };
+      }),
       setTabTitle: (id, title) => set((s) => ({
         sideTabs: s.sideTabs.map((tab) => tab.id === id ? { ...tab, title } : tab),
       })),
@@ -1578,6 +1589,7 @@ export const useWorkStore = create<WorkState>()(
         drafts: s.drafts,
         sidebarOpen: s.sidebarOpen,
         sideOpen: s.sideOpen,
+        sideDock: s.sideDock,
         terminalOpen: s.terminalOpen,
         terminalHeight: s.terminalHeight,
         navView: s.navView,

@@ -2,9 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildNavigateDeepLink, parseNavigateDeepLink, parseOpenDeepLink } from "./open-deep-link.ts";
 
-test("an open link yields the absolute path, decoded", () => {
-  assert.equal(parseOpenDeepLink("agentsamstudio://open?path=%2Fworkspace%2Fmy%20repo%20%26%20co&t=abc"), "/workspace/my repo & co");
-  assert.equal(parseOpenDeepLink("agentsamstudio://open/?path=%2Ftmp%2Fx"), "/tmp/x");
+test("an open link yields only a valid one-time workspace handoff token", () => {
+  const token = "a".repeat(64);
+  assert.equal(parseOpenDeepLink(`agentsamstudio://open?handoff=${token}`), token);
+  assert.equal(parseOpenDeepLink(`agentsamstudio://open/?handoff=${token}`), token);
+  assert.equal(parseOpenDeepLink("agentsamstudio://open?path=%2Ftmp%2Fx"), null);
+  assert.equal(parseOpenDeepLink("agentsamstudio://open?handoff=abc123"), null);
 });
 
 test("other agentsamstudio links are not open links", () => {

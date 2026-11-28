@@ -964,14 +964,13 @@
   .agentsam-page-layout .agentsam-floating-lead-chat {display:none;}
 }
 
-/* Work opens the active stage on the left with the lead chat on the right.
-   Chat keeps its existing split orientation. The resize delta is reversed in
-   AgentSamPage when the flex order changes. */
+/* The Side Stage can dock on either side. AgentSamPage reverses the resize
+   delta when the stage is first in the visual order. */
 @media(min-width:768px) {
-  .agentsam-page-layout .agentsam-workspace.is-work-stage-first {
+  .agentsam-page-layout .agentsam-workspace.is-side-stage-first {
     flex-direction:row-reverse;
   }
-  .agentsam-page-layout .agentsam-workspace.is-work-stage-first .agentsam-side-panel {
+  .agentsam-page-layout .agentsam-workspace.is-side-stage-first .agentsam-side-panel {
     border-left:0; border-right:1px solid var(--nav-border);
   }
 }
