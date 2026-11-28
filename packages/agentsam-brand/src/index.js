@@ -96,7 +96,7 @@ export {
   CANONICAL_PNG_DELIVERY_POLICY_TYPES,
   AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES,
 } from './adapters/cloudflare-images.js';
-export { D1BrandRegistryAdapter } from './adapters/d1-registry.js';
+export { D1BrandRegistryAdapter, normalizeBrand, normalizeAsset, normalizeVariant } from './adapters/d1-registry.js';
 
 export {
   FORMAT_CAPABILITIES,

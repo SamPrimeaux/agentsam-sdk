@@ -60,15 +60,35 @@ function fromBrandEntry(entry) {
   const e = record(entry), contract = record(e.contract || e.latestContract || e.brandContract || (e.visual_system || e.schema ? e : null));
   const base = fromContract(contract);
   const pack = record(e.pack);
+  const theme = record(e.theme || e.theme_json);
+  const themeColors = record(theme.colors);
+  const themeColor = record(theme.color);
+  const contractColors = record(base.colors);
+  const resolvedColors = e.colors ?? (Object.keys(themeColors).length ? themeColors : null) ??
+    (Object.keys(themeColor).length ? themeColor : null) ??
+    record(e.tokens).color ?? record(pack.tokens).color ?? contractColors;
   return {
     id: safe(e.id || e.brandId || record(pack.brand).id || base.id),
-    name: safe(e.name || e.displayName || record(pack.brand).name || base.name),
+    slug: safe(e.slug || e.brandSlug),
+    name: safe(e.display_name || e.displayName || e.name || record(pack.brand).name || base.name),
+    displayName: safe(e.display_name || e.displayName || e.name || base.name),
     status: safe(e.status || base.status || 'draft'),
+    contractStatus: safe(e.contractStatus || e.contract_status || e.contractRevision?.status || 'not_defined'),
+    parentBrandId: safe(e.parent_brand_id || e.parentBrandId),
+    architectureModel: safe(e.architecture_model || e.architectureModel),
+    tagline: safe(e.tagline || contract.tagline || contract.slogan),
+    description: safe(e.description || contract.description),
+    mission: safe(e.mission || contract.mission),
+    domain: safe(e.domain),
+    assetCount: Number(e.assetCount ?? e.asset_count ?? record(e.assets).total ?? 0),
     contract,
-    colors: e.colors || record(e.tokens).color || record(pack.tokens).color || base.colors,
+    contractRevision: record(e.contractRevision || e.latestContract),
+    contractRevisions: Array.isArray(e.contractRevisions) ? e.contractRevisions : [],
+    colors: resolvedColors,
     assets: e.assets || pack.assets || base.assets,
     sources: e.sources || record(pack.provenance).sources || base.sources,
     themes: Array.isArray(e.themes) ? e.themes : [],
+    metadata: record(e.metadata || e.metadata_json),
     lastChange: safe(e.lastChange || e.updated_at || contract.updated_at),
   };
 }
@@ -89,7 +109,12 @@ export function normalizeBrandWorkspace(raw) {
     workspaceId: safe(data.workspaceId || record(data.workspace).id),
     brands,
     connections: Array.isArray(data.connections) ? data.connections : [],
-    activeBrandId: brands.some(brand => brand.id === data.activeBrandId) ? data.activeBrandId : null,
+    activeBrandId: brands.some(brand => brand.id === data.activeBrandId) ? data.activeBrandId :
+      brands.find(brand => brand.slug && brand.slug === data.activeBrandSlug)?.id || null,
+    activeBrandSlug: brands.some(brand => brand.slug === data.activeBrandSlug) ? data.activeBrandSlug :
+      brands.find(brand => brand.id === data.activeBrandId)?.slug || null,
+    unmatchedAssetSlugs: Array.isArray(data.unmatchedAssetSlugs) ? data.unmatchedAssetSlugs : [],
+    warnings: Array.isArray(data.warnings) ? data.warnings : [],
     source: 'authorized_brand_workspace',
   };
 }

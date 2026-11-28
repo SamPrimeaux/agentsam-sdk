@@ -26,7 +26,11 @@
     "./cli": "./src/cli/controller.js",
     "./package.json": "./package.json",
     "./public": "./src/public.js",
-    "./workspace": "./src/workspace.js"
+    "./workspace": "./src/workspace.js",
+    "./registry": {
+      "types": "./src/adapters/d1-registry.d.ts",
+      "default": "./src/adapters/d1-registry.js"
+    }
   },
   "files": [
     "bin",
