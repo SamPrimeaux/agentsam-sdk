@@ -12,6 +12,9 @@ Identify target application, user goal, primary journey, user roles, devices, re
 ## Prerequisites
 Inspect the actual application and its design system before proposing architecture. Ask for the target repository or surface only when genuinely unknown. Do not substitute a generic mockup for a working product experience.
 
+## Audit and prioritization
+When the request includes a review or redesign, trace the real journey before proposing polish: entry, user intent, actions, system feedback, loading/empty/validation/error/recovery states, and completion. Evaluate hierarchy, navigation, information architecture, interaction consistency, responsive behavior, accessibility, content clarity and brand fit. Separate observed behavior, inferred gaps and proposed direction. Prioritize blockers and high-friction issues first; tie each finding to evidence, user impact and a testable acceptance check.
+
 ## Workflow
 1. Inspect the target codebase, routes, components, tokens, data contracts and interaction patterns with repository and browser tools.
 2. Map the journey and edge cases. Use Excalidraw or plan-map tools for flow diagrams when useful.
