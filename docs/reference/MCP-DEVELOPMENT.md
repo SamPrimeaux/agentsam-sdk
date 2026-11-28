@@ -24,3 +24,5 @@ Run:
 - npm run registry:universal:write, npm run docs:registry, node scripts/registry/generate.mjs, then the respective check commands.
 
 After a preview deployment, verify an actual authorized account registration and paired-device workspace read, revoke the allowlist and confirm denial, and visually check the Settings pages at mobile and desktop widths. Do not claim production acceptance from fixture tests or publish distributions before acceptance.
+
+For reviewed local stdio projects, run `agentsam mcp project-tools ./my-server --trust-project` or `agentsam mcp project-call ./my-server --trust-project --tool system.health` after installing dependencies. These are explicit per-command local development sessions, not persisted trust or a filesystem sandbox. Only declared tools can be called; non-read-only tools require the additional write flag. This does not enable a remote catalog entry or grant account workspace access.

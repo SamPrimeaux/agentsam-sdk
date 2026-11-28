@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { resolveMcpRuntime } from './templates/mcp-server/runtime-adapters.js';
 
 export async function validateMcpProject(directory = '.', cwd = process.cwd()) {
@@ -45,4 +47,51 @@ export async function runMcpProject(action, directory, options = {}) {
   });
   if (exitCode !== 0) throw new Error('mcp_project_command_failed:' + action + ':' + exitCode);
   return { ...project, action, exitCode };
+}
+
+
+/** A user-selected development session, never a catalog-driven process spawn.
+ * This executes reviewed project code with the local user's OS permissions.
+ * It does not grant the account workspace authority or persist client trust.
+ */
+export async function runLocalMcpProject(action, directory, options = {}) {
+  if (options.trustProject !== true) throw new Error('mcp_project_explicit_trust_required');
+  const project = await validateMcpProject(directory, options.cwd);
+  if (project.transport !== 'stdio') throw new Error('mcp_project_stdio_required');
+  const root = await fs.realpath(project.root);
+  const entry = await fs.realpath(path.join(root, project.entry));
+  const relative = path.relative(root, entry);
+  if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw new Error('mcp_project_entry_outside_root');
+  const command = project.runtime === 'python'
+    ? path.join(root, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
+    : process.execPath;
+  await fs.access(command);
+  const manifestTools = new Map(project.manifest.tools.map(tool => [tool.name, tool]));
+  if (action === 'call' && !manifestTools.has(options.tool)) throw new Error('mcp_project_tool_not_declared');
+  if (action === 'call' && options.allowWrite !== true && manifestTools.get(options.tool).annotations?.readOnlyHint !== true) throw new Error('mcp_project_write_consent_required');
+  const transport = new StdioClientTransport({ command, args: [entry], cwd: root, stderr: 'pipe' });
+  const client = new Client({name:'agentsam-project-client',version:'1'}, {capabilities:{}});
+  // Drain stderr without leaking local process output or credential material.
+  transport.stderr?.resume();
+  const timer = setTimeout(() => { void transport.close().catch(()=>{}); }, 15000);
+  try {
+    await client.connect(transport);
+    const listed = await client.listTools();
+    if (listed.nextCursor || !Array.isArray(listed.tools) || listed.tools.length > 150) throw new Error('mcp_project_tools_invalid');
+    const tools = listed.tools.filter(tool => manifestTools.has(tool.name));
+    if (action === 'tools') return {ok:true,transport:'stdio',name:project.manifest.name,tools};
+    if (action !== 'call') throw new Error('mcp_project_action_unsupported');
+    const remote = tools.find(tool=>tool.name===options.tool);
+    if (!remote) throw new Error('mcp_project_tool_unavailable');
+    if (options.allowWrite !== true && remote.annotations?.readOnlyHint !== true) throw new Error('mcp_project_write_consent_required');
+    const input=options.input ?? {};
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('mcp_project_input_invalid');
+    const result = await client.callTool({name:options.tool,arguments:input});
+    if (result.isError) throw new Error('mcp_project_tool_failed');
+    return {ok:true,transport:'stdio',name:project.manifest.name,tool:options.tool,result:result.structuredContent??result.content};
+  } finally {
+    clearTimeout(timer);
+    await client.close().catch(()=>{});
+    await transport.close().catch(()=>{});
+  }
 }

@@ -136,6 +136,10 @@ describe("oauth-kind plugin state", () => {
     assert.equal(live.connection_ref, "google_gmail:a@b.c");
     const failing = applyOauthPluginState(plugin, [{ provider: "google_gmail", account_identifier: "a@b.c", is_active: 1, revoked_at: null, last_refresh_error_code: "http_401" }]);
     assert.equal(failing.health_status, "auth_error");
+    const inactive = applyOauthPluginState(plugin, [{ provider: "google_gmail", account_identifier: "a@b.c", is_active: 0, revoked_at: null, last_refresh_error_code: "PROVIDER_REFRESH_FAILED" }]);
+    assert.equal(inactive.setup_status, "configured");
+    assert.equal(inactive.health_status, "auth_error");
+    assert.equal(inactive.last_error_code, "PROVIDER_REFRESH_FAILED");
     assert.equal(applyOauthPluginState(plugin, []).setup_status, "unconfigured");
     assert.equal(applyOauthPluginState({ ...plugin, plugin_kind: "mcp" }, []).setup_status, "unconfigured");
     const cloudflare = { ...plugin, provider_key:"cloudflare", plugin_kind:"oauth", setup_status:"connected", health_status:"healthy" };
