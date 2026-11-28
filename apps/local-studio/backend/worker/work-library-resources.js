@@ -86,6 +86,11 @@ export async function listAccountLibraryResources(db, owner) {
       ? 'account='+encodeURIComponent(recordedCfAccount) : '';
     const privateLink = base + (cfAccountQuery ? '?'+cfAccountQuery : '');
     const privatePreview = base + '?preview=1' + (cfAccountQuery ? '&'+cfAccountQuery : '');
+    const creativeType = safe(attributes.creativeType);
+    const hasLegacyCanvasPreview = row.artifact_type === 'design-canvas' && (
+      Number(attributes.artboardCount) > 0
+      || ['page','document','spreadsheet','slides','system','whiteboard','code'].includes(creativeType)
+    );
     return {
       starred: attributes.library?.starred === true,
       id:'artifact:'+row.id,name,kind,source:'artifacts',mime:safe(row.mime_type)||null,
@@ -95,8 +100,7 @@ export async function listAccountLibraryResources(db, owner) {
       // Render previews by verified stored thumbnail availability, not by the
       // original artifact kind. A design or website document can have a
       // generated preview while its source file remains JSON/HTML.
-      preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key ||
-        (row.artifact_type === 'design-canvas' && Number(attributes.artboardCount) > 0)
+      preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key || hasLegacyCanvasPreview
         ? privatePreview : (kind==='image'?privateLink:null)),
       open:row.artifact_type === 'design-canvas'
         ? '/admin/canvas?canvas='+encodeURIComponent(row.id)

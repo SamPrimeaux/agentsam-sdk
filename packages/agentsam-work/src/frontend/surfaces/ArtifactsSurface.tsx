@@ -205,26 +205,18 @@ export function ArtifactsSurface({
       void onOpenArtifact(artifact);
       return;
     }
-    if (artifact.open) {
+    if (artifact.source === "local" && onOpenArtifact) {
+      void onOpenArtifact(artifact);
+      return;
+    }
+    if (artifact.preview || artifact.open) {
       try {
-        const destination = new URL(artifact.open, window.location.href);
+        const destination = new URL(artifact.preview || artifact.open || "", window.location.href);
         if (!["http:", "https:"].includes(destination.protocol)) return;
         if (destination.origin === window.location.origin) window.location.assign(destination.href);
         else window.open(destination.href, "_blank", "noopener,noreferrer");
       } catch { /* A malformed destination must not navigate. */ }
       return;
-    }
-    if (artifact.source === "local" && onOpenArtifact) {
-      void onOpenArtifact(artifact);
-      return;
-    }
-    if (artifact.preview) {
-      try {
-        const destination = new URL(artifact.preview, window.location.href);
-        if (!["http:", "https:"].includes(destination.protocol)) return;
-        if (destination.origin === window.location.origin) window.location.assign(destination.href);
-        else window.open(destination.href, "_blank", "noopener,noreferrer");
-      } catch { /* Preview unavailable. */ }
     }
   };
 
@@ -545,9 +537,9 @@ export function ArtifactsSurface({
                     const hasDestination = Boolean(artifact.open || artifact.preview || (artifact.source === "local" && onOpenArtifact));
                     const isRenaming = renaming === artifact.id;
                     const isBusy = mutating === artifact.id;
-                    const visual = Boolean(artifact.preview && !failedPreviews.has(artifact.id) && (["image", "video", "design", "website", "product", "document", "presentation"].includes(artifact.kind) || artifact.mime === "application/pdf"));
+                    const visual = Boolean(artifact.preview && !failedPreviews.has(artifact.id));
                     return (
-                      <article key={artifact.id} className="agentsam-artifact-hub__item" data-kind={artifact.kind} data-preview={visual ? "image" : "symbol"} data-busy={isBusy || undefined} data-menu-active={actionMenu?.id === artifact.id || undefined}
+                      <article key={artifact.id} className="agentsam-artifact-hub__item" data-kind={artifact.kind} data-preview={visual ? (artifact.artifactType === "design-canvas" ? "document" : "image") : "symbol"} data-busy={isBusy || undefined} data-menu-active={actionMenu?.id === artifact.id || undefined}
                         onPointerDown={event => beginHold(event, artifact, hasDestination || ownerEditable)}
                         onPointerMove={moveHold} onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
                         onClickCapture={event => { if (consumed.current) { event.preventDefault(); event.stopPropagation(); consumed.current = false; } }}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   BarChart3, Check, ChevronDown, Circle, Code2, Copy, Diamond, Download, FileJson,
@@ -28,18 +28,40 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
   const inheritedAvoidRect = useContext(MenuAvoidanceContext);
   const effectiveAvoidRect = avoidRect || inheritedAvoidRect;
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<{ align: 'start' | 'end'; side: 'top' | 'bottom' | 'left' | 'right' }>({ align, side });
+  const [placement, setPlacement] = useState<{
+    align: 'start' | 'end';
+    side: 'top' | 'bottom' | 'left' | 'right';
+    left: number;
+    top: number;
+    maxWidth: number;
+    maxHeight: number;
+    ready: boolean;
+  }>({ align, side, left: 0, top: 0, maxWidth: 340, maxHeight: 560, ready: false });
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
-  useEffect(() => {
+
+  // Menus are portaled out of scrolling toolbars and clipped editor panes.
+  // Their coordinates are still clamped to this Design Canvas instance, so an
+  // embedded editor cannot cover AgentSam's global navigation or Side Stage.
+  useLayoutEffect(() => {
     if (!open) return;
+    const appRoot = rootRef.current?.closest('.dcx-root');
     const place = () => {
       const triggerRect = triggerRef.current?.getBoundingClientRect();
       const menuRect = menuRef.current?.getBoundingClientRect();
       if (!triggerRect || !menuRect) return;
+      const rootRect = appRoot?.getBoundingClientRect();
+      const minLeft = Math.max(8, rootRect?.left ?? 8);
+      const maxRight = Math.min(window.innerWidth - 8, rootRect?.right ?? window.innerWidth - 8);
+      const minTop = Math.max(8, rootRect?.top ?? 8);
+      const maxBottom = Math.min(window.innerHeight - 8, rootRect?.bottom ?? window.innerHeight - 8);
+      const availableWidth = Math.max(120, maxRight - minLeft);
+      const availableHeight = Math.max(120, maxBottom - minTop);
+      const width = Math.min(menuRect.width, availableWidth);
+      const height = Math.min(menuRect.height, availableHeight);
       const otherAlign = align === 'start' ? 'end' : 'start';
       const otherSide = side === 'bottom' ? 'top' : 'bottom';
       const candidates: Array<{ align: 'start' | 'end'; side: 'top' | 'bottom' | 'left' | 'right' }> = [
@@ -55,28 +77,68 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
       let best = candidates[0];
       let bestScore = Number.POSITIVE_INFINITY;
       candidates.forEach((candidate, index) => {
-        const left = candidate.side === 'left' ? triggerRect.left - menuRect.width - 7 : candidate.side === 'right' ? triggerRect.right + 7 : candidate.align === 'start' ? triggerRect.left : triggerRect.right - menuRect.width;
-        const top = candidate.side === 'bottom' ? triggerRect.bottom + 7 : candidate.side === 'top' ? triggerRect.top - menuRect.height - 7 : candidate.align === 'start' ? triggerRect.top : triggerRect.bottom - menuRect.height;
-        const overflow = Math.max(0, 8 - left) + Math.max(0, left + menuRect.width - (window.innerWidth - 8)) + Math.max(0, 8 - top) + Math.max(0, top + menuRect.height - (window.innerHeight - 8));
+        const left = candidate.side === 'left'
+          ? triggerRect.left - width - 7
+          : candidate.side === 'right'
+            ? triggerRect.right + 7
+            : candidate.align === 'start' ? triggerRect.left : triggerRect.right - width;
+        const top = candidate.side === 'bottom'
+          ? triggerRect.bottom + 7
+          : candidate.side === 'top'
+            ? triggerRect.top - height - 7
+            : candidate.align === 'start' ? triggerRect.top : triggerRect.bottom - height;
+        const overflow = Math.max(0, minLeft - left)
+          + Math.max(0, left + width - maxRight)
+          + Math.max(0, minTop - top)
+          + Math.max(0, top + height - maxBottom);
         const avoid = effectiveAvoidRect;
-        const overlapWidth = avoid ? Math.max(0, Math.min(left + menuRect.width, avoid.right + 10) - Math.max(left, avoid.left - 10)) : 0;
-        const overlapHeight = avoid ? Math.max(0, Math.min(top + menuRect.height, avoid.bottom + 10) - Math.max(top, avoid.top - 10)) : 0;
-        const overlapArea = overlapWidth * overlapHeight;
-        const score = overflow * 10000 + overlapArea * 10 + index;
+        const overlapWidth = avoid ? Math.max(0, Math.min(left + width, avoid.right + 10) - Math.max(left, avoid.left - 10)) : 0;
+        const overlapHeight = avoid ? Math.max(0, Math.min(top + height, avoid.bottom + 10) - Math.max(top, avoid.top - 10)) : 0;
+        const score = overflow * 10000 + overlapWidth * overlapHeight * 10 + index;
         if (score < bestScore) { bestScore = score; best = candidate; }
       });
-      setPlacement(best || { side: 'bottom', align: 'start' });
+      const candidateLeft = best.side === 'left'
+        ? triggerRect.left - width - 7
+        : best.side === 'right'
+          ? triggerRect.right + 7
+          : best.align === 'start' ? triggerRect.left : triggerRect.right - width;
+      const candidateTop = best.side === 'bottom'
+        ? triggerRect.bottom + 7
+        : best.side === 'top'
+          ? triggerRect.top - height - 7
+          : best.align === 'start' ? triggerRect.top : triggerRect.bottom - height;
+      const maxLeft = Math.max(minLeft, maxRight - width);
+      const maxTop = Math.max(minTop, maxBottom - height);
+      setPlacement({
+        align: best.align,
+        side: best.side,
+        left: Math.min(maxLeft, Math.max(minLeft, candidateLeft)),
+        top: Math.min(maxTop, Math.max(minTop, candidateTop)),
+        maxWidth: Math.min(340, availableWidth),
+        maxHeight: Math.min(560, availableHeight),
+        ready: true,
+      });
     };
     place();
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
-    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null;
+    if (appRoot) observer?.observe(appRoot);
+    if (rootRef.current) observer?.observe(rootRef.current);
+    if (triggerRef.current) observer?.observe(triggerRef.current);
+    if (menuRef.current) observer?.observe(menuRef.current);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+      observer?.disconnect();
+    };
   }, [open, align, side, effectiveAvoidRect?.left, effectiveAvoidRect?.top, effectiveAvoidRect?.right, effectiveAvoidRect?.bottom]);
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) close();
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) close();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -92,11 +154,21 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
     };
   }, [open]);
 
-  return <div ref={rootRef} className={'dcx-menu-anchor ' + className}>
-    <button ref={triggerRef} type="button" className={'dcx-menu-trigger ' + triggerClassName} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen((value) => !value)}>
-      {trigger}
-    </button>
-    {open ? <div ref={menuRef} id={menuId} className={'dcx-menu-popover align-' + placement.align + ' side-' + placement.side} role="menu" aria-label={label} onKeyDown={(event) => {
+  const popover = open ? <div
+    ref={menuRef}
+    id={menuId}
+    className={'dcx-menu-popover align-' + placement.align + ' side-' + placement.side}
+    role="menu"
+    aria-label={label}
+    style={{
+      '--dcx-menu-left': `${placement.left}px`,
+      '--dcx-menu-top': `${placement.top}px`,
+      '--dcx-menu-min-width': `${Math.min(218, placement.maxWidth)}px`,
+      '--dcx-menu-max-width': `${placement.maxWidth}px`,
+      '--dcx-menu-max-height': `${placement.maxHeight}px`,
+      '--dcx-menu-visibility': placement.ready ? 'visible' : 'hidden',
+    } as CSSProperties}
+    onKeyDown={(event) => {
       const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'));
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
       if (event.key === 'Escape') { close(); triggerRef.current?.focus(); }
@@ -104,10 +176,19 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
       else if (event.key === 'ArrowUp') { event.preventDefault(); items[(current - 1 + items.length) % items.length]?.focus(); }
       else if (event.key === 'Home') { event.preventDefault(); items[0]?.focus(); }
       else if (event.key === 'End') { event.preventDefault(); items[items.length - 1]?.focus(); }
-    }}>
-      {children(close)}
-    </div> : null}
-  </div>;
+    }}
+  >
+    {children(close)}
+  </div> : null;
+
+  return <>
+    <div ref={rootRef} className={'dcx-menu-anchor ' + className}>
+      <button ref={triggerRef} type="button" className={'dcx-menu-trigger ' + triggerClassName} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen((value) => !value)}>
+        {trigger}
+      </button>
+    </div>
+    {popover && typeof document !== 'undefined' ? createPortal(popover, document.body) : popover}
+  </>;
 }
 
 export function MenuAction({ label, icon, detail, onClick, close, destructive = false, disabled = false }: {

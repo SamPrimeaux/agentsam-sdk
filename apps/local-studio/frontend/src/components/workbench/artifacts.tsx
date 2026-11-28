@@ -55,7 +55,9 @@ export function ArtifactsStage({ tab }: { tab: SideTab }) {
       return;
     }
 
-    const target = artifact.open || artifact.preview;
+    // Prefer the verified preview for formats that browsers cannot render directly (for example PPTX).
+    // The original file remains available through the artifact download action.
+    const target = artifact.preview || artifact.open;
     if (target) {
       openSideTab("browser", {
         title: artifact.name,

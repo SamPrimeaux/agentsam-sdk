@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, cpSync, mkdirSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
@@ -37,6 +38,14 @@ await build({
   target: 'es2022',
   jsx: 'automatic',
   loader: { '.css': 'copy', '.svg': 'text' },
+  plugins: [{
+    name: 'svg-raw-source',
+    setup(build) {
+      build.onResolve({ filter: /\.svg\?raw$/ }, (args) => ({
+        path: resolve(args.resolveDir, args.path.replace(/\?raw$/, '')),
+      }));
+    },
+  }],
   assetNames: '[dir]/[name]',
   external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', '@inneranimalmedia/agentsam-contracts', '@inneranimalmedia/agentsam-loading-scene', '@inneranimalmedia/agentsam-loading-scene/*'],
 });
