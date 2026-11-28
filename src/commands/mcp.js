@@ -25,6 +25,7 @@ import {
 } from '../mcp/oauth-connection.js';
 import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
 import { runMcpProject } from '../lib/scaffold/mcp-project.js';
+import { requestStudioMcp, serveNativeWorkspace } from '../mcp/server/studio-host.js';
 import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
 
 async function probeMcpServer(server, name, options) {
@@ -71,6 +72,8 @@ export function parseMcpArgs(argv = []) {
   let pack = '';
   let preset = '';
   let runtime = '';
+  let workspaceId = '';
+  let connectionId = '';
   let transport = '';
   let output = '';
   let issuer = '';
@@ -90,6 +93,8 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--pack') pack = argv[++i] || '';
     else if (arg === '--preset') preset = argv[++i] || '';
     else if (arg === '--runtime') runtime = argv[++i] || '';
+    else if (arg === '--workspace-id') workspaceId = argv[++i] || '';
+    else if (arg === '--connection-id') connectionId = argv[++i] || '';
     else if (arg === '--transport') transport = argv[++i] || '';
     else if (arg === '--output' || arg === '--out') output = argv[++i] || '';
     else if (arg === '--issuer') issuer = argv[++i] || '';
@@ -116,6 +121,8 @@ export function parseMcpArgs(argv = []) {
     pack: pack.toLowerCase(),
     preset: preset.toLowerCase(),
     runtime,
+    workspaceId,
+    connectionId,
     transport,
     output,
     issuer,
@@ -163,6 +170,8 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--runtime cloudflare-worker|node|python] [--transport streamable_http|stdio] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]
+    agentsam mcp register <name> --url <https-url> [--write]
+    agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
     agentsam mcp add browsermcp --client agentsam  Local Chrome extension MCP (Node 20+)
     agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
@@ -204,6 +213,21 @@ export async function runMcp(argv = [], options = {}) {
   }
 
   const { subcommand, target } = args;
+
+  if (subcommand === 'register') {
+    if (!target || !args.url) throw new Error('mcp_register_name_and_url_required');
+    if (args.writeAccess) await (options.authenticateImpl || authenticateViaBrowser)({
+      ...options, scope:'openid profile email offline_access iam:agent',
+    });
+    const result=await requestStudioMcp('',{...options,env:{...process.env,...options.env,AGENTSAM_API_KEY:''},method:'POST',body:{name:target,url:args.url}});
+    write(args.json?JSON.stringify(result,null,2)+'\n':'Registered (disabled): '+result.server.id+'; authorize in Settings → Customize → MCPs.\n');
+    return result;
+  }
+  if (subcommand === 'serve-workspace') {
+    if (!target || !args.workspaceId || !args.connectionId) throw new Error('mcp_workspace_root_and_ids_required');
+    await serveNativeWorkspace({...options,root:target,workspaceId:args.workspaceId,connectionId:args.connectionId});
+    return null;
+  }
 
   if (['validate','inspect','install','test','build','dev','deploy'].includes(subcommand)) {
     const result = await runMcpProject(subcommand, target || '.', options);

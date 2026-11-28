@@ -83,6 +83,11 @@ export function McpManagementPage(){
     </header>
 
     <div className="flex flex-wrap gap-2 text-xs"><a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/agents?view=policy">Execution policy</a><a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/storage">Storage &amp; device access</a></div>
+    <div className="rounded-lg border border-border p-3 text-xs leading-relaxed text-muted-foreground">
+      <p className="font-medium text-foreground">Local workspace access</p>
+      <p className="mt-1">Off by default. Local MCP reads require an enrolled machine, an account-authorized workspace and a live device folder capability. Browser folder permissions stay in your browser and are never transferred to a remote MCP server.</p>
+      <a href="/admin/settings/runtime" className="mt-2 inline-flex font-medium text-foreground underline underline-offset-2">Manage machines and runtimes</a>
+    </div>
     {error?<p role="alert" className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive">{error}</p>:null}
     {draft?<div className="space-y-4 rounded-lg border border-border bg-card p-5">
       <header className="flex items-center justify-between"><h3 className="font-semibold">{draft.id?"Edit MCP server":"Register MCP server"}</h3><IconAction label="Close editor" variant="ghost" onClick={()=>setDraft(null)}><X className="size-4"/></IconAction></header>

@@ -89,6 +89,7 @@ test('account policy denies absent grants and uses canonical account/device reco
   let allowed=true, device=true, blocked=false, calls=0;
   const db={prepare(sql){return {bind(){return this},async first(){
     if(sql.includes('blocklist'))return blocked?{workspace_id:'w'}:null;
+    if(sql.includes('workspace_members'))return {id:'w',root_path:'/fixture'};
     return {id:'verified'};
   },async all(){
     if(sql.includes('agentsam_user_policy'))return {results:[{tool_risk_level_max:'low'}]};
