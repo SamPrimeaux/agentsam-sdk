@@ -1,9 +1,10 @@
 import {
-  Archive, ArrowLeft, BarChart3, Box, Check, Copy, ExternalLink, FileArchive, FileAudio2,
+  Archive, ArrowLeft, Box, Check, Copy, ExternalLink, FileArchive, FileAudio2,
   FileCode2, FileImage, FileText, FileVideo2, Folder, Grid2X2, List, MoreHorizontal, Palette, Pencil, Pin, Link, Share2, Trash2,
-  Plus, Presentation, RotateCcw, Search, Shapes, SlidersHorizontal, Star, StickyNote, Table2, X,
+  Plus, Presentation, RotateCcw, Search, SlidersHorizontal, Star, StickyNote, Table2, X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { CREATIVE_WIDGET_COVERS } from "@inneranimalmedia/agentsam-workbench/creative-covers";
 import type { WorkArtifact, WorkArtifactCreateKind } from "../../contracts/index";
 
 const sourceLabels: Record<WorkArtifact["source"], string> = {
@@ -17,12 +18,12 @@ const sourceLabels: Record<WorkArtifact["source"], string> = {
 };
 
 const createOptions = [
-  { id: "docs", label: "Docs", description: "Documents and writing", icon: FileText },
-  { id: "slides", label: "Slides", description: "Presentations and stories", icon: Presentation },
-  { id: "sheets", label: "Sheets", description: "Tables and calculations", icon: Table2 },
-  { id: "design", label: "Design", description: "Layouts and visual systems", icon: Palette },
-  { id: "data", label: "Data", description: "Dashboards and analysis", icon: BarChart3 },
-  { id: "whiteboard", label: "Whiteboard", description: "Ideas and collaborative maps", icon: Shapes },
+  { id: "docs", label: "Docs", description: "Documents and writing", cover: CREATIVE_WIDGET_COVERS.docs },
+  { id: "slides", label: "Slides", description: "Presentations and stories", cover: CREATIVE_WIDGET_COVERS.slides },
+  { id: "sheets", label: "Sheets", description: "Tables and calculations", cover: CREATIVE_WIDGET_COVERS.sheets },
+  { id: "design", label: "Design", description: "Layouts and visual systems", cover: CREATIVE_WIDGET_COVERS.design },
+  { id: "data", label: "Data", description: "Dashboards and analysis", cover: CREATIVE_WIDGET_COVERS.data },
+  { id: "whiteboard", label: "Whiteboard", description: "Ideas and collaborative maps", cover: CREATIVE_WIDGET_COVERS.whiteboard },
 ] as const;
 
 function iconFor(kind: WorkArtifact["kind"]) {
@@ -468,18 +469,15 @@ export function ArtifactsSurface({
                   </summary>
                   <div className="agentsam-artifact-hub__menu-panel agentsam-artifact-hub__create-menu">
                     <span className="agentsam-artifact-hub__menu-label">Create new</span>
-                    {createOptions.map((option) => {
-                      const Icon = option.icon;
-                      return (
-                        <button key={option.id} type="button" onClick={(event) => {
-                          onCreateArtifact(option.id);
-                          event.currentTarget.closest("details")?.removeAttribute("open");
-                        }}>
-                          <Icon size={15} />
-                          <span>{option.label}</span>
-                        </button>
-                      );
-                    })}
+                    {createOptions.map((option) => (
+                      <button key={option.id} type="button" onClick={(event) => {
+                        onCreateArtifact(option.id);
+                        event.currentTarget.closest("details")?.removeAttribute("open");
+                      }}>
+                        <img src={option.cover} alt="" aria-hidden="true" draggable={false} />
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </details>
               ) : null}
@@ -492,7 +490,6 @@ export function ArtifactsSurface({
                 </div>
                 <div className="agentsam-artifact-hub__create-grid">
                   {createOptions.map((option) => {
-                    const Icon = option.icon;
                     return (
                       <button
                         key={option.id}
@@ -504,7 +501,14 @@ export function ArtifactsSurface({
                         onClick={() => onCreateArtifact?.(option.id)}
                       >
                         <span className="agentsam-artifact-hub__create-art">
-                          <Icon size={31} strokeWidth={1.55} aria-hidden="true" />
+                          <img
+                            src={option.cover}
+                            alt=""
+                            aria-hidden="true"
+                            loading="eager"
+                            decoding="async"
+                            draggable={false}
+                          />
                         </span>
                         <span className="agentsam-artifact-hub__create-label">{option.label}</span>
                       </button>

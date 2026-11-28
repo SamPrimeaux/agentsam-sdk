@@ -14,7 +14,7 @@ await build({
   platform: 'neutral',
   target: 'es2022',
   jsx: 'automatic',
-  external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', '*.css'],
+  external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', '@inneranimalmedia/agentsam-workbench', '@inneranimalmedia/agentsam-workbench/*', '*.css'],
 });
 mkdirSync(`${cwd}/dist/frontend`, { recursive: true });
 copyFileSync(`${cwd}/src/frontend/theme.css`, `${cwd}/dist/frontend/theme.css`);

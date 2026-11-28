@@ -48,11 +48,17 @@ test('code and whiteboard copies retain workspace identity and re-key document n
   assert.notEqual(whiteboardCopy.data.artboards[0].id, whiteboard.data.artboards[0].id);
 });
 
-test('gallery exposes six distinct cover assets and functional library filters', async () => {
+test('Design quick-create gallery exposes five shared covers; Brand Guidelines remains a template preview', async () => {
   const app = await readFile(appPath, 'utf8');
-  for (const name of ['slides', 'brand-guidelines', 'design', 'design-in-code', 'design-system', 'whiteboard']) {
+  const covers = await readFile(new URL('../../../packages/agentsam-workbench/src/widgets/creative-covers.ts', import.meta.url), 'utf8');
+  for (const name of ['slides', 'design', 'design-in-code', 'design-system', 'whiteboard']) {
     assert.ok(app.includes("CREATIVE_WIDGET_COVERS['" + name + "']") || app.includes('CREATIVE_WIDGET_COVERS.' + name.replaceAll('-', '')), 'gallery should use the shared ' + name + ' cover');
   }
+  assert.ok(!app.includes('dcx-create-tile brand-guidelines'), 'Brand Guidelines must not be a top-level quick-create tile');
+  assert.ok(app.includes('createBrandGuidelines'), 'Brand Guidelines remains available through the template action');
+  assert.ok(covers.includes("'brand-guidelines':"), 'Brand Guidelines SVG remains available for template previews');
+  assert.ok(app.includes("template.title.trim().toLowerCase() === 'brand guidelines'"), 'Brand Guidelines uses its SVG as the template preview');
+  assert.ok(app.includes('dcx-studio-template__cover'), 'template preview artwork must render in the catalog card');
   for (const label of ['All', 'Pinned', 'Yours', 'Shared with you', 'Search your work']) {
     assert.ok(app.includes(label), 'gallery should expose ' + label);
   }

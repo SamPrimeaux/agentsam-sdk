@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
@@ -23,6 +23,7 @@ await build({
     'timeline/index': 'src/timeline/index.ts',
     'manufacturing/index': 'src/manufacturing/index.ts',
     'widgets/index': 'src/widgets/index.ts',
+    'widgets/creative-covers': 'src/widgets/creative-covers.ts',
     'knowledge/index': 'src/knowledge/index.ts',
     'design/index': 'src/design/index.ts',
     'workflows/index': 'src/workflows/index.ts',
@@ -35,10 +36,12 @@ await build({
   platform: 'neutral',
   target: 'es2022',
   jsx: 'automatic',
-  loader: { '.css': 'copy' },
+  loader: { '.css': 'copy', '.svg': 'text' },
   assetNames: '[dir]/[name]',
   external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', '@inneranimalmedia/agentsam-contracts', '@inneranimalmedia/agentsam-loading-scene', '@inneranimalmedia/agentsam-loading-scene/*'],
 });
+mkdirSync(`${cwd}/dist/widgets/covers`, { recursive: true });
+cpSync(`${cwd}/src/widgets/covers`, `${cwd}/dist/widgets/covers`, { recursive: true });
 mkdirSync(`${cwd}/dist/agent`, { recursive: true });
 for (const file of ['mini-agentsam.css', 'contextual-composer.css', 'tool-permission.css', 'selection-toolbar.css', 'thread.css']) {
   copyFileSync(`${cwd}/src/agent/${file}`, `${cwd}/dist/agent/${file}`);

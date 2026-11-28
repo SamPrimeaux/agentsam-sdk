@@ -23,8 +23,8 @@ import { SelectionFormattingToolbar } from './components/SelectionFormattingTool
 import { useCanvasZoom } from './components/canvas-zoom';
 import '@inneranimalmedia/agentsam-workbench/design/design-workspace.css';
 import './design-canvas.css';
-import { CREATIVE_WIDGET_COVERS } from '@inneranimalmedia/agentsam-workbench/widgets';
-const slidesCover=CREATIVE_WIDGET_COVERS.slides,brandGuidelinesCover=CREATIVE_WIDGET_COVERS['brand-guidelines'],designCover=CREATIVE_WIDGET_COVERS.design,codeCover=CREATIVE_WIDGET_COVERS['design-in-code'],systemCover=CREATIVE_WIDGET_COVERS['design-system'],whiteboardCover=CREATIVE_WIDGET_COVERS.whiteboard;
+import { CREATIVE_WIDGET_COVERS } from '@inneranimalmedia/agentsam-workbench/creative-covers';
+const slidesCover=CREATIVE_WIDGET_COVERS.slides,designCover=CREATIVE_WIDGET_COVERS.design,codeCover=CREATIVE_WIDGET_COVERS['design-in-code'],systemCover=CREATIVE_WIDGET_COVERS['design-system'],whiteboardCover=CREATIVE_WIDGET_COVERS.whiteboard;
 
 type AskContext = DesignCanvasAgentContext;
 type EditorChromeProps = {
@@ -1377,7 +1377,6 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
           <div className="dcx-section-label">Make something new</div>
           <div className="dcx-create-grid">
             <button className="dcx-create-tile slides" onClick={() => selectCreation('slides')}><img src={slidesCover} alt=""/><span>Slides</span></button>
-            <button className="dcx-create-tile brand-guidelines" onClick={createBrandGuidelines}><img src={brandGuidelinesCover} alt=""/><span>Brand Guidelines <i>Template</i></span></button>
             <button className="dcx-create-tile design" onClick={() => selectCreation('design')}><img src={designCover} alt=""/><span>Design</span></button>
             <button className="dcx-create-tile code" onClick={() => selectCreation('code')}><img src={codeCover} alt=""/><span>Create in Code</span></button>
             <button className="dcx-create-tile system" onClick={() => selectCreation('system')}><img src={systemCover} alt=""/><span>Design System</span></button>
@@ -1389,10 +1388,14 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
           {templatesLoading ? <p role="status">Loading saved templates…</p> : null}
           {templatesError ? <p role="alert">{templatesError}</p> : null}
           {templateActionError ? <p role="alert">{templateActionError}</p> : null}
-          {studioTemplates.length ? <div className="dcx-studio-template-list">{studioTemplates.map((template) => <article className="dcx-studio-template" key={template.id}>
-            <div><strong>{template.title}</strong><small>{template.category || (template.kind === 'slide_template' ? 'Slide' : template.kind === 'presentation_template' ? 'Presentation' : 'Image prompt')}</small>{template.description ? <p>{template.description}</p> : null}</div>
-            <button type="button" disabled={templateBusyId === template.id} onClick={() => void applyStudioTemplate(template)}>{templateBusyId === template.id ? 'Opening…' : template.kind === 'image_generation_template' ? 'Use prompt' : template.kind === 'slide_template' && active?.type === 'slides' ? 'Add to current presentation' : 'Create editable slides'}</button>
-          </article>)}</div> : !templatesLoading && !templatesError ? <p>No saved Design Canvas templates are available.</p> : null}
+          {studioTemplates.length ? <div className="dcx-studio-template-list">{studioTemplates.map((template) => {
+            const previewCover = template.title.trim().toLowerCase() === 'brand guidelines' ? CREATIVE_WIDGET_COVERS['brand-guidelines'] : undefined;
+            return <article className="dcx-studio-template" key={template.id}>
+              {previewCover ? <img className="dcx-studio-template__cover" src={previewCover} alt="" aria-hidden="true" loading="lazy" decoding="async"/> : null}
+              <div className="dcx-studio-template__content"><strong>{template.title}</strong><small>{template.category || (template.kind === 'slide_template' ? 'Slide' : template.kind === 'presentation_template' ? 'Presentation' : 'Image prompt')}</small>{template.description ? <p>{template.description}</p> : null}</div>
+              <button type="button" disabled={templateBusyId === template.id} onClick={() => void applyStudioTemplate(template)}>{templateBusyId === template.id ? 'Opening…' : template.kind === 'image_generation_template' ? 'Use prompt' : template.kind === 'slide_template' && active?.type === 'slides' ? 'Add to current presentation' : 'Create editable slides'}</button>
+            </article>;
+          })}</div> : !templatesLoading && !templatesError ? <p>No saved Design Canvas templates are available.</p> : null}
         </section>
         <section className="dcx-artifacts-section" aria-label="Saved work">
           {visible.length ? <div className={'dcx-artifact-grid' + (viewMode === 'list' ? ' is-list' : '')}>{visible.map((item) => <ArtifactCard key={item.id} artifact={item} onOpen={() => { setActiveId(item.id); setRoute('editor'); }} onRename={() => renameArtifact(item.id)} onDuplicate={() => duplicate(item)} onTogglePin={() => togglePin(item.id)} onDelete={() => requestDelete(item.id)}/>)}</div> : <EmptyState title={query ? 'No matching work' : tab === 'pinned' ? 'Nothing pinned yet' : tab === 'shared' ? 'Nothing shared with you yet' : 'Your work will appear here'} description={query ? 'Try another search or clear the type filter.' : tab === 'pinned' ? 'Pin a document from its actions menu to find it here.' : tab === 'shared' ? 'Documents shared with you will appear here.' : 'Create a presentation, design, design system or whiteboard, or open Code to work in an existing project.'}/>}

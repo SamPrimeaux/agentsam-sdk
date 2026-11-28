@@ -92,6 +92,10 @@
     "./workflows/model": {
       "types": "./dist/workflows/model.d.ts",
       "import": "./dist/workflows/model.js"
+    },
+    "./creative-covers": {
+      "types": "./dist/widgets/creative-covers.d.ts",
+      "import": "./dist/widgets/creative-covers.js"
     }
   },
   "scripts": {
