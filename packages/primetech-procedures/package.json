@@ -2,10 +2,16 @@
   "name": "@inneranimalmedia/primetech-procedures",
   "version": "2.6.18",
   "type": "module",
-  "description": "Versioned PrimeTech workflow manifests, validation, execution orchestration and evidence receipts for AgentSam.",
+  "description": "PrimeTech creative-production procedures, portable AgentSam/OpenAI skills, deterministic asset builders, approval-aware execution and evidence receipts.",
   "exports": {
-    ".": "./src/index.js",
-    "./skills": "./src/skills.js"
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./skills": {
+      "types": "./src/skills.d.ts",
+      "import": "./src/skills.js"
+    }
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
@@ -14,6 +20,13 @@
     "prepack": "npm test"
   },
   "files": [
+    "plugin.README.md",
+    "companion.json",
+    "assets/",
+    ".codex-plugin/",
+    "agents/",
+    "plugin.json",
+    "agentsam.package.json",
     "src/",
     "procedures/",
     "profiles/",
@@ -40,5 +53,6 @@
     "fflate": "^0.8.3",
     "opentype.js": "^1.3.4",
     "sharp": "^0.35.5"
-  }
+  },
+  "types": "./src/index.d.ts"
 }

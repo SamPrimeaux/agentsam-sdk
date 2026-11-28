@@ -12,6 +12,9 @@ Establish product or brand context, supported surfaces, theme modes, accessibili
 ## Prerequisites
 Start from approved creative direction and actual product requirements. Do not invent a universal theme or hardcode brand colors into application code. Confirm token ownership and naming conventions.
 
+## Source of truth and handoff
+Record the canonical source, owner, version, provenance and approval status. References and screenshots inform the work; they do not automatically constrain it or prove production readiness. Map approved choices into semantic tokens, components, assets and platform conventions. Specify component anatomy, variants, states, breakpoints, keyboard/focus behavior, content constraints, accessibility and acceptance criteria. If sources conflict, explain the conflict and recommend a source of truth instead of silently overwriting it. Mark each delivered item observed, proposed, approved or implemented.
+
 ## Workflow
 1. Define semantic roles before raw values: surface, text, border, accent, status, focus and interaction states.
 2. Establish type scale, spacing, radius, shadow, stroke and motion tokens.

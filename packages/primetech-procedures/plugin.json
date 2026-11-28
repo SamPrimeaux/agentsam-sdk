@@ -1,0 +1,43 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "email": "info@inneranimals.com",
+    "name": "sam primeaux"
+  },
+  "description": "PrimeTech Design Studio is an agent-native creative-production system for brand identity and kits, icon families, custom type and letterforms, character and pet identities, sprite atlases, design systems, high-fidelity UI/UX flows and interactive demos, visual quality assurance, creative asset packaging, and digital publishing. Its nine reusable skills guide evidence-based briefs, design rationale, meaningful iteration, approval, production checks and usable deliverables. Use the tools available in the current host and AgentSam PrimeTech procedures; external design providers are optional handoffs, not required dependencies.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [],
+        "category": "Creativity",
+        "composerIcon": "./assets/primetech-design-studio.svg",
+        "defaultPrompt": [
+          "Build or refine a brand kit, icon family, or custom type system.",
+          "Create a character identity, sprite atlas, or digital publication.",
+          "Audit, prototype, and verify a high-fidelity product experience."
+        ],
+        "developerName": "sam primeaux",
+        "displayName": "PrimeTech Design Studio",
+        "logo": "./assets/primetech-design-studio.svg",
+        "longDescription": "PrimeTech Design Studio is an agent-native creative-production system for brand identity and kits, icon families, custom type and letterforms, character and pet identities, sprite atlases, design systems, high-fidelity UI/UX flows and interactive demos, visual quality assurance, creative asset packaging, and digital publishing. Its nine reusable skills guide evidence-based briefs, design rationale, meaningful iteration, approval, production checks and usable deliverables. Use the tools available in the current host and AgentSam PrimeTech procedures; external design providers are optional handoffs, not required dependencies.",
+        "shortDescription": "Creative production workflows"
+      }
+    }
+  },
+  "keywords": [
+    "PrimeTech",
+    "creative production",
+    "brand identity",
+    "iconography",
+    "type design",
+    "character sprites",
+    "design systems",
+    "UI/UX",
+    "visual QA",
+    "digital publishing",
+    "interactive demos",
+    "creative asset packaging"
+  ],
+  "name": "architect-design-studio",
+  "version": "0.3.0"
+}
