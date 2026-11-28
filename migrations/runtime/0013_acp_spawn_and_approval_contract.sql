@@ -1,5 +1,6 @@
 -- Local SQLite test/runtime mirror for the canonical shared-D1 spawn and approval records.
 -- Hosted ACP writes these same logical contracts directly to the shared D1 database.
+ALTER TABLE agentsam_agent_run ADD COLUMN routing_arm_id TEXT;
 
 ALTER TABLE agentsam_approval_queue ADD COLUMN tool_call_id TEXT;
 ALTER TABLE agentsam_approval_queue ADD COLUMN terminal_job_id TEXT;
