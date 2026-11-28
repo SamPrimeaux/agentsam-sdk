@@ -104,7 +104,9 @@ function mockFetcher(options={}) {
     };
     else if(href===(options.metadata?.endpoint_url||endpoint)){
       const rpc=JSON.parse(init.body);
-      if(rpc.method==='tools/list')body={jsonrpc:'2.0',id:rpc.id,result:{tools:options.tools||[fakeTool,sharedTool]}};
+      if(rpc.method==='initialize')body={jsonrpc:'2.0',id:rpc.id,result:{protocolVersion:'2025-11-25',capabilities:{tools:{}},serverInfo:{name:'fixture',version:'1'}}};
+      else if(rpc.method==='notifications/initialized')return new Response(null,{status:202});
+      else if(rpc.method==='tools/list')body={jsonrpc:'2.0',id:rpc.id,result:{tools:options.tools||[fakeTool,sharedTool]}};
       else if(rpc.method==='tools/call')body={jsonrpc:'2.0',id:rpc.id,result:{structuredContent:{ok:true,tool:rpc.params.name}}};
       else throw new Error('unknown rpc '+rpc.method);
     }else throw new Error('unexpected test network destination '+href);

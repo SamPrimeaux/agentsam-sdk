@@ -58,7 +58,7 @@ export function applyOauthPluginState(plugin, tokenRows = []) {
         && String(row.account_identifier) === ref.accountIdentifier)
     : null;
   const live = token && Number(token.is_active) === 1 && !token.revoked_at;
-  const failing = live && token.last_refresh_error_code;
+  const failing = token && !token.revoked_at && token.last_refresh_error_code;
   return {
     ...plugin,
     connection_ref: ref ? ref.provider + ":" + ref.accountIdentifier : null,

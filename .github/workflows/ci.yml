@@ -238,6 +238,9 @@ jobs:
       - name: Link current SDK checkout for Studio integration checks
         run: node apps/local-studio/scripts/link-local-sdk.mjs
 
+      - name: Verify MCP plugin transport and account OAuth connections
+        run: node --test apps/local-studio/scripts/plugin-mcp-transport.test.mjs apps/local-studio/scripts/plugin-oauth-integration.test.mjs apps/local-studio/scripts/connections-registry.test.mjs apps/local-studio/backend/worker/plugin-discovery-policy.test.mjs apps/local-studio/backend/worker/plugin-oauth-external.test.mjs
+
       - name: Verify account-owned AgentSam avatar preference
         run: node --test apps/local-studio/backend/worker/studio-user-preferences.test.mjs
 
