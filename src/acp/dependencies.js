@@ -506,10 +506,10 @@ async function spawnChildrenForJob(database, {
     const childStep = clean(spec.step_id || spec.stepId || stepId) || null;
     const childRequirements = object(spec.runtime_requirements || spec.runtimeRequirements || runtimeRequirements);
     const childMetadata = sanitize(object(spec.metadata || metadata));
-    const selected = clean(spec.selected_by || spec.selectedBy || selectedBy);
+    const selected = clean(spec.selected_by || spec.selectedBy || selectedBy || parent.selected_by);
     const storedSelected = selected === 'automatic' || selected === 'thompson' ? 'thompson'
       : (selected === 'manual' || selected === 'fallback' ? selected : null);
-    const modelKey = clean(spec.model_key || spec.modelKey) || null;
+    const modelKey = clean(spec.model_key || spec.modelKey || parent.model_key) || null;
     const effort = clean(spec.reasoning_effort || spec.reasoningEffort || reasoningEffort || parent.reasoning_effort) || null;
     const tier = clean(spec.service_tier || spec.serviceTier || serviceTier || parent.requested_service_tier) || null;
     const existing = await database.prepare(
