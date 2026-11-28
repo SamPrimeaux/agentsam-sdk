@@ -38,12 +38,12 @@ test('standalone SDK tarball installs and launches with authenticated release de
       type: 'module',
     }, null, 2) + '\n');
 
-    // A pending npm release cannot fetch a version that does not exist.
-    // In CI candidate mode, first seed the EXACT matching errors-package
-    // tarball from this checkout, without linking a monorepo workspace.
-    // Postpublication verifies a standalone root-tarball install instead.
+    // A pending npm release cannot fetch first-party dependency versions that
+    // do not exist yet. In CI candidate mode, seed the exact matching local
+    // tarballs, without linking monorepo workspaces. Postpublication verifies
+    // a standalone root-tarball install from the public registry instead.
     if (process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK !== '1') {
-      const sourcePackages = ['agentsam-errors', 'agentsam-contracts'];
+      const sourcePackages = ['agentsam-errors', 'agentsam-contracts', 'primetech-procedures'];
       for (const packageDir of sourcePackages) {
         const tarball = run('npm', [
           'pack', '--silent', '--pack-destination', packDir,
