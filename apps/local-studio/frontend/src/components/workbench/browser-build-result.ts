@@ -7,12 +7,12 @@ export function extractRunnableHtml(message: string): string | null {
 }
 export function buildBrowserInstruction(prompt: string, previousHtml?: string | null): string {
   const task = prompt.trim().slice(0,10_000);
-  const continuation = previousHtml ? '\nYou are editing this current browser preview. Preserve working functionality and regenerate a COMPLETE replacement page:\n```html\n' + previousHtml.slice(0,16_000) + '\n```\n' : '';
+  const continuation = previousHtml ? '\nCurrent browser preview (may be truncated for context). Only if the user requests edits, preserve working functionality and regenerate a COMPLETE replacement page:\n```html\n' + previousHtml.slice(0,Math.max(0,10_500-task.length)) + '\n```\n' : '';
   return [
-    'Build a functioning interactive webpage in the AgentSam Browser for this request:', task, continuation,
-    'Return exactly one complete self-contained runnable HTML document inside a ```html code fence.',
-    'Include semantic structure, responsive styling and working client-side interactions where appropriate. Do not output commentary instead of the document.',
-    'Do not include private account information, passwords, API tokens, untrusted remote scripts or remote dependencies.',
+    'Respond to this user request in the AgentSam Browser Build conversation:', task,
+    'If the user asks to create or modify a webpage, return exactly one complete self-contained runnable HTML document inside a ```html code fence. If they ask a question, greet you, or need clarification, answer in normal prose; do not generate a page.',
+    'Include semantic structure, responsive styling and working client-side interactions where appropriate. For actual builds, do not output commentary instead of the document.',
+    'Do not include private account information, passwords, API tokens, untrusted remote scripts or remote dependencies.', continuation,
   ].filter(Boolean).join('\n\n');
 }
 

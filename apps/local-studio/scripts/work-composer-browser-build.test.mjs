@@ -18,12 +18,15 @@ test('browser Build accepts a complete executable preview, never plain prose or 
 
 test('browser Build instruction binds existing preview without silently mutating source',()=>{
  assert.match(buildBrowserInstruction('make a landing page'),/complete self-contained runnable HTML/);
- assert.match(buildBrowserInstruction('edit colors','<html><body>Old</body></html>'),/Preserve working functionality/);
+ assert.match(buildBrowserInstruction('Wyd'),/answer in normal prose; do not generate a page/);
+ assert.ok(buildBrowserInstruction('x'.repeat(10000),'x'.repeat(10000)).length < 12000);
+ assert.match(buildBrowserInstruction('edit colors','<html><body>Old</body></html>'),/preserve working functionality/i);
 });
 
 test('browser Build uses the same tab and actual agent send, never drafts to lead chat',()=>{
  const source=read('../frontend/src/components/workbench/browser.tsx');
- assert.match(source,/await send\(tab\.id, 'side', buildBrowserInstruction\(request, source\), \{ runMode: 'agent' \}\)/);
+ assert.match(source,/await send\(tab\.id, 'side', buildBrowserInstruction\(request, source\), \{ runMode: 'agent', attachments \}\)/);
+ assert.match(source,/!previousIds.has\(message.id\)/);
  assert.match(source,/setBrowserSrcdoc\(tab\.id, html/);
  assert.doesNotMatch(source,/Added the request to your AgentSam chat composer/);
  assert.match(source,/onStop=\{\(\) => stop\(tab\.id\)\}/);
@@ -57,7 +60,7 @@ test('Explore and Build welcome screens use the active companion via ABS slots',
  assert.match(source,/companionStateAsset\(companion, busy \? 'working' : 'idle'\)/);
  assert.match(source,/exploreHomeExtra=\{mascot\}/);
  assert.match(source,/as-browser-conversation-welcome/);
- assert.match(source,/as-browser-chat-composer/);
+ assert.match(source,/as-browser-shared-composer/);
  assert.match(source,/showWindowbar=\{false\}/);
  assert.match(source,/showBuildToolbar=\{false\}/);
  assert.match(abs,/exploreHomeExtra\?: ReactNode/);
@@ -71,11 +74,14 @@ test('Browser build uses one compact toolbar, inline conversation and preview ra
  assert.match(browser,/showWindowbar=\{false\}/);
  assert.match(browser,/showBuildToolbar=\{false\}/);
  assert.match(browser,/setPreviewOpen\(true\)/);
- assert.match(browser,/as-browser-chat-composer/);
+ assert.match(browser,/as-browser-shared-composer/);
  assert.doesNotMatch(browser,/<section className="as-browser-build-activity"/);
  assert.match(abs,/aria-label="Back"/);
  assert.match(abs,/aria-label="Forward"/);
- assert.match(css,/border-radius:17px/);
+ assert.match(css,/\.as-browser-shared-composer \{ flex:0 0 auto;/);
+ assert.doesNotMatch(css,/padding-bottom:170px/);
+ assert.match(browser,/<Composer targetId=\{tab.id\} targetKind="side"/);
+ assert.match(browser,/resolveCompanion\('geaux'\)/);
 });
 
 test('Browser build completion handles no selected project without crashing the response', () => {

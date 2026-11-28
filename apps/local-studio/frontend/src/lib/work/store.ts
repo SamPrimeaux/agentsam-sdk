@@ -287,7 +287,7 @@ type WorkState = {
     targetId: string,
     targetKind: "chat" | "side",
     text?: string,
-    context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode; queuedAnnotations?: PendingAnnotation[] },
+    context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode; queuedAnnotations?: PendingAnnotation[]; attachments?: ChatAttachmentReference[] },
   ) => Promise<void>;
   stop: (id: string) => void;
   removeFollowup: (id: string) => void;
@@ -1164,10 +1164,10 @@ export const useWorkStore = create<WorkState>()(
             ? (window as unknown as { __agentsamComposerAttachments?: { targetId?: string; accountId?: string; attachments?: ChatAttachmentReference[] } })
                 .__agentsamComposerAttachments
             : undefined;
-        const pendingAttachments =
+        const pendingAttachments = context?.attachments ?? (
           pendingBag?.targetId === targetId && Array.isArray(pendingBag.attachments)
             ? pendingBag.attachments
-            : [];
+            : []);
         if (typeof window !== "undefined" && pendingBag?.targetId === targetId) {
           delete (window as unknown as { __agentsamComposerAttachments?: unknown }).__agentsamComposerAttachments;
         }

@@ -470,7 +470,7 @@ export function Composer({
         {!contextual && targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
       <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async files => { await onFiles(files); }} />
-      <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} />
+      <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} onSubmit={onSubmit ? (text) => onSubmit({text, attachments: [], images: []}) : undefined} />
     </div>
   );
 }

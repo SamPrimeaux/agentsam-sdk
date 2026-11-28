@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUp, ExternalLink, Eye, MessageSquare, Puzzle, Square } from 'lucide-react';
+import { ExternalLink, Eye, MessageSquare, Puzzle } from 'lucide-react';
 import { AgentSamAbsBrowser } from '@inneranimalmedia/agentsam-abs/react';
 import type { AbsBrowserMode, BrowserTabState } from '@inneranimalmedia/agentsam-abs';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
@@ -10,7 +10,9 @@ import { WebBrowserViewport } from './web-browser-viewport';
 import { toast } from 'sonner';
 import { IconAction } from '@/components/ui/icon-action';
 import { useActiveCompanion } from '../../../agentsam/CompanionContext';
-import { companionStateAsset } from '../../../agentsam/companions';
+import { companionStateAsset, resolveCompanion } from '../../../agentsam/companions';
+import { Composer } from './composer';
+import type { ChatAttachmentReference } from '@/lib/content/chat-images';
 import '@inneranimalmedia/agentsam-abs/browser.css';
 import './browser-stage.css';
 import { extractRunnableHtml, buildBrowserInstruction, withBrowserAnnotationBridge } from './browser-build-result';
@@ -20,9 +22,9 @@ interface BrowserNativeEvent { sessionId: string; url: string; title?: string | 
 
 /** Only the user's request is shown; implementation instructions remain internal. */
 function browserRequestText(value: string) {
-  const prefix = 'Build a functioning interactive webpage in the AgentSam Browser for this request:';
-  if (!value.startsWith(prefix)) return value;
-  return value.slice(prefix.length).split(/\n\n(?:You are editing this current browser preview|Return exactly one complete)/)[0].trim();
+  const prefix = ['Respond to this user request in the AgentSam Browser Build conversation:', 'Build a functioning interactive webpage in the AgentSam Browser for this request:'].find(item => value.startsWith(item));
+  if (!prefix) return value;
+  return value.slice(prefix.length).split(/\n\n(?:You are editing this current browser preview|Return exactly one complete|If the user asks to create or modify a webpage)/)[0].trim();
 }
 
 /** The existing Side Stage and expanded Work panel both mount this same browser session. */
@@ -32,6 +34,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   const busy = useWorkStore(state => state.streamingIds.includes(tab.id));
   const pet = companionStateAsset(companion, busy ? 'working' : 'idle');
   const mascot = pet ? <img className="as-browser-ready-pet" src={pet} alt="" draggable={false} /> : null;
+  const geaux = companionStateAsset(resolveCompanion('geaux'), busy ? 'working' : 'idle');
   const setTabUrl = useWorkStore((state) => state.setTabUrl);
   const navigateBrowser = useWorkStore((state) => state.navigateBrowser);
   const openSideTab = useWorkStore((state) => state.openSideTab);
@@ -39,11 +42,9 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [buildError, setBuildError] = useState('');
   const [previewOpen, setPreviewOpen] = useState(Boolean(tab.srcdoc));
-  const [buildDraft, setBuildDraft] = useState('');
   const [buildRequested, setBuildRequested] = useState(Boolean(tab.messages.length));
   const send = useWorkStore(state => state.send);
   const stop = useWorkStore(state => state.stop);
-  const conversationOpen = mode === 'build' && !previewOpen;
   useEffect(() => { if (tab.url) setMode('explore'); }, [tab.url]);
   // Settled page visits feed the New tab's Suggested tiles (account history, best-effort).
   useEffect(() => {
@@ -115,25 +116,31 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   /** Run the existing authenticated agent directly against this persistent browser tab.
    * The browser stores its own instruction/reply history and only previews verified HTML output.
    */
-  async function runBrowserBuild(intent: 'create' | 'edit', prompt: string) {
-    if (!prompt.trim() || busy) return;
-    const request = intent === 'edit' ? 'Revise the current page: ' + prompt : prompt;
+  async function runBrowserBuild(_intent: 'create' | 'edit', prompt: string, attachments: ChatAttachmentReference[] = []) {
+    if (!prompt.trim() && !attachments.length && !useWorkStore.getState().pendingAnnotations[tab.id]?.length) return;
+    if (useWorkStore.getState().streamingIds.includes(tab.id)) throw new Error('Wait for the current build to finish.');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Reconnect before building. Your draft is retained.');
+    const request = prompt.trim() || 'Review the attached context.';
+    const before = useWorkStore.getState().sideTabs.find(item => item.id === tab.id);
+    const source = before?.srcdoc;
+    const previousIds = new Set(before?.messages.map(message => message.id));
+    if (request.length > 10000) throw new Error('Please shorten the request to 10,000 characters or fewer.');
     setMode('build'); setBuildRequested(true); setPreviewOpen(false); setBuildError('');
-    const source = useWorkStore.getState().sideTabs.find(item => item.id === tab.id)?.srcdoc;
     try {
-      await send(tab.id, 'side', buildBrowserInstruction(request, source), { runMode: 'agent' });
+      await send(tab.id, 'side', buildBrowserInstruction(request, source), { runMode: 'agent', attachments });
       const latest = useWorkStore.getState().sideTabs.find(item => item.id === tab.id);
-      const answer = [...(latest?.messages || [])].reverse().find(message => message.role === 'assistant' && message.content.trim());
+      const answer = [...(latest?.messages || [])].reverse().find(message => message.role === 'assistant' && !previousIds.has(message.id) && message.content.trim());
       const html = answer && extractRunnableHtml(answer.content);
       if (!html) {
         const reply = answer?.content?.trim() || '';
-        const codeLike = /```(?:html|htm)?\s|<!doctype\s+html|<html\b/i.test(reply);
-        setBuildError(codeLike ? 'AgentSam returned an incomplete page. Ask it to finish the HTML and retry.' : reply.slice(0, 500) || 'No complete preview was returned. Try again.');
+        const codeLike = /```(?:html|htm)\b|<!doctype\s+html|<html\b/i.test(reply);
+        if (codeLike) setBuildError('The generated page is incomplete. Your previous preview is unchanged.');
+        else if (!reply) setBuildError('No new response was returned. You can retry.');
         return;
       }
       useWorkStore.getState().setBrowserSrcdoc(tab.id, html, 'Built · ' + prompt.trim().slice(0,48));
       setPreviewOpen(true);
-    } catch (error) { setBuildError(error instanceof Error ? error.message : 'Browser build failed.'); }
+    } catch (error) { setBuildError(error instanceof Error ? error.message : 'Browser build failed.'); throw error; }
   }
 
   return (
@@ -161,7 +168,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onExploreForward={() => nativeAction('forward')}
         onExploreRefresh={() => nativeAction('reload')}
         exploreSurface={native ? <EmbeddedBrowserViewport key={`${tab.id}-${reloadKey}`} sessionId={tab.id} url={tab.url} /> : <WebBrowserViewport key={`${tab.id}-${reloadKey}`} tabId={tab.id} url={tab.url} />}
-        onNavigate={(intent, prompt) => { void runBrowserBuild(intent,prompt); }}
+        onNavigate={(intent, prompt) => { void runBrowserBuild(intent,prompt).catch(error => toast.error(String(error))); }}
         onBack={() => nativeAction('back')}
         onForward={() => nativeAction('forward')}
         onRefresh={() => nativeAction('reload')}
@@ -186,40 +193,34 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
             <div className="as-browser-conversation" role="region" aria-label="Browser build conversation">
               {!buildRequested && tab.messages.length === 0 ? (
                 <div className="as-browser-conversation-welcome">
-                  {mascot}
+                  {geaux ? <img className="as-browser-build-pet" src={geaux} alt="" draggable={false}/> : mascot}
                   <h2>What should we build?</h2>
-                  <p>Describe a page or experience. AgentSam will build it in this browser tab.</p>
                 </div>
               ) : (
                 <div className="as-browser-messages" aria-live="polite">
                   {tab.messages.filter(message => message.role === 'user' || message.role === 'assistant').map(message => {
                     const userMessage = message.role === 'user';
                     const content = userMessage ? browserRequestText(message.content) : message.content;
-                    const generatedCode = !userMessage && /```(?:html|htm)?\s|<!doctype\s+html|<html\b/i.test(content);
-                    const rendered = generatedCode ? (tab.srcdoc ? 'Your page is ready to preview.' : '') : content.trim();
+                    const generatedCode = !userMessage && /```(?:html|htm)\b|<!doctype\s+html|<html\b/i.test(content);
+                    const rendered = generatedCode ? (extractRunnableHtml(content) ? 'Your page is ready to preview.' : '') : content.trim();
                     if (!rendered) return null;
                     return <div key={message.id} className={`as-browser-message ${userMessage ? 'is-user' : 'is-assistant'}`}>
                       {!userMessage && <strong>AgentSam</strong>}
                       <p>{rendered.length > 1000 && !userMessage ? `${rendered.slice(0, 950)}…` : rendered}</p>
                     </div>;
                   })}
-                  {busy && <div className="as-browser-building" role="status"><span className="as-browser-thinking-dot" />Working on it… <button type="button" onClick={() => stop(tab.id)} aria-label="Stop build"><Square size={12} /> Stop</button></div>}
+                  {busy && <div className="as-browser-building" role="status"><span className="as-browser-thinking-dot" />Working on it…</div>}
                   {buildError && !busy && <div className="as-browser-build-error" role="alert">{buildError}</div>}
                   {tab.srcdoc && !busy && <button type="button" className="as-browser-show-preview" onClick={() => setPreviewOpen(true)}><Eye size={15} /> View page</button>}
                 </div>
               )}
             </div>
           )}
-          {!(previewOpen && tab.srcdoc) && <form className="as-browser-chat-composer" onSubmit={(event) => {
-            event.preventDefault();
-            const next = buildDraft.trim();
-            if (next) { setBuildDraft(''); void runBrowserBuild(tab.srcdoc ? 'edit' : 'create', next); }
-          }}>
-            <textarea aria-label="Build with AgentSam" placeholder={tab.srcdoc ? 'Describe a change…' : 'Ask AgentSam to build anything…'}
-              rows={2} value={buildDraft} onChange={event => setBuildDraft(event.target.value)}
-              onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-            <div className="as-browser-composer-bottom"><span>{tab.srcdoc ? 'Edit this page' : 'Build in this tab'}</span><button type="submit" aria-label="Send build request" disabled={busy || !buildDraft.trim()}><ArrowUp size={17} /></button></div>
-          </form>}
+          {!(previewOpen && tab.srcdoc) && <div className="as-browser-shared-composer">
+            <Composer targetId={tab.id} targetKind="side" placeholder={tab.srcdoc ? 'Describe a change…' : 'Ask AgentSam'}
+              busy={busy} onCancel={() => stop(tab.id)}
+              onSubmit={({text, attachments}) => runBrowserBuild(tab.srcdoc ? 'edit' : 'create', text, attachments)}/>
+          </div>}
         </div>
       </AgentSamAbsBrowser>
     </div>
