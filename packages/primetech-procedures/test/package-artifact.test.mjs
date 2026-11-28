@@ -49,6 +49,8 @@ test('npm tarball includes AgentSam and OpenAI manifests, skills, and TypeScript
   assert.equal(ui.category, 'Creativity');
   assert.ok(ui.shortDescription.length <= 30, 'OpenAI listing subtitle exceeds 30 characters');
   assert.equal(ui.displayName, 'PrimeTech Design Studio');
+  assert.equal(ui.composerIcon, './assets/primetech-design-studio.svg');
+  assert.equal(ui.logo, './assets/primetech-design-studio.svg');
   const skillDirs = fs.readdirSync(path.join(packageRoot, 'skills'), { withFileTypes: true })
     .filter(entry => entry.isDirectory() && fs.existsSync(path.join(packageRoot, 'skills', entry.name, 'SKILL.md')));
   assert.equal(skillDirs.length, 9, 'expected nine canonical skills');

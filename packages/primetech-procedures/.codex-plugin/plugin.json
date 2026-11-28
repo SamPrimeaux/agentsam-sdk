@@ -2,7 +2,7 @@
   "interface": {
     "capabilities": [],
     "category": "Creativity",
-    "composerIcon": "assets/primetech-design-studio.svg",
+    "composerIcon": "./assets/primetech-design-studio.svg",
     "defaultPrompt": [
       "Build or refine a brand kit, icon family, or custom type system.",
       "Create a character identity, sprite atlas, or digital publication.",
@@ -10,7 +10,7 @@
     ],
     "developerName": "sam primeaux",
     "displayName": "PrimeTech Design Studio",
-    "logo": "assets/primetech-design-studio.svg",
+    "logo": "./assets/primetech-design-studio.svg",
     "longDescription": "PrimeTech Design Studio is an agent-native creative-production system for brand identity and kits, icon families, custom type and letterforms, character and pet identities, sprite atlases, design systems, high-fidelity UI/UX flows and interactive demos, visual quality assurance, creative asset packaging, and digital publishing. Its nine reusable skills guide evidence-based briefs, design rationale, meaningful iteration, approval, production checks and usable deliverables. Use the tools available in the current host and AgentSam PrimeTech procedures; external design providers are optional handoffs, not required dependencies.",
     "shortDescription": "Creative production workflows"
   },
