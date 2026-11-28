@@ -23,7 +23,7 @@ export interface AgentInput {
 }
 
 export const AGENT_RUN_MODES = ['ask', 'plan', 'agent', 'debug', 'multitask'] as const;
-export const AGENT_RUN_SELECTED_BY = ['manual', 'thompson', 'fallback'] as const;
+export const AGENT_RUN_SELECTED_BY = ['manual', 'automatic', 'fallback'] as const;
 export const AGENT_RUN_STATUSES = [
   'queued', 'running', 'waiting_external', 'waiting_child',
   'awaiting_input', 'awaiting_approval', 'sleeping', 'retry_scheduled',
@@ -79,8 +79,6 @@ export interface AgentRun {
   createdAt?: number;
   updatedAt?: number;
   latencyMs?: number;
-  planId?: string;
-  todoId?: string;
   metadata?: Record<string, unknown>;
 }
 
