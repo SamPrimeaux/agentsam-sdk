@@ -271,7 +271,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
   const mobileStageVisible = isMobile && (mobileWorkOpen || state.sideOpen);
-  const mobileFocusedStage = mobileStageVisible && !!activeStage && !["newtab", "files", "artifacts", "apps"].includes(activeStage.kind);
+  const mobileFocusedStage = mobileStageVisible && !!activeStage && !["newtab", "files", "artifacts", "apps", "terminal"].includes(activeStage.kind);
   const headerActions = isMobile ? (mobileStageVisible ? <MobileStageActions /> : empty ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
