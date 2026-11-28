@@ -215,7 +215,7 @@ export class DatabaseAgentControlClient {
   }
 
   async getApproval(id) {
-    return getAgentApproval(this.database, id, this.accountId);
+    return getAgentApproval(this.database, id, this.accountId, this.queueControl);
   }
 
   async listApprovals(options = {}) {
@@ -224,6 +224,7 @@ export class DatabaseAgentControlClient {
       runId: options.run_id || options.runId || null,
       status: options.status || 'pending',
       limit: options.limit || 100,
+      queueControl: this.queueControl,
     });
   }
 
