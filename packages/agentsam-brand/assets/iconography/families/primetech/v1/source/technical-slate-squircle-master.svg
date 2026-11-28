@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="technical-slate-squircle-master" width="640" height="640" viewBox="0 0 640 640" role="img" aria-labelledby="title description">
+  <title id="title">PrimeTech Technical Slate Squircle</title>
+  <desc id="description">The verified five-facet PrimeTech P. Colorway: Technical Slate. Shape: Squircle.</desc>
+  <rect id="background" x="0" y="0" width="640" height="640" rx="132" fill="#101722"/>
+  <g id="mark" transform="translate(109 71) scale(0.81)">
+    <path id="facet-top" d="M140 140 L240 2 L342 2 L376 140 Z" fill="#E2E8F0"/>
+    <path id="facet-right" d="M370 2 L520 140 L520 270 L421 270 L440 220 Z" fill="#CBD5E1"/>
+    <path id="facet-left" d="M0 142 L140 184 L140 222 L0 449 Z" fill="#8B9BB1"/>
+    <path id="facet-lower-left" d="M146 282 L146 612 L6 502 Z" fill="#637890"/>
+    <path id="facet-bottom-right" d="M270 302 L502 302 L314 440 L178 440 Z" fill="#42A5F5"/>
+  </g>
+</svg>

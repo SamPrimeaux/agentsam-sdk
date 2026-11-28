@@ -209,23 +209,60 @@ Examples:
 
   try {
     if (action === 'iconography') {
-      const manifestPath = opts.from || rest[0];
-      if (!manifestPath || !opts.out) {
-        write('iconography requires --from <iconography.manifest.json> and --out <output directory>\n');
-        return 2;
+      const subcommands = new Set(['validate', 'build', 'inspect', 'package']);
+      const subAction = subcommands.has(rest[0]) ? rest[0] : 'build';
+      const from = opts.from || (subcommands.has(rest[0]) ? rest[1] : rest[0]);
+      const family = await import('../core/iconography/family.js');
+      let result;
+      if (subAction === 'validate') {
+        if (!from) {
+          write('iconography validate requires --from <family.manifest.json>\n');
+          return 2;
+        }
+        result = await family.validateIconographyFamilyManifest({ manifestPath: path.resolve(opts.cwd, from) });
+      } else if (subAction === 'inspect') {
+        if (!from) {
+          write('iconography inspect requires --from <built-family-directory>\n');
+          return 2;
+        }
+        result = await family.inspectIconographyFamilyPack({ buildDir: path.resolve(opts.cwd, from) });
+      } else if (subAction === 'package') {
+        if (!from || !opts.out) {
+          write('iconography package requires --from <built-family-directory> and --out <archive.zip>\n');
+          return 2;
+        }
+        result = await family.packageIconographyFamilyPack({
+          buildDir: path.resolve(opts.cwd, from),
+          outFile: path.resolve(opts.cwd, opts.out),
+        });
+      } else {
+        if (!from || !opts.out) {
+          write('iconography build requires --from <manifest.json> and --out <output directory>\n');
+          return 2;
+        }
+        const manifestPath = path.resolve(opts.cwd, from);
+        const { readFile } = await import('node:fs/promises');
+        const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+        if (manifest.schema === family.ICON_FAMILY_SCHEMA) {
+          result = await family.buildIconographyFamilyPack({
+            manifestPath,
+            outDir: path.resolve(opts.cwd, opts.out),
+          });
+        } else {
+          const { buildIconographyPack } = await import('../core/iconography/build.js');
+          let normalizeSvg;
+          try {
+            ({ normalizeSvgMarkup: normalizeSvg } = await import('../../../agentsam-merch/src/node/vector.js'));
+          } catch {
+            // Standalone agentsam-brand uses its dependency-free normalizer.
+          }
+          result = await buildIconographyPack({
+            manifestPath,
+            outDir: path.resolve(opts.cwd, opts.out),
+            normalizeSvg,
+          });
+        }
       }
-      const { buildIconographyPack } = await import('../core/iconography/build.js');
-      let normalizeSvg;
-      try {
-        ({ normalizeSvgMarkup: normalizeSvg } = await import('../../../agentsam-merch/src/node/vector.js'));
-      } catch {
-        // Standalone agentsam-brand uses its dependency-free normalizer.
-      }
-      const result = await buildIconographyPack({
-        manifestPath: path.resolve(opts.cwd, manifestPath),
-        outDir: path.resolve(opts.cwd, opts.out),
-        normalizeSvg,
-      });
       writeResult(write, opts, result);
       return result.ok ? 0 : 1;
     }

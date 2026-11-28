@@ -1,0 +1,80 @@
+{
+  "schema": "agentsam.brand-icon-family.v1",
+  "family_id": "inneranimal-cloud-system-icons",
+  "revision": "v1",
+  "name": "InnerAnimal Cloud System Icons",
+  "metadata": {
+    "brand_slug": "inneranimal",
+    "brand_name": "InnerAnimal",
+    "icon_count": 2,
+    "source_archive": "ia-cloud-exports(2).zip",
+    "source_archive_library_path": "/PrimeTech/Brand References/Cloud Icon Exports",
+    "extracted_library_path": "/PrimeTech/Brand References/Cloud Icon Exports",
+    "source_preservation": "Original SVGs and all original PNG/ICO platform exports are retained in the extracted Library folder.",
+    "standardized_exports": "This family build adds a shared favicon/app/web size ladder using the original SVG geometry."
+  },
+  "source_policy": {
+    "original_only": true,
+    "allow_external_icon_libraries": false,
+    "allow_third_party_marks": false
+  },
+  "size_sets": {
+    "menu": [16, 20, 24, 32],
+    "standard": [48, 64],
+    "app": [128, 180, 192, 256, 432, 512, 1024, 1200],
+    "favicon": [16, 24, 32, 48, 64, 128, 256],
+    "webp": [64, 128, 192, 512]
+  },
+  "icons": [
+    {
+      "id": "custom-cloud-download-si",
+      "name": "InnerAnimal Cloud Download",
+      "semantic": "inneranimal.system.cloud.download",
+      "description": "Original InnerAnimal cloud download system icon with green app tile and monochrome marks.",
+      "metadata": {
+        "brand_slug": "inneranimal",
+        "family": "cloud-system-icons",
+        "function": "download",
+        "source_svg": "source/custom-cloud-download-si-source.svg",
+        "source_favicon_svg": "source/custom-cloud-download-si-favicon.svg",
+        "source_archive": "ia-cloud-exports(2).zip"
+      },
+      "layers": [
+        { "id": "background", "name": "InnerAnimal green background", "role": "background", "fill": "#4FC414" },
+        { "id": "glyph", "name": "Cloud download mark", "role": "symbol" },
+        { "id": "cut", "name": "Download arrow negative space", "role": "negative-space" }
+      ],
+      "variants": {
+        "master": "source/custom-cloud-download-si-favicon.svg",
+        "micro": "source/custom-cloud-download-si-favicon.svg",
+        "monochrome_light": "source/custom-cloud-download-si-mono-white.svg",
+        "monochrome_dark": "source/custom-cloud-download-si-mono-black.svg"
+      }
+    },
+    {
+      "id": "custom-cloud-code-si",
+      "name": "InnerAnimal Cloud Code",
+      "semantic": "inneranimal.system.cloud.code",
+      "description": "Original InnerAnimal cloud code system icon with green app tile and monochrome marks.",
+      "metadata": {
+        "brand_slug": "inneranimal",
+        "family": "cloud-system-icons",
+        "function": "code",
+        "source_svg": "source/custom-cloud-code-si-source.svg",
+        "source_favicon_svg": "source/custom-cloud-code-si-favicon.svg",
+        "source_archive": "ia-cloud-exports(2).zip"
+      },
+      "layers": [
+        { "id": "background", "name": "InnerAnimal green background", "role": "background", "fill": "#4FC414" },
+        { "id": "glyph", "name": "Cloud code mark", "role": "symbol" },
+        { "id": "cut", "name": "Code bracket and slash negative space", "role": "negative-space" }
+      ],
+      "variants": {
+        "master": "source/custom-cloud-code-si-favicon.svg",
+        "micro": "source/custom-cloud-code-si-favicon.svg",
+        "monochrome_light": "source/custom-cloud-code-si-mono-white.svg",
+        "monochrome_dark": "source/custom-cloud-code-si-mono-black.svg"
+      }
+    }
+  ]
+}
