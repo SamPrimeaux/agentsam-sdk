@@ -396,6 +396,7 @@ export function createPrimeTechProcedureHandler({
   projectRoot,
   receiptDir = null,
   invokeSamOperation,
+  invokeFileRuntime = null,
   invokeNativeTool = null,
   isCapabilityAvailable = () => false,
   isNativeToolAvailable = () => false,
@@ -490,15 +491,20 @@ export function createPrimeTechProcedureHandler({
       if (inputErrors.length) throw new PrimetechProcedureError('primetech_procedure_input_schema_invalid', 'Procedure input did not match its schema.', inputErrors);
       if (manifest.flags.physical_hardware) throw new PrimetechProcedureError('primetech_physical_hardware_not_supported');
       const runtime = manifest.runtime;
+      const fileRunner = runtime.kind === 'python' || runtime.kind === 'bash';
+      const boundFileRuntime = fileRunner && typeof invokeFileRuntime === 'function';
       const toolId = runtime.kind === 'native_tool' ? runtime.tool_key : null;
       const directOperation = runtime.kind === 'sam_operation' ? runtime.operation : null;
       if (runtime.kind === 'native_tool' && typeof invokeNativeTool !== 'function') {
         throw new PrimetechProcedureError('primetech_native_tool_host_not_bound');
       }
-      if (runtime.kind !== 'native_tool' && typeof invokeSamOperation !== 'function') {
+      if (runtime.kind !== 'native_tool' && !boundFileRuntime && typeof invokeSamOperation !== 'function') {
         throw new PrimetechProcedureError('primetech_procedure_host_binding_required');
       }
       for (const capability of manifest.capabilities) {
+        // Existing versioned file manifests name the legacy shell lane. An
+        // explicitly bound private file adapter satisfies only that dependency.
+        if (boundFileRuntime && capability === 'sam.superbash') continue;
         const available = toolId === capability
           ? await isNativeToolAvailable(capability)
           : await isCapabilityAvailable(capability);
@@ -515,11 +521,10 @@ export function createPrimeTechProcedureHandler({
           throw new PrimetechProcedureError('primetech_procedure_operator_approval_required');
         }
       }
-      const fileRunner = runtime.kind === 'python' || runtime.kind === 'bash';
-      const script = runtime.kind === 'python'
+      const script = boundFileRuntime ? null : runtime.kind === 'python'
         ? buildPythonCommand(manifest, procedure.entrypointPath, input.input)
         : runtime.kind === 'bash' ? buildBashCommand(procedure.entrypointPath, input.input) : null;
-      executedOperation = fileRunner ? 'sam.superbash' : (directOperation || toolId);
+      executedOperation = fileRunner ? (boundFileRuntime ? 'terminal.exec' : 'sam.superbash') : (directOperation || toolId);
       record.timings_ms.preflight = Math.max(0, now() - started);
       const executionStarted = now();
       const invocation = fileRunner ? {
@@ -527,8 +532,11 @@ export function createPrimeTechProcedureHandler({
         relativeCwd: '.',
         idempotencyKey: 'primetech:' + manifest.id + ':' + manifest.version + ':' + record.input_sha256,
       } : input.input;
-      const invocationResult = toolId
-        ? await invokeNativeTool(toolId, invocation)
+      const invocationResult = boundFileRuntime
+        ? await invokeFileRuntime({ id: manifest.id, version: manifest.version,
+          manifestSha256: procedure.manifestSha256, entrypointSha256: procedure.entrypointSha256,
+          projectRoot: canonicalProjectRoot, input: input.input, idempotencyKey: invocation.idempotencyKey })
+        : toolId ? await invokeNativeTool(toolId, invocation)
         : await invokeSamOperation(executedOperation, invocation);
       if (!isObject(invocationResult) || invocationResult.ok !== true) {
         const code = invocationResult?.error?.code || invocationResult?.error || 'primetech_procedure_execution_failed';

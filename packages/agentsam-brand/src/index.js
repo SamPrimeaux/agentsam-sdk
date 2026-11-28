@@ -164,6 +164,14 @@ export {
 } from './core/v2/compile.js';
 export { buildIconographyPack } from './core/iconography/build.js';
 export {
+  ICON_FAMILY_SCHEMA,
+  ICON_FAMILY_BUILDER,
+  validateIconographyFamilyManifest,
+  buildIconographyFamilyPack,
+  inspectIconographyFamilyPack,
+  packageIconographyFamilyPack,
+} from './core/iconography/family.js';
+export {
   BRAND_TEMPLATES,
   listBrandTemplates,
   getBrandTemplate,
@@ -205,4 +213,10 @@ export const BRAND_CAPABILITY_META = Object.freeze({
   'brand.publish': { id: 'brand.publish', deterministic: true, model_required: false, side_effects: 'storage-adapter' },
   'brand.verify': { id: 'brand.verify', deterministic: true, model_required: false, side_effects: 'none' },
   'brand.iconography.build': { id: 'brand.iconography.build', deterministic: true, model_required: false, side_effects: 'filesystem-and-renderer' },
+  'brand.iconography.family.validate': { id: 'brand.iconography.family.validate', deterministic: true, model_required: false, side_effects: 'none' },
+  'brand.iconography.family.build': { id: 'brand.iconography.family.build', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.iconography.family.inspect': { id: 'brand.iconography.family.inspect', deterministic: true, model_required: false, side_effects: 'none' },
+  'brand.iconography.family.package': { id: 'brand.iconography.family.package', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.asset.optimize': { id: 'brand.asset.optimize', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.asset.derive': { id: 'brand.asset.derive', deterministic: true, model_required: false, side_effects: 'filesystem' },
 });

@@ -61,8 +61,8 @@ The catalog lists **packaged** procedures. An actual host can run one only when 
 
 ## Runtime kinds and verification
 
-- **`python`**: validated package-local `.py` entrypoint invoked through the existing authorized `sam.superbash` lane, with pinned arguments and interpreter candidates.
-- **`bash`**: validated package-local Bash entrypoint invoked through the same authorized SAM operation, receiving one schema-validated JSON argument. Users cannot submit arbitrary scripts or substitute an entrypoint.
+- **`python`**: validated package-local `.py` entrypoint executed by the SDK CLI through the existing bounded `terminal.exec` argv runtime, with pinned arguments and interpreter candidates. Older hosts may explicitly bind the legacy SAM shell operation.
+- **`bash`**: validated package-local Bash entrypoint invoked through the same private, authorized argv runtime, receiving one schema-validated JSON argument. Users cannot submit arbitrary scripts or substitute an entrypoint.
 - **`sam_operation`**: manifest pins `runtime.operation`; the authenticated SAM host invokes that exact registered operation, not a shell. The operation must also appear in the manifest's declared capabilities.
 - **`native_tool`**: manifest pins `runtime.tool_key`; an authorized host must bind both `invokeNativeTool` and `isNativeToolAvailable`. In the SDK shell, installed SAM native-media operations are reused rather than wrapped in a new engine.
 
@@ -90,7 +90,7 @@ const receipt = await handler({ id: 'arch.assembly.calculate', version: '0.1.0',
   input: { layers: [{ name: 'sheet', thickness_in: 0.5 }, { name: 'stud', thickness_in: 3.5 }] } });
 ```
 
-Those `samHost`, `approvals`, and `nativeVerification` values are supplied by an existing installation; the package does **not** provision them. The AgentSam interactive CLI binds eligible read-only packaged SAM operations and already installed native-media operations automatically, subject to its session and approval policies. The hosted Cloudflare Worker requires its own explicit SAM/native host bindings; a D1 tool record alone is not an executor.
+Those `samHost`, `approvals`, and `nativeVerification` values are supplied by an existing installation; the package does **not** provision them. The AgentSam interactive CLI binds eligible read-only packaged SAM operations and already installed native-media operations automatically, subject to its session and approval policies. The hosted Cloudflare Worker requires its own explicit SAM/native host bindings; a D1 tool record alone is not an executor. File-host bindings are private: `invokeFileRuntime` receives only the procedure identity, validated input, pinned hashes and trusted project root. The host must independently authorize and re-resolve the packaged entrypoint.
 
 ## Python is a first-class SDK participant
 
@@ -118,7 +118,7 @@ Precedence: existing domain operation → canonical versioned procedure → appr
 
 ## Trust and evidence
 
-Trusted project root and tenant identity resolve through the host. Storage comes from installation bindings, never a hardcoded customer bucket. Read-only procedures may use `sam.superbash` only if an authorized host explicitly binds that operation. Writes require host approval and idempotency; shell access is not a sandbox. Physical machinery and production actuation are deliberately outside this offline procedure system.
+Trusted project root and tenant identity resolve through the host. Storage comes from installation bindings, never a hardcoded customer bucket. The SDK CLI re-resolves the versioned file manifest and source hashes, approves the bounded terminal invocation, and executes the exact argv without composing shell source. Legacy external hosts may still explicitly bind `sam.superbash`; it is not required by the SDK CLI. Writes require host approval and idempotency; shell access is not a sandbox. Physical machinery and production actuation are deliberately outside this offline procedure system.
 
 Each completed procedure records exact source revision, manifest and entrypoint hashes, request hash, output hashes, runtime/tool versions, exit status, verification result, operation receipt, destination and performance. The result is not complete until the real files exist and can be independently reopened.
 

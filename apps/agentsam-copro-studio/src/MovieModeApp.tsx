@@ -65,7 +65,7 @@ function installCoProBrandIcons() {
   if (typeof document === "undefined") return;
   // First-party local identity ships with this application, not CDN fallbacks.
   const localIcon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (localIcon?.getAttribute("href") === "/favicon.ico") return;
+  if (localIcon?.getAttribute("href")?.startsWith("/favicon")) return;
   const base = coproAppManifest.iconBaseUrl;
   if (!base) return;
   const setLink = (rel: string, size: string) => {
@@ -1112,7 +1112,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onRenameProject={renameProject}
         onDeleteProject={deleteSavedProject}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
-        appIconUrl={standalone ? "/brand/p-prime-spectrum-128.avif" : coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
+        appIconUrl={standalone ? "/brand/primetech/prime-spectrum-squircle/v1/app/png/192.png" : coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
         systemIcons={MOVIEMODE_SYSTEM_ICONS}
       />
       <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*,.glb,model/gltf-binary" className="copro-hidden-source-input" aria-label="Select a video, 3D GLB scene, image or audio file" onChange={(event) => {

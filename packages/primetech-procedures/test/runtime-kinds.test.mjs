@@ -208,3 +208,37 @@ test('authenticated interactive shell binds packaged SAM operations but not arbi
     assert.equal(result.execution.runtime_kind, 'sam_operation');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+
+test('authenticated CLI file procedures use the bounded terminal runtime without Superbash', async () => {
+  const root = temp('primetech-argv-');
+  try {
+    execFileSync('git', ['init', '-q', root]);
+    fs.writeFileSync(path.join(root, 'one.txt'), 'fixture');
+    const calls = [];
+    let allowed = true;
+    const host = createShellSamAdapter({ state: { cwd: root, projectRoot: root, home: root },
+      trustedIdentity: identity, authorize: async request => { calls.push(request); return allowed; } });
+    const run = createPrimeTechProcedureHandler({ catalog, projectRoot: root,
+      invokeFileRuntime: host.invokeProcedureFile,
+      invokeSamOperation: () => { throw new Error('must not call legacy SAM shell'); },
+      isCapabilityAvailable: () => false });
+    for (const [id, kind] of [['repo.git.status','bash'], ['repo.asset.inventory','python']]) {
+      const result = await run({ id, version:'0.1.0', input:{} });
+      assert.equal(result.status,'completed');
+      assert.equal(result.execution.operation,'terminal.exec');
+      assert.equal(result.execution.runtime_kind,kind);
+      assert.equal(result.verification.ok,true);
+      assert.match(result.execution.script_sha256,/^[a-f0-9]{64}$/);
+      assert.ok(fs.existsSync(path.join(root,'.agentsam','receipts',result.receipt.ref)));
+    }
+    assert.deepEqual(calls.map(x => x.capability_id),['terminal.exec','terminal.exec']);
+    allowed = false;
+    await assert.rejects(() => run({id:'repo.git.status',version:'0.1.0',input:{}}),
+      error => error.code === 'primetech_file_runtime_approval_required');
+    const p = catalog.get('repo.git.status','0.1.0');
+    const refused = await host.invokeProcedureFile({id:p.manifest.id,version:p.manifest.version,
+      projectRoot:fs.realpathSync(root),manifestSha256:p.manifestSha256,entrypointSha256:'0'.repeat(64),input:{}});
+    assert.equal(refused.error.code,'primetech_file_runtime_binding_mismatch');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});

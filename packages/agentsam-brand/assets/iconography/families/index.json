@@ -1,0 +1,661 @@
+{
+  "schema": "agentsam.brand-icon-family-index.v1",
+  "families": [
+    {
+      "family_id": "primetech-shared-brand-icon-families",
+      "brand_slug": "primetech",
+      "asset_key": "icon-families",
+      "asset_id": "basset_primetech_icon-families_v1",
+      "name": "PrimeTech Shared Brand Icon Families",
+      "manifest_key": "brands/primetech/icon-families/v1/manifest.json",
+      "package_key": "brands/primetech/icon-families/v1/primetech-icon-family-v1.zip",
+      "reference_library_path": "/PrimeTech/Brand References/PrimeTech",
+      "icons": [
+        {
+          "id": "core-mono-bare-p",
+          "asset_key": "icon-core-mono-bare-p",
+          "asset_id": "basset_primetech_icon-core-mono-bare-p_v1",
+          "name": "PrimeTech Core Mono Bare P",
+          "semantic": "primetech.brand.icon.core-mono.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "core-mono",
+            "colorway_name": "Core Mono",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-core-mono-bare-p/v1"
+        },
+        {
+          "id": "core-mono-circle",
+          "asset_key": "icon-core-mono-circle",
+          "asset_id": "basset_primetech_icon-core-mono-circle_v1",
+          "name": "PrimeTech Core Mono Circle",
+          "semantic": "primetech.brand.icon.core-mono.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "core-mono",
+            "colorway_name": "Core Mono",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#080A0F",
+            "facet_fills": [
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-core-mono-circle/v1"
+        },
+        {
+          "id": "core-mono-squircle",
+          "asset_key": "icon-core-mono-squircle",
+          "asset_id": "basset_primetech_icon-core-mono-squircle_v1",
+          "name": "PrimeTech Core Mono Squircle",
+          "semantic": "primetech.brand.icon.core-mono.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "core-mono",
+            "colorway_name": "Core Mono",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#080A0F",
+            "facet_fills": [
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF",
+              "#FFFFFF"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-core-mono-squircle/v1"
+        },
+        {
+          "id": "reverse-bare-p",
+          "asset_key": "icon-reverse-bare-p",
+          "asset_id": "basset_primetech_icon-reverse-bare-p_v1",
+          "name": "PrimeTech Reverse Bare P",
+          "semantic": "primetech.brand.icon.reverse.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "reverse",
+            "colorway_name": "Reverse",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-reverse-bare-p/v1"
+        },
+        {
+          "id": "reverse-circle",
+          "asset_key": "icon-reverse-circle",
+          "asset_id": "basset_primetech_icon-reverse-circle_v1",
+          "name": "PrimeTech Reverse Circle",
+          "semantic": "primetech.brand.icon.reverse.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "reverse",
+            "colorway_name": "Reverse",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#FFFFFF",
+            "facet_fills": [
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-reverse-circle/v1"
+        },
+        {
+          "id": "reverse-squircle",
+          "asset_key": "icon-reverse-squircle",
+          "asset_id": "basset_primetech_icon-reverse-squircle_v1",
+          "name": "PrimeTech Reverse Squircle",
+          "semantic": "primetech.brand.icon.reverse.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "reverse",
+            "colorway_name": "Reverse",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#FFFFFF",
+            "facet_fills": [
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317",
+              "#101317"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-reverse-squircle/v1"
+        },
+        {
+          "id": "prime-spectrum-bare-p",
+          "asset_key": "icon-prime-spectrum-bare-p",
+          "asset_id": "basset_primetech_icon-prime-spectrum-bare-p_v1",
+          "name": "PrimeTech Prime Spectrum Bare P",
+          "semantic": "primetech.brand.icon.prime-spectrum.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-spectrum",
+            "colorway_name": "Prime Spectrum",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#FF2D3D",
+              "#FF7A1F",
+              "#8A4FFF",
+              "#22C55E",
+              "#00B3F0"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-spectrum-bare-p/v1"
+        },
+        {
+          "id": "prime-spectrum-circle",
+          "asset_key": "icon-prime-spectrum-circle",
+          "asset_id": "basset_primetech_icon-prime-spectrum-circle_v1",
+          "name": "PrimeTech Prime Spectrum Circle",
+          "semantic": "primetech.brand.icon.prime-spectrum.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-spectrum",
+            "colorway_name": "Prime Spectrum",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#0B0D12",
+            "facet_fills": [
+              "#FF2D3D",
+              "#FF7A1F",
+              "#8A4FFF",
+              "#22C55E",
+              "#00B3F0"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-spectrum-circle/v1"
+        },
+        {
+          "id": "prime-spectrum-squircle",
+          "asset_key": "icon-prime-spectrum-squircle",
+          "asset_id": "basset_primetech_icon-prime-spectrum-squircle_v1",
+          "name": "PrimeTech Prime Spectrum Squircle",
+          "semantic": "primetech.brand.icon.prime-spectrum.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-spectrum",
+            "colorway_name": "Prime Spectrum",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#0B0D12",
+            "facet_fills": [
+              "#FF2D3D",
+              "#FF7A1F",
+              "#8A4FFF",
+              "#22C55E",
+              "#00B3F0"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-spectrum-squircle/v1"
+        },
+        {
+          "id": "prime-electric-bare-p",
+          "asset_key": "icon-prime-electric-bare-p",
+          "asset_id": "basset_primetech_icon-prime-electric-bare-p_v1",
+          "name": "PrimeTech Prime Electric Bare P",
+          "semantic": "primetech.brand.icon.prime-electric.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-electric",
+            "colorway_name": "Prime Electric",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#26DFFF",
+              "#1479FF",
+              "#3867F6",
+              "#6451F9",
+              "#028FEC"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-electric-bare-p/v1"
+        },
+        {
+          "id": "prime-electric-circle",
+          "asset_key": "icon-prime-electric-circle",
+          "asset_id": "basset_primetech_icon-prime-electric-circle_v1",
+          "name": "PrimeTech Prime Electric Circle",
+          "semantic": "primetech.brand.icon.prime-electric.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-electric",
+            "colorway_name": "Prime Electric",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#08152B",
+            "facet_fills": [
+              "#26DFFF",
+              "#1479FF",
+              "#3867F6",
+              "#6451F9",
+              "#028FEC"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-electric-circle/v1"
+        },
+        {
+          "id": "prime-electric-squircle",
+          "asset_key": "icon-prime-electric-squircle",
+          "asset_id": "basset_primetech_icon-prime-electric-squircle_v1",
+          "name": "PrimeTech Prime Electric Squircle",
+          "semantic": "primetech.brand.icon.prime-electric.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "prime-electric",
+            "colorway_name": "Prime Electric",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#08152B",
+            "facet_fills": [
+              "#26DFFF",
+              "#1479FF",
+              "#3867F6",
+              "#6451F9",
+              "#028FEC"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-prime-electric-squircle/v1"
+        },
+        {
+          "id": "alloy-blue-bare-p",
+          "asset_key": "icon-alloy-blue-bare-p",
+          "asset_id": "basset_primetech_icon-alloy-blue-bare-p_v1",
+          "name": "PrimeTech Alloy Blue Bare P",
+          "semantic": "primetech.brand.icon.alloy-blue.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "alloy-blue",
+            "colorway_name": "Alloy Blue",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#F1F5F9",
+              "#B3C0D2",
+              "#5E6D83",
+              "#317BF5",
+              "#0EA5E9"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-alloy-blue-bare-p/v1"
+        },
+        {
+          "id": "alloy-blue-circle",
+          "asset_key": "icon-alloy-blue-circle",
+          "asset_id": "basset_primetech_icon-alloy-blue-circle_v1",
+          "name": "PrimeTech Alloy Blue Circle",
+          "semantic": "primetech.brand.icon.alloy-blue.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "alloy-blue",
+            "colorway_name": "Alloy Blue",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#11161F",
+            "facet_fills": [
+              "#F1F5F9",
+              "#B3C0D2",
+              "#5E6D83",
+              "#317BF5",
+              "#0EA5E9"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-alloy-blue-circle/v1"
+        },
+        {
+          "id": "alloy-blue-squircle",
+          "asset_key": "icon-alloy-blue-squircle",
+          "asset_id": "basset_primetech_icon-alloy-blue-squircle_v1",
+          "name": "PrimeTech Alloy Blue Squircle",
+          "semantic": "primetech.brand.icon.alloy-blue.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "alloy-blue",
+            "colorway_name": "Alloy Blue",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#11161F",
+            "facet_fills": [
+              "#F1F5F9",
+              "#B3C0D2",
+              "#5E6D83",
+              "#317BF5",
+              "#0EA5E9"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-alloy-blue-squircle/v1"
+        },
+        {
+          "id": "industrial-ember-bare-p",
+          "asset_key": "icon-industrial-ember-bare-p",
+          "asset_id": "basset_primetech_icon-industrial-ember-bare-p_v1",
+          "name": "PrimeTech Industrial Ember Bare P",
+          "semantic": "primetech.brand.icon.industrial-ember.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "industrial-ember",
+            "colorway_name": "Industrial Ember",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#FFB347",
+              "#FF762A",
+              "#F04438",
+              "#D33C69",
+              "#F59E0B"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-industrial-ember-bare-p/v1"
+        },
+        {
+          "id": "industrial-ember-circle",
+          "asset_key": "icon-industrial-ember-circle",
+          "asset_id": "basset_primetech_icon-industrial-ember-circle_v1",
+          "name": "PrimeTech Industrial Ember Circle",
+          "semantic": "primetech.brand.icon.industrial-ember.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "industrial-ember",
+            "colorway_name": "Industrial Ember",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#160F15",
+            "facet_fills": [
+              "#FFB347",
+              "#FF762A",
+              "#F04438",
+              "#D33C69",
+              "#F59E0B"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-industrial-ember-circle/v1"
+        },
+        {
+          "id": "industrial-ember-squircle",
+          "asset_key": "icon-industrial-ember-squircle",
+          "asset_id": "basset_primetech_icon-industrial-ember-squircle_v1",
+          "name": "PrimeTech Industrial Ember Squircle",
+          "semantic": "primetech.brand.icon.industrial-ember.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "industrial-ember",
+            "colorway_name": "Industrial Ember",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#160F15",
+            "facet_fills": [
+              "#FFB347",
+              "#FF762A",
+              "#F04438",
+              "#D33C69",
+              "#F59E0B"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-industrial-ember-squircle/v1"
+        },
+        {
+          "id": "lagoon-bare-p",
+          "asset_key": "icon-lagoon-bare-p",
+          "asset_id": "basset_primetech_icon-lagoon-bare-p_v1",
+          "name": "PrimeTech Lagoon Bare P",
+          "semantic": "primetech.brand.icon.lagoon.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "lagoon",
+            "colorway_name": "Lagoon",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#2DD4BF",
+              "#22A4EE",
+              "#4875FF",
+              "#34D399",
+              "#00BFC5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-lagoon-bare-p/v1"
+        },
+        {
+          "id": "lagoon-circle",
+          "asset_key": "icon-lagoon-circle",
+          "asset_id": "basset_primetech_icon-lagoon-circle_v1",
+          "name": "PrimeTech Lagoon Circle",
+          "semantic": "primetech.brand.icon.lagoon.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "lagoon",
+            "colorway_name": "Lagoon",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#061B26",
+            "facet_fills": [
+              "#2DD4BF",
+              "#22A4EE",
+              "#4875FF",
+              "#34D399",
+              "#00BFC5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-lagoon-circle/v1"
+        },
+        {
+          "id": "lagoon-squircle",
+          "asset_key": "icon-lagoon-squircle",
+          "asset_id": "basset_primetech_icon-lagoon-squircle_v1",
+          "name": "PrimeTech Lagoon Squircle",
+          "semantic": "primetech.brand.icon.lagoon.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "lagoon",
+            "colorway_name": "Lagoon",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#061B26",
+            "facet_fills": [
+              "#2DD4BF",
+              "#22A4EE",
+              "#4875FF",
+              "#34D399",
+              "#00BFC5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-lagoon-squircle/v1"
+        },
+        {
+          "id": "technical-slate-bare-p",
+          "asset_key": "icon-technical-slate-bare-p",
+          "asset_id": "basset_primetech_icon-technical-slate-bare-p_v1",
+          "name": "PrimeTech Technical Slate Bare P",
+          "semantic": "primetech.brand.icon.technical-slate.bare-p",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "technical-slate",
+            "colorway_name": "Technical Slate",
+            "shape": "bare-p",
+            "shape_name": "Bare P",
+            "background": "transparent",
+            "facet_fills": [
+              "#E2E8F0",
+              "#CBD5E1",
+              "#8B9BB1",
+              "#637890",
+              "#42A5F5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-technical-slate-bare-p/v1"
+        },
+        {
+          "id": "technical-slate-circle",
+          "asset_key": "icon-technical-slate-circle",
+          "asset_id": "basset_primetech_icon-technical-slate-circle_v1",
+          "name": "PrimeTech Technical Slate Circle",
+          "semantic": "primetech.brand.icon.technical-slate.circle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "technical-slate",
+            "colorway_name": "Technical Slate",
+            "shape": "circle",
+            "shape_name": "Circle",
+            "background": "#101722",
+            "facet_fills": [
+              "#E2E8F0",
+              "#CBD5E1",
+              "#8B9BB1",
+              "#637890",
+              "#42A5F5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-technical-slate-circle/v1"
+        },
+        {
+          "id": "technical-slate-squircle",
+          "asset_key": "icon-technical-slate-squircle",
+          "asset_id": "basset_primetech_icon-technical-slate-squircle_v1",
+          "name": "PrimeTech Technical Slate Squircle",
+          "semantic": "primetech.brand.icon.technical-slate.squircle",
+          "metadata": {
+            "brand_slug": "primetech",
+            "colorway": "technical-slate",
+            "colorway_name": "Technical Slate",
+            "shape": "squircle",
+            "shape_name": "Squircle",
+            "background": "#101722",
+            "facet_fills": [
+              "#E2E8F0",
+              "#CBD5E1",
+              "#8B9BB1",
+              "#637890",
+              "#42A5F5"
+            ],
+            "approved_geometry": "five-facet-p-v1",
+            "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+          },
+          "r2_prefix": "brands/primetech/icon-technical-slate-squircle/v1"
+        }
+      ]
+    },
+    {
+      "family_id": "inneranimal-cloud-system-icons",
+      "brand_slug": "inneranimal",
+      "asset_key": "cloud-system-icons",
+      "asset_id": "basset_inneranimal_cloud-system-icons_v1",
+      "name": "InnerAnimal Cloud System Icons",
+      "manifest_key": "brands/inneranimal/cloud-system-icons/v1/manifest.json",
+      "package_key": "brands/inneranimal/cloud-system-icons/v1/inneranimal-cloud-icons-v1.zip",
+      "reference_library_path": "/PrimeTech/Brand References/Cloud Icon Exports",
+      "icons": [
+        {
+          "id": "custom-cloud-download-si",
+          "asset_key": "custom-cloud-download-si",
+          "asset_id": "basset_inneranimal_custom-cloud-download-si_v1",
+          "name": "InnerAnimal Cloud Download",
+          "semantic": "inneranimal.system.cloud.download",
+          "metadata": {
+            "brand_slug": "inneranimal",
+            "family": "cloud-system-icons",
+            "function": "download",
+            "source_svg": "source/custom-cloud-download-si-source.svg",
+            "source_favicon_svg": "source/custom-cloud-download-si-favicon.svg",
+            "source_archive": "ia-cloud-exports(2).zip"
+          },
+          "r2_prefix": "brands/inneranimal/custom-cloud-download-si/v1"
+        },
+        {
+          "id": "custom-cloud-code-si",
+          "asset_key": "custom-cloud-code-si",
+          "asset_id": "basset_inneranimal_custom-cloud-code-si_v1",
+          "name": "InnerAnimal Cloud Code",
+          "semantic": "inneranimal.system.cloud.code",
+          "metadata": {
+            "brand_slug": "inneranimal",
+            "family": "cloud-system-icons",
+            "function": "code",
+            "source_svg": "source/custom-cloud-code-si-source.svg",
+            "source_favicon_svg": "source/custom-cloud-code-si-favicon.svg",
+            "source_archive": "ia-cloud-exports(2).zip"
+          },
+          "r2_prefix": "brands/inneranimal/custom-cloud-code-si/v1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1736 @@
+{
+  "schema": "agentsam.brand-icon-family.v1",
+  "family_id": "primetech-shared-brand-icon-families",
+  "revision": "v1",
+  "name": "PrimeTech Shared Brand Icon Families",
+  "metadata": {
+    "brand_slug": "primetech",
+    "brand_name": "PrimeTech",
+    "geometry": "verified-five-facet-p",
+    "colorway_count": 8,
+    "shape_count": 3,
+    "icon_count": 24,
+    "default_favicon": "prime-spectrum-squircle",
+    "colorways": [
+      {
+        "id": "core-mono",
+        "name": "Core Mono",
+        "background": "#080A0F",
+        "fills": [
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF"
+        ]
+      },
+      {
+        "id": "reverse",
+        "name": "Reverse",
+        "background": "#FFFFFF",
+        "fills": [
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317"
+        ]
+      },
+      {
+        "id": "prime-spectrum",
+        "name": "Prime Spectrum",
+        "background": "#0B0D12",
+        "fills": [
+          "#FF2D3D",
+          "#FF7A1F",
+          "#8A4FFF",
+          "#22C55E",
+          "#00B3F0"
+        ]
+      },
+      {
+        "id": "prime-electric",
+        "name": "Prime Electric",
+        "background": "#08152B",
+        "fills": [
+          "#26DFFF",
+          "#1479FF",
+          "#3867F6",
+          "#6451F9",
+          "#028FEC"
+        ]
+      },
+      {
+        "id": "alloy-blue",
+        "name": "Alloy Blue",
+        "background": "#11161F",
+        "fills": [
+          "#F1F5F9",
+          "#B3C0D2",
+          "#5E6D83",
+          "#317BF5",
+          "#0EA5E9"
+        ]
+      },
+      {
+        "id": "industrial-ember",
+        "name": "Industrial Ember",
+        "background": "#160F15",
+        "fills": [
+          "#FFB347",
+          "#FF762A",
+          "#F04438",
+          "#D33C69",
+          "#F59E0B"
+        ]
+      },
+      {
+        "id": "lagoon",
+        "name": "Lagoon",
+        "background": "#061B26",
+        "fills": [
+          "#2DD4BF",
+          "#22A4EE",
+          "#4875FF",
+          "#34D399",
+          "#00BFC5"
+        ]
+      },
+      {
+        "id": "technical-slate",
+        "name": "Technical Slate",
+        "background": "#101722",
+        "fills": [
+          "#E2E8F0",
+          "#CBD5E1",
+          "#8B9BB1",
+          "#637890",
+          "#42A5F5"
+        ]
+      }
+    ],
+    "shapes": [
+      {
+        "id": "bare-p",
+        "name": "Bare P",
+        "background": "none"
+      },
+      {
+        "id": "circle",
+        "name": "Circle",
+        "background": "circle"
+      },
+      {
+        "id": "squircle",
+        "name": "Squircle",
+        "background": "squircle"
+      }
+    ],
+    "geometry_source": "source/p-prime-electric-original.svg",
+    "visual_reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png",
+    "source_reference_library_path": "/PrimeTech/Brand References/PrimeTech"
+  },
+  "source_policy": {
+    "original_only": true,
+    "allow_external_icon_libraries": false,
+    "allow_third_party_marks": false
+  },
+  "size_sets": {
+    "menu": [
+      16,
+      20,
+      24,
+      32
+    ],
+    "standard": [
+      48,
+      64
+    ],
+    "app": [
+      128,
+      180,
+      192,
+      256,
+      512,
+      1024,
+      1200
+    ],
+    "favicon": [
+      16,
+      24,
+      32,
+      48,
+      64,
+      128,
+      256
+    ],
+    "webp": [
+      64,
+      128,
+      192,
+      512
+    ]
+  },
+  "icons": [
+    {
+      "id": "core-mono-bare-p",
+      "name": "PrimeTech Core Mono Bare P",
+      "semantic": "primetech.brand.icon.core-mono.bare-p",
+      "description": "Approved five-facet P / Core Mono / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "core-mono",
+        "colorway_name": "Core Mono",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        }
+      ],
+      "variants": {
+        "master": "source/core-mono-bare-p-master.svg",
+        "micro": "source/core-mono-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "core-mono-circle",
+      "name": "PrimeTech Core Mono Circle",
+      "semantic": "primetech.brand.icon.core-mono.circle",
+      "description": "Approved five-facet P / Core Mono / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "core-mono",
+        "colorway_name": "Core Mono",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#080A0F",
+        "facet_fills": [
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#080A0F"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        }
+      ],
+      "variants": {
+        "master": "source/core-mono-circle-master.svg",
+        "micro": "source/core-mono-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "core-mono-squircle",
+      "name": "PrimeTech Core Mono Squircle",
+      "semantic": "primetech.brand.icon.core-mono.squircle",
+      "description": "Approved five-facet P / Core Mono / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "core-mono",
+        "colorway_name": "Core Mono",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#080A0F",
+        "facet_fills": [
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#080A0F"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#FFFFFF"
+        }
+      ],
+      "variants": {
+        "master": "source/core-mono-squircle-master.svg",
+        "micro": "source/core-mono-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "reverse-bare-p",
+      "name": "PrimeTech Reverse Bare P",
+      "semantic": "primetech.brand.icon.reverse.bare-p",
+      "description": "Approved five-facet P / Reverse / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "reverse",
+        "colorway_name": "Reverse",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        }
+      ],
+      "variants": {
+        "master": "source/reverse-bare-p-master.svg",
+        "micro": "source/reverse-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "reverse-circle",
+      "name": "PrimeTech Reverse Circle",
+      "semantic": "primetech.brand.icon.reverse.circle",
+      "description": "Approved five-facet P / Reverse / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "reverse",
+        "colorway_name": "Reverse",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#FFFFFF",
+        "facet_fills": [
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        }
+      ],
+      "variants": {
+        "master": "source/reverse-circle-master.svg",
+        "micro": "source/reverse-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "reverse-squircle",
+      "name": "PrimeTech Reverse Squircle",
+      "semantic": "primetech.brand.icon.reverse.squircle",
+      "description": "Approved five-facet P / Reverse / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "reverse",
+        "colorway_name": "Reverse",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#FFFFFF",
+        "facet_fills": [
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317",
+          "#101317"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#FFFFFF"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#101317"
+        }
+      ],
+      "variants": {
+        "master": "source/reverse-squircle-master.svg",
+        "micro": "source/reverse-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-spectrum-bare-p",
+      "name": "PrimeTech Prime Spectrum Bare P",
+      "semantic": "primetech.brand.icon.prime-spectrum.bare-p",
+      "description": "Approved five-facet P / Prime Spectrum / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-spectrum",
+        "colorway_name": "Prime Spectrum",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#FF2D3D",
+          "#FF7A1F",
+          "#8A4FFF",
+          "#22C55E",
+          "#00B3F0"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FF2D3D"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF7A1F"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8A4FFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#22C55E"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00B3F0"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-spectrum-bare-p-master.svg",
+        "micro": "source/prime-spectrum-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-spectrum-circle",
+      "name": "PrimeTech Prime Spectrum Circle",
+      "semantic": "primetech.brand.icon.prime-spectrum.circle",
+      "description": "Approved five-facet P / Prime Spectrum / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-spectrum",
+        "colorway_name": "Prime Spectrum",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#0B0D12",
+        "facet_fills": [
+          "#FF2D3D",
+          "#FF7A1F",
+          "#8A4FFF",
+          "#22C55E",
+          "#00B3F0"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#0B0D12"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FF2D3D"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF7A1F"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8A4FFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#22C55E"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00B3F0"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-spectrum-circle-master.svg",
+        "micro": "source/prime-spectrum-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-spectrum-squircle",
+      "name": "PrimeTech Prime Spectrum Squircle",
+      "semantic": "primetech.brand.icon.prime-spectrum.squircle",
+      "description": "Approved five-facet P / Prime Spectrum / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-spectrum",
+        "colorway_name": "Prime Spectrum",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#0B0D12",
+        "facet_fills": [
+          "#FF2D3D",
+          "#FF7A1F",
+          "#8A4FFF",
+          "#22C55E",
+          "#00B3F0"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#0B0D12"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FF2D3D"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF7A1F"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8A4FFF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#22C55E"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00B3F0"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-spectrum-squircle-master.svg",
+        "micro": "source/prime-spectrum-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-electric-bare-p",
+      "name": "PrimeTech Prime Electric Bare P",
+      "semantic": "primetech.brand.icon.prime-electric.bare-p",
+      "description": "Approved five-facet P / Prime Electric / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-electric",
+        "colorway_name": "Prime Electric",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#26DFFF",
+          "#1479FF",
+          "#3867F6",
+          "#6451F9",
+          "#028FEC"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#26DFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#1479FF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#3867F6"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#6451F9"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#028FEC"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-electric-bare-p-master.svg",
+        "micro": "source/prime-electric-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-electric-circle",
+      "name": "PrimeTech Prime Electric Circle",
+      "semantic": "primetech.brand.icon.prime-electric.circle",
+      "description": "Approved five-facet P / Prime Electric / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-electric",
+        "colorway_name": "Prime Electric",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#08152B",
+        "facet_fills": [
+          "#26DFFF",
+          "#1479FF",
+          "#3867F6",
+          "#6451F9",
+          "#028FEC"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#08152B"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#26DFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#1479FF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#3867F6"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#6451F9"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#028FEC"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-electric-circle-master.svg",
+        "micro": "source/prime-electric-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "prime-electric-squircle",
+      "name": "PrimeTech Prime Electric Squircle",
+      "semantic": "primetech.brand.icon.prime-electric.squircle",
+      "description": "Approved five-facet P / Prime Electric / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "prime-electric",
+        "colorway_name": "Prime Electric",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#08152B",
+        "facet_fills": [
+          "#26DFFF",
+          "#1479FF",
+          "#3867F6",
+          "#6451F9",
+          "#028FEC"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#08152B"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#26DFFF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#1479FF"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#3867F6"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#6451F9"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#028FEC"
+        }
+      ],
+      "variants": {
+        "master": "source/prime-electric-squircle-master.svg",
+        "micro": "source/prime-electric-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "alloy-blue-bare-p",
+      "name": "PrimeTech Alloy Blue Bare P",
+      "semantic": "primetech.brand.icon.alloy-blue.bare-p",
+      "description": "Approved five-facet P / Alloy Blue / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "alloy-blue",
+        "colorway_name": "Alloy Blue",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#F1F5F9",
+          "#B3C0D2",
+          "#5E6D83",
+          "#317BF5",
+          "#0EA5E9"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#F1F5F9"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#B3C0D2"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#5E6D83"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#317BF5"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#0EA5E9"
+        }
+      ],
+      "variants": {
+        "master": "source/alloy-blue-bare-p-master.svg",
+        "micro": "source/alloy-blue-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "alloy-blue-circle",
+      "name": "PrimeTech Alloy Blue Circle",
+      "semantic": "primetech.brand.icon.alloy-blue.circle",
+      "description": "Approved five-facet P / Alloy Blue / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "alloy-blue",
+        "colorway_name": "Alloy Blue",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#11161F",
+        "facet_fills": [
+          "#F1F5F9",
+          "#B3C0D2",
+          "#5E6D83",
+          "#317BF5",
+          "#0EA5E9"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#11161F"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#F1F5F9"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#B3C0D2"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#5E6D83"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#317BF5"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#0EA5E9"
+        }
+      ],
+      "variants": {
+        "master": "source/alloy-blue-circle-master.svg",
+        "micro": "source/alloy-blue-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "alloy-blue-squircle",
+      "name": "PrimeTech Alloy Blue Squircle",
+      "semantic": "primetech.brand.icon.alloy-blue.squircle",
+      "description": "Approved five-facet P / Alloy Blue / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "alloy-blue",
+        "colorway_name": "Alloy Blue",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#11161F",
+        "facet_fills": [
+          "#F1F5F9",
+          "#B3C0D2",
+          "#5E6D83",
+          "#317BF5",
+          "#0EA5E9"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#11161F"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#F1F5F9"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#B3C0D2"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#5E6D83"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#317BF5"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#0EA5E9"
+        }
+      ],
+      "variants": {
+        "master": "source/alloy-blue-squircle-master.svg",
+        "micro": "source/alloy-blue-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "industrial-ember-bare-p",
+      "name": "PrimeTech Industrial Ember Bare P",
+      "semantic": "primetech.brand.icon.industrial-ember.bare-p",
+      "description": "Approved five-facet P / Industrial Ember / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "industrial-ember",
+        "colorway_name": "Industrial Ember",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#FFB347",
+          "#FF762A",
+          "#F04438",
+          "#D33C69",
+          "#F59E0B"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFB347"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF762A"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#F04438"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#D33C69"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#F59E0B"
+        }
+      ],
+      "variants": {
+        "master": "source/industrial-ember-bare-p-master.svg",
+        "micro": "source/industrial-ember-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "industrial-ember-circle",
+      "name": "PrimeTech Industrial Ember Circle",
+      "semantic": "primetech.brand.icon.industrial-ember.circle",
+      "description": "Approved five-facet P / Industrial Ember / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "industrial-ember",
+        "colorway_name": "Industrial Ember",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#160F15",
+        "facet_fills": [
+          "#FFB347",
+          "#FF762A",
+          "#F04438",
+          "#D33C69",
+          "#F59E0B"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#160F15"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFB347"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF762A"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#F04438"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#D33C69"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#F59E0B"
+        }
+      ],
+      "variants": {
+        "master": "source/industrial-ember-circle-master.svg",
+        "micro": "source/industrial-ember-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "industrial-ember-squircle",
+      "name": "PrimeTech Industrial Ember Squircle",
+      "semantic": "primetech.brand.icon.industrial-ember.squircle",
+      "description": "Approved five-facet P / Industrial Ember / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "industrial-ember",
+        "colorway_name": "Industrial Ember",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#160F15",
+        "facet_fills": [
+          "#FFB347",
+          "#FF762A",
+          "#F04438",
+          "#D33C69",
+          "#F59E0B"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#160F15"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#FFB347"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#FF762A"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#F04438"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#D33C69"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#F59E0B"
+        }
+      ],
+      "variants": {
+        "master": "source/industrial-ember-squircle-master.svg",
+        "micro": "source/industrial-ember-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "lagoon-bare-p",
+      "name": "PrimeTech Lagoon Bare P",
+      "semantic": "primetech.brand.icon.lagoon.bare-p",
+      "description": "Approved five-facet P / Lagoon / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "lagoon",
+        "colorway_name": "Lagoon",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#2DD4BF",
+          "#22A4EE",
+          "#4875FF",
+          "#34D399",
+          "#00BFC5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#2DD4BF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#22A4EE"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#4875FF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#34D399"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00BFC5"
+        }
+      ],
+      "variants": {
+        "master": "source/lagoon-bare-p-master.svg",
+        "micro": "source/lagoon-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "lagoon-circle",
+      "name": "PrimeTech Lagoon Circle",
+      "semantic": "primetech.brand.icon.lagoon.circle",
+      "description": "Approved five-facet P / Lagoon / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "lagoon",
+        "colorway_name": "Lagoon",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#061B26",
+        "facet_fills": [
+          "#2DD4BF",
+          "#22A4EE",
+          "#4875FF",
+          "#34D399",
+          "#00BFC5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#061B26"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#2DD4BF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#22A4EE"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#4875FF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#34D399"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00BFC5"
+        }
+      ],
+      "variants": {
+        "master": "source/lagoon-circle-master.svg",
+        "micro": "source/lagoon-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "lagoon-squircle",
+      "name": "PrimeTech Lagoon Squircle",
+      "semantic": "primetech.brand.icon.lagoon.squircle",
+      "description": "Approved five-facet P / Lagoon / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "lagoon",
+        "colorway_name": "Lagoon",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#061B26",
+        "facet_fills": [
+          "#2DD4BF",
+          "#22A4EE",
+          "#4875FF",
+          "#34D399",
+          "#00BFC5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#061B26"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#2DD4BF"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#22A4EE"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#4875FF"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#34D399"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#00BFC5"
+        }
+      ],
+      "variants": {
+        "master": "source/lagoon-squircle-master.svg",
+        "micro": "source/lagoon-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "technical-slate-bare-p",
+      "name": "PrimeTech Technical Slate Bare P",
+      "semantic": "primetech.brand.icon.technical-slate.bare-p",
+      "description": "Approved five-facet P / Technical Slate / Bare P.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "technical-slate",
+        "colorway_name": "Technical Slate",
+        "shape": "bare-p",
+        "shape_name": "Bare P",
+        "background": "transparent",
+        "facet_fills": [
+          "#E2E8F0",
+          "#CBD5E1",
+          "#8B9BB1",
+          "#637890",
+          "#42A5F5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#E2E8F0"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#CBD5E1"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8B9BB1"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#637890"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#42A5F5"
+        }
+      ],
+      "variants": {
+        "master": "source/technical-slate-bare-p-master.svg",
+        "micro": "source/technical-slate-bare-p-micro.svg",
+        "monochrome_light": "source/shared/bare-p-monochrome-light.svg",
+        "monochrome_dark": "source/shared/bare-p-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "technical-slate-circle",
+      "name": "PrimeTech Technical Slate Circle",
+      "semantic": "primetech.brand.icon.technical-slate.circle",
+      "description": "Approved five-facet P / Technical Slate / Circle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "technical-slate",
+        "colorway_name": "Technical Slate",
+        "shape": "circle",
+        "shape_name": "Circle",
+        "background": "#101722",
+        "facet_fills": [
+          "#E2E8F0",
+          "#CBD5E1",
+          "#8B9BB1",
+          "#637890",
+          "#42A5F5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Circle background",
+          "role": "background",
+          "fill": "#101722"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#E2E8F0"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#CBD5E1"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8B9BB1"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#637890"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#42A5F5"
+        }
+      ],
+      "variants": {
+        "master": "source/technical-slate-circle-master.svg",
+        "micro": "source/technical-slate-circle-micro.svg",
+        "monochrome_light": "source/shared/circle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/circle-monochrome-dark.svg"
+      }
+    },
+    {
+      "id": "technical-slate-squircle",
+      "name": "PrimeTech Technical Slate Squircle",
+      "semantic": "primetech.brand.icon.technical-slate.squircle",
+      "description": "Approved five-facet P / Technical Slate / Squircle.",
+      "metadata": {
+        "brand_slug": "primetech",
+        "colorway": "technical-slate",
+        "colorway_name": "Technical Slate",
+        "shape": "squircle",
+        "shape_name": "Squircle",
+        "background": "#101722",
+        "facet_fills": [
+          "#E2E8F0",
+          "#CBD5E1",
+          "#8B9BB1",
+          "#637890",
+          "#42A5F5"
+        ],
+        "approved_geometry": "five-facet-p-v1",
+        "reference": "PrimeTech_Brand_Icon_Families_Master_Reference_v1.png"
+      },
+      "layers": [
+        {
+          "id": "background",
+          "name": "Squircle background",
+          "role": "background",
+          "fill": "#101722"
+        },
+        {
+          "id": "facet-top",
+          "name": "Top facet",
+          "role": "mark-facet",
+          "fill": "#E2E8F0"
+        },
+        {
+          "id": "facet-right",
+          "name": "Right facet",
+          "role": "mark-facet",
+          "fill": "#CBD5E1"
+        },
+        {
+          "id": "facet-left",
+          "name": "Left facet",
+          "role": "mark-facet",
+          "fill": "#8B9BB1"
+        },
+        {
+          "id": "facet-lower-left",
+          "name": "Lower-left facet",
+          "role": "mark-facet",
+          "fill": "#637890"
+        },
+        {
+          "id": "facet-bottom-right",
+          "name": "Bottom-right facet",
+          "role": "mark-facet",
+          "fill": "#42A5F5"
+        }
+      ],
+      "variants": {
+        "master": "source/technical-slate-squircle-master.svg",
+        "micro": "source/technical-slate-squircle-micro.svg",
+        "monochrome_light": "source/shared/squircle-monochrome-light.svg",
+        "monochrome_dark": "source/shared/squircle-monochrome-dark.svg"
+      }
+    }
+  ]
+}

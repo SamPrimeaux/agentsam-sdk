@@ -4,6 +4,10 @@
  * IAM user + account must be resolved from a valid local OAuth session.
  */
 import path from 'node:path';
+import fs from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { terminalExec } from '../capabilities/terminal-exec.js';
+import { createProcedureCatalog } from '@inneranimalmedia/primetech-procedures';
 import { readAccountSession, isBrowserSessionExpired } from '../lib/account-session.js';
 import { resolveAccountAuthority } from '../lib/auth.js';
 import { getJson } from '../lib/core-client.js';
@@ -144,6 +148,32 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   return Object.freeze({
     ...modelAdapter,
     canInvokeProcedureOperation: id => procedureAllow.has(id) && !!samOS.get(id),
+    // Private package-bound argv invocation; never a model tool or arbitrary script.
+    invokeProcedureFile: async request => {
+      if (!readTrustedIdentity()) return { ok:false, error:{code:'sam_authenticated_session_required'} };
+      const procedure = createProcedureCatalog().get(request.id, request.version);
+      const { manifest, entrypointPath, entrypointSha256, manifestSha256 } = procedure;
+      const kind = manifest.runtime.kind;
+      if (!['python','bash'].includes(kind) || request.projectRoot !== fs.realpathSync(root) ||
+          request.entrypointSha256 !== entrypointSha256 || request.manifestSha256 !== manifestSha256) {
+        return { ok:false, error:{code:'primetech_file_runtime_binding_mismatch'} };
+      }
+      const available = name => String(process.env.PATH || '').split(path.delimiter).some(dir => {
+        if (!path.isAbsolute(dir)) return false;
+        try { fs.accessSync(path.join(dir,name),fs.constants.X_OK); return true; } catch { return false; }
+      });
+      const candidates = kind === 'bash' ? ['bash'] : (manifest.runtime.interpreter_candidates || ['python3.12','python3.11','python3.10','python3']);
+      const command = candidates.find(available);
+      if (!command) return {ok:false,error:{code:'primetech_interpreter_unavailable'}};
+      const args = [...(kind === 'python' ? ['-B','-I','-S'] : ['--']),entrypointPath,JSON.stringify(request.input)];
+      if (!await authorize({capability_id:'terminal.exec',input:{procedure_id:manifest.id,version:manifest.version,entrypoint_sha256:entrypointSha256,idempotency_key:request.idempotencyKey},descriptor:{side_effects:'local_write'}})) {
+        return {ok:false,error:{code:'primetech_file_runtime_approval_required'}};
+      }
+      if (!readTrustedIdentity() || createHash('sha256').update(fs.readFileSync(entrypointPath)).digest('hex') !== entrypointSha256) return {ok:false,error:{code:'primetech_file_runtime_binding_mismatch'}};
+      const started=Date.now();
+      const result=await terminalExec({command,args,relative_cwd:'.'},{cwd:root});
+      return {ok:true,data:{...result,status:result.ok?'completed':'failed',executionId:'pex_'+randomUUID().replaceAll('-',''),durationMs:Date.now()-started,scriptHash:createHash('sha256').update(JSON.stringify({command,args})).digest('hex')}};
+    },
     invokeProcedureOperation: async (id,input={}) => {
       if (!procedureAllow.has(id) || !samOS.get(id)) {
         return {ok:false,error:{code:'sam_procedure_operation_unavailable',operation:id}};

@@ -123,3 +123,15 @@ See `packages/theme-scenes/README.md`. Studio shell (Moon Glass → Brand Studio
 `agentsam brand iconography --from <iconography.manifest.json> --out <output-dir>` builds a versioned icon family from the sources named in the manifest. The build preserves source masters, records source/output SHA-256 hashes, normalizes semantic SVG masters, emits color/size derivatives, and can invoke the configured Blender lane to author real relief GLBs and reproducible renders from source-derived masks. Blender is used for model authoring and rendering—not as a generic GLB optimizer. Generated output directories are replaceable only when they carry this kit's ownership marker; unrelated directories are never overwritten.
 
 The current `assets/iconography/v1` source set uses the canonical InnerAnimalMedia dashboard PWA icon and the actual AgentSam Tauri desktop icon master as immutable clay-model inputs. The Local Studio public icon and upstream SVG mark remain provenance references, not substitute logo sources. It also includes 64 normalized semantic system-icon sources. The system icon paths originate from the existing Lucide UI library (ISC); they are normalized v1 masters, not yet bespoke-redrawn glyphs. Clay GLBs are presentation derivatives in icon-units and must not be used as manufacturing geometry. For apparel, laser, engraving and CNC work, use verified 2D vector masters and the merch preflight pipeline.
+
+## Original icon-family production
+
+`@inneranimalmedia/agentsam-brand` includes a deterministic icon-family builder for original brand marks. It validates editable SVG sources, preserves family/icon metadata and layer maps, and generates repeatable menu, standard, favicon, app, PWA, Apple touch and WebP exports plus a multi-size ICO.
+
+```sh
+agentsam-brand iconography validate --from packages/agentsam-brand/assets/iconography/families/primetech/v1/family.manifest.json
+agentsam-brand iconography build --from packages/agentsam-brand/assets/iconography/families/primetech/v1/family.manifest.json --out packages/agentsam-brand/dist/iconography/primetech/v1
+agentsam-brand iconography package --from packages/agentsam-brand/dist/iconography/primetech/v1 --out packages/agentsam-brand/dist/iconography/primetech-icon-family-v1.zip
+```
+
+The canonical source catalog lives at `packages/agentsam-brand/assets/iconography/families/index.json`. Each family manifest declares stable icon IDs, colorways, shapes, source SVG variants, metadata and export size sets. Generated exports are published to the `brand` R2 bucket; `brand_asset`, `brand_asset_variant` and `asset_relationships` register the family and its members for lookup. The one-time publisher emits D1 seed JSON and an R2 upload map; provide `AGENTSAM_ACCOUNT_ID` at runtime rather than hardcoding an account identifier.

@@ -47,6 +47,14 @@ def main() -> int:
     add(package_root / 'companion.json', 'companion.json')
     add(package_root / 'assets' / 'architect-icon.svg', 'assets/architect-icon.svg')
     add(package_root / 'assets' / 'primetech-design-studio.svg', 'assets/primetech-design-studio.svg')
+    for variant in ('light', 'dark'):
+        name = f'primetech-design-studio-{variant}.svg'
+        add(package_root / 'assets' / name, f'assets/{name}')
+    for manifest_interface in (interface, codex['interface']):
+        for key in ('logo', 'composerIcon', 'logoDark', 'composerIconDark'):
+            relative = manifest_interface[key]
+            if not relative.startswith('./assets/') or relative[2:] not in {rel for _, rel in files}:
+                raise SystemExit(f'Unpackaged plugin artwork: {key}: {relative}')
     add(package_root / 'plugin.README.md', 'README.md')
 
     for skill_dir in skill_dirs:

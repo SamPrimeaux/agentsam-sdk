@@ -704,7 +704,7 @@ async function runInteractiveModelTurn(prompt, state) {
     state, trustedIdentity: trustedSamIdentity, procedureOperationIds,
     authorize: request => approveToolExecution(request, state),
   });
-  const procedureProjectRoot = path.resolve(state.cwd);
+  const procedureProjectRoot = path.resolve(state.projectRoot || state.cwd);
   const procedureHandler = samAdapter ? createPrimeTechProcedureHandler({
     catalog: procedureCatalog,
     projectRoot: procedureProjectRoot,
@@ -714,6 +714,7 @@ async function runInteractiveModelTurn(prompt, state) {
       return samAdapter.invokeProcedureOperation(operation, input);
     },
     isCapabilityAvailable: operation => samAdapter.canInvokeProcedureOperation?.(operation) === true,
+    invokeFileRuntime: request => samAdapter.invokeProcedureFile(request),
     invokeNativeTool: async (tool, input) => {
       if (!samAdapter.canInvoke(tool)) return { ok: false, error: { code: 'native_tool_unavailable' } };
       return samAdapter.invoke(tool, input);
