@@ -184,6 +184,12 @@ test('Artifacts is a global Side Stage library with six focused creation routes 
   for (const label of ['All', 'Yours', 'Shared', 'Docs', 'Slides', 'Sheets', 'Design', 'Data', 'Whiteboard']) {
     assert.match(surface, new RegExp('label: "' + label + '"'));
   }
+  assert.match(surface, /agentsam-workbench\/creative-covers/);
+  for (const cover of ['docs', 'slides', 'sheets', 'design', 'data', 'whiteboard']) {
+    assert.match(surface, new RegExp('cover: CREATIVE_WIDGET_COVERS\.' + cover));
+  }
+  assert.equal([...surface.matchAll(/src=\{option\.cover\}/g)].length, 2, 'both quick-create tiles and the create menu must use the same SVG artwork');
+  assert.doesNotMatch(surface, /option\.icon|<Icon size=\{31\}/, 'creation art must not fall back to Lucide icons');
   assert.match(surface, /aria-label="Search artifacts"/);
   assert.match(surface, /aria-label="Filter artifacts"/);
   assert.match(surface, /aria-label="Filter by view"/);
