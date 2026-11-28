@@ -14,13 +14,15 @@ function fixture() {
     'CREATE TABLE agentsam_widget_preferences(installation_id TEXT PRIMARY KEY REFERENCES agentsam_widget_installations(id) ON DELETE CASCADE,preferences_json TEXT NOT NULL DEFAULT "{}" CHECK(json_valid(preferences_json)),updated_at INTEGER NOT NULL DEFAULT (unixepoch()))',
     "INSERT INTO accounts VALUES ('alice'),('bob')"
   ].join(';')+';');
-  const insert = sqlite.prepare('INSERT INTO agentsam_widget_catalog (widget_key,name,category,component_key,default_size,supported_sizes_json) VALUES (?,?,?,?,?,?)');
-  insert.run('countdown','Countdown','utility','CountdownWidget','small','["small","medium"]');
-  insert.run('clock','Clock','utility','ClockWidget','small','["small","medium"]');
-  insert.run('queues','Queue Depth','glance','QueueDepthWidget','medium','["medium","large"]');
-  insert.run('calculator','Calculator','utility','CalculatorWidget','small','["small","medium"]');
-  insert.run('quick-controls','Quick Controls','utility','quick-controls','small','["small"]');
-  insert.run('store-chat','Store chat','inbox','agentsam-store-chat','small','["small"]');
+  const insert = sqlite.prepare('INSERT INTO agentsam_widget_catalog (widget_key,name,category,component_key,default_size,supported_sizes_json,data_adapter_key) VALUES (?,?,?,?,?,?,?)');
+  insert.run('countdown','Countdown','utility','CountdownWidget','small','["small","medium"]',null);
+  insert.run('clock','Clock','utility','ClockWidget','small','["small","medium"]',null);
+  insert.run('queues','Queue Depth','glance','QueueDepthWidget','medium','["medium","large"]','queues.observability');
+  insert.run('calculator','Calculator','utility','CalculatorWidget','small','["small","medium"]',null);
+  insert.run('pull-request-summary','Pull Request Summary','glance','PullRequestSummaryWidget','medium','["medium","large"]','widget.configuration.snapshot');
+  insert.run('release-readiness','Verification','glance','ReleaseReadinessWidget','medium','["medium","large"]','github.commit-readiness');
+  insert.run('quick-controls','Quick Controls','utility','quick-controls','small','["small"]',null);
+  insert.run('store-chat','Store chat','inbox','agentsam-store-chat','small','["small"]',null);
   const db={prepare(query){const stmt=sqlite.prepare(query); return {bind(...args){return {
     first:async()=>stmt.get(...args),all:async()=>({results:stmt.all(...args)}),
     run:async()=>({meta:{changes:Number(stmt.run(...args).changes)}}),
@@ -33,12 +35,19 @@ const body=key=>({key,surface:'agentsam_stage'});
 test('catalog is D1-projected but only compiled Workbench widgets are installable',async()=>{
   const {db}=fixture();
   const widgets=await listAccountWidgets(db,'alice','agentsam_stage');
-  assert.equal(widgets.length,5);
-  assert.equal(widgets.filter(w=>w.available).length,4);
+  assert.equal(widgets.length,7);
+  assert.equal(widgets.filter(w=>w.available).length,5);
   assert.equal(widgets.find(w=>w.key==='quick-controls').availability,'concept');
+  assert.equal(widgets.find(w=>w.key==='pull-request-summary').available,false);
+  assert.equal(widgets.find(w=>w.key==='release-readiness').available,true);
   assert.equal(widgets.some(w=>w.key==='store-chat'),false);
   await assert.rejects(()=>installAccountWidget(db,'alice',body('quick-controls')),/widget_not_ready/);
+  await assert.rejects(()=>installAccountWidget(db,'alice',body('pull-request-summary')),/widget_not_ready/);
   await assert.rejects(()=>installAccountWidget(db,'alice',body('store-chat')),/widget_not_found/);
+  await db.prepare("UPDATE agentsam_widget_catalog SET data_adapter_key='github.pull-request' WHERE widget_key='pull-request-summary'").run();
+  const refreshed=(await listAccountWidgets(db,'alice','agentsam_stage')).find(w=>w.key==='pull-request-summary');
+  assert.equal(refreshed.available,true);
+  await installAccountWidget(db,'alice',body('pull-request-summary'));
 });
 
 test('install is idempotent, account-scoped, and creates a base layout',async()=>{
