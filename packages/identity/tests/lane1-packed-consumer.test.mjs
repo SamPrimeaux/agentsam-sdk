@@ -67,6 +67,16 @@ describe('Lane 1 packed identity consumer proof', () => {
     const cmsTarballDest = path.join(artifacts, cmsTarballName);
     assert.ok(fs.existsSync(cmsTarballDest), cmsTarballDest);
 
+    // The root SDK ships PrimeTech procedures as a first-party package dependency.
+    // Seed its exact local tarball in the isolated consumer, like contracts and CMS.
+    const proceduresPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts],
+      path.join(REPO, 'packages', 'primetech-procedures'));
+    const proceduresPacked = JSON.parse(proceduresPackOut);
+    const proceduresTarballName = firstPack(proceduresPacked)?.filename;
+    assert.ok(proceduresTarballName, 'PrimeTech procedures npm pack must emit a tarball name');
+    const proceduresTarballDest = path.join(artifacts, proceduresTarballName);
+    assert.ok(fs.existsSync(proceduresTarballDest), proceduresTarballDest);
+
     const packOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], REPO);
     const packed = JSON.parse(packOut);
     const tarballName = firstPack(packed)?.filename;
@@ -87,7 +97,7 @@ describe('Lane 1 packed identity consumer proof', () => {
     );
     run(
       'npm',
-      ['install', errorsTarballDest, contractsTarballDest, cmsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
+      ['install', errorsTarballDest, contractsTarballDest, cmsTarballDest, proceduresTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
       consumer,
     );
 

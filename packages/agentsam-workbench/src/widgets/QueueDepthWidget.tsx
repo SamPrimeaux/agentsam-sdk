@@ -25,7 +25,7 @@ function ageOf(timestamp: number | null | undefined) {
   if (!timestamp || timestamp < 0) return 'Unknown';
   const age = Math.max(0, Date.now() - timestamp);
   return age < 60_000 ? '<1m' : age < 3_600_000
-    ? \`\${Math.floor(age / 60_000)}m\` : \`\${Math.floor(age / 3_600_000)}h\`;
+    ? `${Math.floor(age / 60_000)}m` : `${Math.floor(age / 3_600_000)}h`;
 }
 function errorMessage(code: string | null) {
   switch (code) {
@@ -81,7 +81,7 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
     void (async () => {
       try {
         const response = await fetch(
-          \`/api/queues/observability?history=24h&queue_id=\${encodeURIComponent(selectedId)}\`,
+          `/api/queues/observability?history=24h&queue_id=${encodeURIComponent(selectedId)}`,
           { credentials: 'same-origin', cache: 'no-store', signal: controller.signal },
         );
         if (!response.ok) throw new Error('history_unavailable');
@@ -126,13 +126,13 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
     {showHistory && <div className="space-y-1" aria-label="Backlog over the last 24 hours">
       {history?.state === 'unavailable' ? <p className="text-xs text-muted-foreground">Historical analytics unavailable.</p>
         : history?.state === 'ready' ? points.length ? <div className="flex h-12 items-end gap-px" role="img" aria-label="Hourly average backlog">
-          {points.map((point, index) => <div key={point.at || index} className="min-w-0 flex-1 rounded-t-sm bg-violet-400/75 h-[var(--queue-height)]"
-            title={\`\${point.at || 'Unknown'}: \${point.backlog_count ?? 'unavailable'} messages\`}
-            style={{ '--queue-height': \`\${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%\` } as import('react').CSSProperties}/>)}
+          {points.map((point, index) => <div key={point.at || index} className="min-w-0 flex-1 rounded-t-sm bg-primary/75 h-[var(--queue-height)]"
+            title={`${point.at || 'Unknown'}: ${point.backlog_count ?? 'unavailable'} messages`}
+            style={{ '--queue-height': `${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%` } as import('react').CSSProperties}/>)}
         </div> : <p className="text-xs text-muted-foreground">No historical samples for this period.</p>
         : <p className="text-xs text-muted-foreground">Loading history…</p>}
     </div>}
     {!compact && <p className="text-[10px] text-muted-foreground">Last checked {new Date(snapshot.collected_at).toLocaleTimeString()}. Cloudflare backlog is not AgentSam job status.</p>}
-    {metrics.state !== 'ready' && <p className="text-xs text-amber-400">Current backlog metrics unavailable.</p>}
+    {metrics.state !== 'ready' && <p className="text-xs text-muted-foreground">Current backlog metrics unavailable.</p>}
   </section>;
 }

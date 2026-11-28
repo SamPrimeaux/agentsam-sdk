@@ -9,6 +9,7 @@ function fixture(fn) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "ecommerce-boundaries-"));
   const app = path.join(temp, "app");
   fs.mkdirSync(path.join(app, "src"), { recursive: true });
+  fs.writeFileSync(path.join(app, "package.json"), JSON.stringify({ name: "fixture-app", private: true }));
   try { fn(app, temp); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 }
 test("allows a self-contained local app and package", () => fixture((app) => {
