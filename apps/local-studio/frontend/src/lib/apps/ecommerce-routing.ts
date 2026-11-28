@@ -84,9 +84,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   if (url.origin !== 'https://ecommerce-route.invalid' || !resolveLocalStudioEcommerceAdminRoute(url.pathname)) return null;
   const safe = new URLSearchParams();
   const matchedRoute = resolveLocalStudioEcommerceAdminRoute(url.pathname) as unknown as AdminRoute | null;
-  const baseThemeStudioRoute = matchedRoute?.id === 'admin.theme-editor' || matchedRoute?.id === 'admin.theme-editor.account';
-  const siteThemeStudioRoute = Boolean(matchedRoute?.page === 'theme-editor' && matchedRoute.id.startsWith('admin.theme-editor.') && !baseThemeStudioRoute);
-  const cleanThemeStudioRoute = Boolean(baseThemeStudioRoute || siteThemeStudioRoute);
+  const cleanThemeStudioRoute = Boolean(matchedRoute?.page === 'theme-editor' && matchedRoute.id.startsWith('admin.theme-editor.'));
   // Site identity is supplied by Local Studio. Query validation is retained at
   // this host boundary so packaged assets never become an open proxy.
   const recognized: Record<string, readonly string[]> = {
@@ -106,11 +104,8 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/email': ['folder'],
   };
   const studioProductRoute = /^\/admin\/products\/create\/[A-Za-z0-9_-]+$/.test(url.pathname);
-  const allowed = recognized[url.pathname] || (baseThemeStudioRoute
-    ? ['site_id', 'site', 'source', 'project', 'project_id', 'page', 'page_id', 'slug', 'section', 'block',
-       'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase', 'new', 'catalog', 'assistant']
-    : siteThemeStudioRoute
-      ? ['section', 'block', 'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase', 'assistant']
+  const allowed = recognized[url.pathname] || (cleanThemeStudioRoute
+    ? ['section', 'block', 'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase', 'new']
     : studioProductRoute
     ? ['site_id', 'resume', 'collection_id']
     : url.pathname === '/admin/products/create'
@@ -126,10 +121,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     if (url.searchParams.has('previewMode') &&
         !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   }
-  if (baseThemeStudioRoute && url.searchParams.has('new') &&
-      (url.searchParams.get('new') !== '1' || !url.searchParams.has('site_id') ||
-       ['project', 'project_id', 'page', 'page_id', 'slug'].some(key => url.searchParams.has(key)))) return null;
-  if (cleanThemeStudioRoute && url.searchParams.has('assistant') && url.searchParams.get('assistant') !== 'theme') return null;
+  if (cleanThemeStudioRoute && url.searchParams.has('new') && url.searchParams.get('new') !== '1') return null;
   if (cleanThemeStudioRoute && url.searchParams.has('previewMode') &&
       !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   for (const [name, value] of url.searchParams) {
