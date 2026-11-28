@@ -277,6 +277,7 @@
     background: rgba(0, 0, 0, 0.38);
     cursor: pointer;
   }
+  .dw-stage { visibility: visible; z-index: 1; }
   [data-mobile-pane="stage"] .dw-stage,
   [data-mobile-pane="explorer"] .dw-explorer,
   [data-mobile-pane="inspector"] .dw-inspector,

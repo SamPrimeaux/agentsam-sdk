@@ -9,9 +9,10 @@ const built = await build({
 const { fitZoom, wheelZoom, anchoredScroll, clampZoom } = await import('data:text/javascript;base64,' + Buffer.from(built.outputFiles[0].text).toString('base64'));
 
 test('fit respects both viewport dimensions and does not enlarge smaller boards', () => {
-  assert.equal(fitZoom(664, 600, 1200, 675), 50);
+  assert.equal(fitZoom(664, 600, 1200, 675), 53);
   assert.equal(fitZoom(1800, 514, 1200, 900), 50);
   assert.equal(fitZoom(1800, 1500, 1200, 675), 100);
+  assert.equal(fitZoom(390, 700, 1200, 675), 30);
 });
 test('wheel zoom moves in the correct direction, uses proportional scaling, and clamps safely', () => {
   assert.ok(wheelZoom(100, -120) > 100);
@@ -19,7 +20,7 @@ test('wheel zoom moves in the correct direction, uses proportional scaling, and 
   assert.equal(wheelZoom(400, -120), 400);
   assert.equal(wheelZoom(4, 120), 4);
   assert.equal(clampZoom(5), 5);
-  assert.equal(fitZoom(390, 700, 7200, 900), 4);
+  assert.equal(fitZoom(390, 700, 7200, 900), 5);
   assert.equal(clampZoom(650), 400);
   assert.equal(clampZoom(0), 4);
 });

@@ -126,8 +126,8 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
       const { placement: nextPlacement, maxHeight } = resolveComposerPopoverLayout({
         anchorTop: rect.top,
         anchorBottom: rect.bottom,
-        visibleTop: visual?.offsetTop ?? 0,
-        visibleBottom: visual ? visual.offsetTop + visual.height : window.innerHeight,
+        visibleTop: (visual?.offsetTop ?? 0) + 64,
+        visibleBottom: (visual ? visual.offsetTop + visual.height : window.innerHeight) - 12,
       });
       setPlacement(nextPlacement);
       setMenuMaxHeight(maxHeight);

@@ -83,7 +83,8 @@ export type DocumentBlock =
   | { id: string; type: 'divider' };
 export type TextDocument = { title: string; subtitle: string; blocks: DocumentBlock[] };
 export type SpreadsheetColumn = { id: string; label: string; width?: number; type?: 'text' | 'number' | 'date' | 'status' | 'priority' };
-export type SpreadsheetRow = { id: string; cells: Record<string, string> };
+export type SpreadsheetCellStyle = { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; align?: 'left' | 'center' | 'right'; fill?: string; color?: string; border?: boolean };
+export type SpreadsheetRow = { id: string; cells: Record<string, string>; cellStyles?: Record<string, SpreadsheetCellStyle> };
 export type SpreadsheetSheet = { id: string; name: string; columns: SpreadsheetColumn[]; rows: SpreadsheetRow[] };
 export type SpreadsheetDocument = { activeSheetId: string; sheets: SpreadsheetSheet[] };
 
@@ -195,6 +196,26 @@ export function makeArtifact(type: CreativeType, name?: string, data?: CreativeA
 }
 
 export function reidentifyCreativeData<T>(value: T): T {
+  // Spreadsheet cell maps and activeSheetId reference IDs; copy those references
+  // together with their owners instead of silently disconnecting populated cells.
+  if (isSpreadsheetDocument(value)) {
+    const sheetIds = new Map(value.sheets.map(sheet => [sheet.id, makeId('sheet')]));
+    const sheets = value.sheets.map(sheet => {
+      const columnIds = new Map(sheet.columns.map(column => [column.id, makeId('column')]));
+      return {
+        ...sheet,
+        id: sheetIds.get(sheet.id)!,
+        columns: sheet.columns.map(column => ({ ...column, id: columnIds.get(column.id)! })),
+        rows: sheet.rows.map(row => ({
+          ...row,
+          id: makeId('row'),
+          cells: Object.fromEntries(Object.entries(row.cells).map(([columnId, raw]) => [columnIds.get(columnId) ?? columnId, raw])),
+          ...(row.cellStyles ? { cellStyles: Object.fromEntries(Object.entries(row.cellStyles).map(([columnId, style]) => [columnIds.get(columnId) ?? columnId, { ...style }])) } : {}),
+        })),
+      };
+    });
+    return { ...value, activeSheetId: sheetIds.get(value.activeSheetId)!, sheets } as T;
+  }
   if (Array.isArray(value)) return value.map(reidentifyCreativeData) as unknown as T;
   if (!value || typeof value !== 'object') return value;
   const source = value as Record<string, unknown>;

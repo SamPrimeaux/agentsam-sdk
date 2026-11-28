@@ -32,7 +32,7 @@
         </header>
         <div class="media-picker-toolbar">
           <div class="media-picker-tabs" id="media-picker-tabs"></div>
-          <select id="media-picker-bucket" aria-label="R2 bucket" style="display:none;max-width:180px;border:1px solid #c9c9c9;border-radius:8px;padding:8px;font-size:13px;background:white"><option value="">All connected buckets</option></select>
+          <select id="media-picker-bucket" aria-label="R2 bucket" class="media-picker-bucket" style="display:none"><option value="">All connected buckets</option></select>
           <input type="search" id="media-picker-search" class="media-picker-search" placeholder="Search filename or path…">
           <button type="button" class="btn ghost small" id="media-picker-sync">Sync from R2</button>
         </div>

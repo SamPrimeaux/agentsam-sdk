@@ -326,7 +326,7 @@ export function DesignWorkspaceFrame({
         ) : null}
       </header>
 
-      <nav className="dw-mobile-switcher" aria-label="Workspace panels">
+      {panes.filter((pane) => pane.enabled).length > 1 && <nav className="dw-mobile-switcher" aria-label="Workspace panels">
         {panes.filter((pane) => pane.enabled).map((pane) => (
           <button
             key={pane.id}
@@ -342,7 +342,7 @@ export function DesignWorkspaceFrame({
             {pane.name}
           </button>
         ))}
-      </nav>
+      </nav>}
 
       <div className="dw-layout" ref={layoutRef}>
         {mobilePane !== "stage" ? (
