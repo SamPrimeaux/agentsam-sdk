@@ -38,7 +38,7 @@ test('npm tarball includes AgentSam and OpenAI manifests, skills, and TypeScript
   const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'agentsam.package.json'), 'utf8'));
   assert.equal(manifest.name, packed.name);
   const plugin = JSON.parse(fs.readFileSync(path.join(packageRoot, 'plugin.json'), 'utf8'));
-  assert.equal(plugin.name, 'architect-design-studio');
+  assert.equal(plugin.name, 'primetech-design-studio');
   assert.equal(plugin.version, '0.3.0');
   const codexPlugin = JSON.parse(fs.readFileSync(path.join(packageRoot, '.codex-plugin', 'plugin.json'), 'utf8'));
   assert.equal(codexPlugin.name, plugin.name);
@@ -62,14 +62,14 @@ test('npm tarball includes AgentSam and OpenAI manifests, skills, and TypeScript
 
 test('OpenAI plugin archive contains the nine canonical skills without AgentSam-only manifests or a fake MCP endpoint', () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'primetech-plugin-'));
-  const archivePath = path.join(tempDir, 'architect-design-studio-0.3.0.zip');
+  const archivePath = path.join(tempDir, 'primetech-design-studio-0.3.0.zip');
   try {
     const build = spawnSync('python3', [
       path.join(packageRoot, 'scripts', 'package-openai-plugin.py'), '--output', archivePath,
     ], { cwd: packageRoot, encoding: 'utf8' });
     assert.equal(build.status, 0, `${build.stdout}\n${build.stderr}`);
     const summary = JSON.parse(build.stdout);
-    assert.equal(summary.plugin, 'architect-design-studio');
+    assert.equal(summary.plugin, 'primetech-design-studio');
     assert.equal(summary.display_name, 'PrimeTech Design Studio');
     assert.equal(summary.version, '0.3.0');
     assert.equal(summary.skills, 9);
@@ -81,14 +81,14 @@ test('OpenAI plugin archive contains the nine canonical skills without AgentSam-
     assert.equal(listing.status, 0, `${listing.stdout}\n${listing.stderr}`);
     const paths = new Set(JSON.parse(listing.stdout));
     for (const required of [
-      'architect-design-studio/plugin.json',
-      'architect-design-studio/.codex-plugin/plugin.json',
-      'architect-design-studio/agents/openai.yaml',
-      'architect-design-studio/README.md',
-      'architect-design-studio/assets/primetech-design-studio.svg',
-      'architect-design-studio/companion.json',
-      'architect-design-studio/skills/primetech-brand-kit/SKILL.md',
-      'architect-design-studio/skills/primetech-visual-qa/SKILL.md',
+      'primetech-design-studio/plugin.json',
+      'primetech-design-studio/.codex-plugin/plugin.json',
+      'primetech-design-studio/agents/openai.yaml',
+      'primetech-design-studio/README.md',
+      'primetech-design-studio/assets/primetech-design-studio.svg',
+      'primetech-design-studio/companion.json',
+      'primetech-design-studio/skills/primetech-brand-kit/SKILL.md',
+      'primetech-design-studio/skills/primetech-visual-qa/SKILL.md',
     ]) assert.ok(paths.has(required), `missing from OpenAI plugin archive: ${required}`);
     assert.equal([...paths].filter(name => /\/skills\/[^/]+\/SKILL\.md$/.test(name)).length, 9);
     assert.equal([...paths].some(name => name.endsWith('agentsam.skill.json')), false);
