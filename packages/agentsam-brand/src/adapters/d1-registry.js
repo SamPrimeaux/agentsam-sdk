@@ -199,6 +199,7 @@ export class D1BrandRegistryAdapter {
 
   resolveAccountId(query = {}) {
     const accountId = query.accountId || query.account_id || this.accountId;
+    if (this.accountId && accountId !== this.accountId) throw new Error("brand_account_scope_mismatch");
     if (!accountId || !ACCOUNT_ID.test(String(accountId))) {
       throw new Error('brand_account_required');
     }
@@ -211,6 +212,7 @@ export class D1BrandRegistryAdapter {
     const where = [];
     const args = [];
     const accountId = query.accountId || query.account_id || this.accountId;
+    if (this.accountId && accountId !== this.accountId) throw new Error("brand_account_scope_mismatch");
     if (query.status) {
       where.push('b.status = ?');
       args.push(String(query.status));

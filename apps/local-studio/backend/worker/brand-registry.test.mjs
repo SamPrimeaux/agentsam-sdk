@@ -101,6 +101,11 @@ test("brand registry writes require superadmin and preserve the permanent slug o
   });
   const denied = await handleBrandRegistryRequest(createRequest(), env, { accountId: OTHER, userId: OTHER });
   assert.equal(denied.status, 403);
+  for (const role of ["owner", "admin", "superadmin"]) {
+    sqlite.prepare("UPDATE auth_users SET role=? WHERE id=?").run(role, OTHER);
+    const deniedRole = await handleBrandRegistryRequest(createRequest(), env, { accountId: OTHER, userId: OTHER });
+    assert.equal(deniedRole.status, 403, `role ${role} cannot write shared identities`);
+  }
 
   const created = await handleBrandRegistryRequest(createRequest(), env, { accountId: ACCOUNT, userId: ACCOUNT });
   assert.equal(created.status, 201);

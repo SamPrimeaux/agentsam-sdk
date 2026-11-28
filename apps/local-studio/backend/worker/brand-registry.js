@@ -15,9 +15,10 @@ async function requireBrandAdmin(db, userId, accountId) {
   const user = await db.prepare(
     "SELECT id,role,is_superadmin,default_account_id,status FROM auth_users WHERE id = ? LIMIT 1"
   ).bind(userId).first();
-  const role = String(user?.role || "").toLowerCase();
+  // The brands table is globally shared, not tenant-owned. Account admin
+  // status alone cannot grant platform-wide brand identity writes.
   if (!user || user.status !== "active" ||
-      (Number(user.is_superadmin) !== 1 && !["owner", "admin", "superadmin"].includes(role)) ||
+      Number(user.is_superadmin) !== 1 ||
       (user.default_account_id && String(user.default_account_id) !== String(accountId))) {
     throw new Error("brand_registry_admin_required");
   }
