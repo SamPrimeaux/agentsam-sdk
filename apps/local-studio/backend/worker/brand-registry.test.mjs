@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
+import { readFile } from "node:fs/promises";
 import { handleBrandRegistryRequest } from "./brand-registry.js";
 
 const ACCOUNT = "au_aaaaaaaaaaaaaaaa";
@@ -48,9 +49,16 @@ function fixture() {
     prepare(sql) {
       let params = [];
       return {
-        bind(...values) { params = values; return this; },
-        async all() { return { results: sqlite.prepare(sql).all(...params) }; },
-        async first() { return sqlite.prepare(sql).get(...params) ?? null; },
+        bind(...values) {
+          params = values;
+          return this;
+        },
+        async all() {
+          return { results: sqlite.prepare(sql).all(...params) };
+        },
+        async first() {
+          return sqlite.prepare(sql).get(...params) ?? null;
+        },
         async run() {
           const result = sqlite.prepare(sql).run(...params);
           return { meta: { changes: Number(result.changes) } };
@@ -58,69 +66,169 @@ function fixture() {
       };
     },
   };
-  sqlite.prepare("INSERT INTO accounts (id,status) VALUES (?, 'active'), (?, 'active')").run(ACCOUNT, OTHER);
-  sqlite.prepare("INSERT INTO auth_users (id,role,is_superadmin,default_account_id,status) VALUES (?, 'superadmin',1,?,'active'), (?, 'member',0,?,'active')")
+  sqlite
+    .prepare("INSERT INTO accounts (id,status) VALUES (?, 'active'), (?, 'active')")
+    .run(ACCOUNT, OTHER);
+  sqlite
+    .prepare(
+      "INSERT INTO auth_users (id,role,is_superadmin,default_account_id,status) VALUES (?, 'superadmin',1,?,'active'), (?, 'member',0,?,'active')",
+    )
     .run(ACCOUNT, ACCOUNT, OTHER, OTHER);
-  sqlite.prepare("INSERT INTO brands (id,name,slug,display_name,architecture_model,status) VALUES ('brand_root','InnerAnimal','inneranimal','InnerAnimal','master_brand','active')").run();
-  sqlite.prepare("INSERT INTO brand_asset (id,account_id,brand_slug,asset_key,version,category,title,meta_json,created_at,updated_at) VALUES ('asset_a',?,'inneranimal','logo.svg','v1','logo','InnerAnimal logo','{}',1,1)")
+  sqlite
+    .prepare(
+      "INSERT INTO brands (id,name,slug,display_name,architecture_model,status) VALUES ('brand_root','InnerAnimal','inneranimal','InnerAnimal','master_brand','active')",
+    )
+    .run();
+  sqlite
+    .prepare(
+      "INSERT INTO brand_asset (id,account_id,brand_slug,asset_key,version,category,title,meta_json,created_at,updated_at) VALUES ('asset_a',?,'inneranimal','logo.svg','v1','logo','InnerAnimal logo','{}',1,1)",
+    )
     .run(ACCOUNT);
-  sqlite.prepare("INSERT INTO brand_asset_variant (id,asset_id,variant_key,file_format,storage_provider,storage_location,delivery_url,is_primary,created_at,updated_at) VALUES ('variant_a','asset_a','public','svg','r2','brands/inneranimal/logo.svg','https://cdn.example/logo.svg',1,1,1)").run();
+  sqlite
+    .prepare(
+      "INSERT INTO brand_asset_variant (id,asset_id,variant_key,file_format,storage_provider,storage_location,delivery_url,is_primary,created_at,updated_at) VALUES ('variant_a','asset_a','public','svg','r2','brands/inneranimal/logo.svg','https://cdn.example/logo.svg',1,1,1)",
+    )
+    .run();
   return { sqlite, env: { DB: db } };
 }
 
 test("brand registry GET reads shared identities and account-scoped asset variants", async () => {
   const { sqlite, env } = fixture();
-  const list = await handleBrandRegistryRequest(new Request("https://studio.example/api/brands"), env, {
-    accountId: ACCOUNT, userId: ACCOUNT,
-  });
+  const list = await handleBrandRegistryRequest(
+    new Request("https://studio.example/api/brands"),
+    env,
+    {
+      accountId: ACCOUNT,
+      userId: ACCOUNT,
+    },
+  );
   assert.equal(list.status, 200);
   const payload = await list.json();
   assert.equal(payload.count, 1);
   assert.equal(payload.brands[0].slug, "inneranimal");
   assert.equal(payload.brands[0].assetCount, 1);
 
-  const detail = await handleBrandRegistryRequest(new Request("https://studio.example/api/brands/inneranimal"), env, {
-    accountId: ACCOUNT, userId: ACCOUNT, slug: "inneranimal",
-  });
+  const detail = await handleBrandRegistryRequest(
+    new Request("https://studio.example/api/brands/inneranimal"),
+    env,
+    {
+      accountId: ACCOUNT,
+      userId: ACCOUNT,
+      slug: "inneranimal",
+    },
+  );
   const detailPayload = await detail.json();
   assert.equal(detail.status, 200);
   assert.equal(detailPayload.brand.assets.items[0].id, "asset_a");
-  assert.equal(detailPayload.brand.assets.items[0].variants[0].deliveryUrl, "https://cdn.example/logo.svg");
+  assert.equal(
+    detailPayload.brand.assets.items[0].variants[0].deliveryUrl,
+    "https://cdn.example/logo.svg",
+  );
   sqlite.close();
 });
 
 test("brand registry writes require superadmin and preserve the permanent slug on rename", async () => {
   const { sqlite, env } = fixture();
-  const createRequest = () => new Request("https://studio.example/api/brands", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      name: "PrimeTech", slug: "primetech", parentBrandId: "brand_root",
-      architectureModel: "endorsed_brand", tagline: "Creative production systems",
-    }),
+  const createRequest = () =>
+    new Request("https://studio.example/api/brands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "PrimeTech",
+        slug: "primetech",
+        parentBrandId: "brand_root",
+        architectureModel: "endorsed_brand",
+        tagline: "Creative production systems",
+      }),
+    });
+  const denied = await handleBrandRegistryRequest(createRequest(), env, {
+    accountId: OTHER,
+    userId: OTHER,
   });
-  const denied = await handleBrandRegistryRequest(createRequest(), env, { accountId: OTHER, userId: OTHER });
   assert.equal(denied.status, 403);
   for (const role of ["owner", "admin", "superadmin"]) {
     sqlite.prepare("UPDATE auth_users SET role=? WHERE id=?").run(role, OTHER);
-    const deniedRole = await handleBrandRegistryRequest(createRequest(), env, { accountId: OTHER, userId: OTHER });
+    const deniedRole = await handleBrandRegistryRequest(createRequest(), env, {
+      accountId: OTHER,
+      userId: OTHER,
+    });
     assert.equal(deniedRole.status, 403, `role ${role} cannot write shared identities`);
   }
 
-  const created = await handleBrandRegistryRequest(createRequest(), env, { accountId: ACCOUNT, userId: ACCOUNT });
+  const created = await handleBrandRegistryRequest(createRequest(), env, {
+    accountId: ACCOUNT,
+    userId: ACCOUNT,
+  });
   assert.equal(created.status, 201);
   const createdPayload = await created.json();
   assert.equal(createdPayload.brand.slug, "primetech");
   assert.equal(createdPayload.brand.parent_brand_id, "brand_root");
 
-  const renamed = await handleBrandRegistryRequest(new Request("https://studio.example/api/brands/primetech", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "PrimeTech Studio", displayName: "PrimeTech Studio" }),
-  }), env, { accountId: ACCOUNT, userId: ACCOUNT, slug: "primetech" });
+  const renamed = await handleBrandRegistryRequest(
+    new Request("https://studio.example/api/brands/primetech", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "PrimeTech Studio", displayName: "PrimeTech Studio" }),
+    }),
+    env,
+    { accountId: ACCOUNT, userId: ACCOUNT, slug: "primetech" },
+  );
   assert.equal(renamed.status, 200);
   const renamedPayload = await renamed.json();
   assert.equal(renamedPayload.brand.name, "PrimeTech Studio");
   assert.equal(renamedPayload.brand.slug, "primetech");
   sqlite.close();
+});
+
+test("PrimeTech identity migration is idempotent and preserves the existing shared registry contract", async () => {
+  const migration = await readFile(
+    new URL("../migrations/1395_primetech_brand_registry_identity.sql", import.meta.url),
+    "utf8",
+  );
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    PRAGMA foreign_keys = ON;
+    CREATE TABLE brands (
+      id TEXT PRIMARY KEY, parent_brand_id TEXT, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
+      display_name TEXT, tagline TEXT, description TEXT, architecture_model TEXT NOT NULL
+        CHECK(architecture_model IN ('master_brand','monolithic_sub','standalone_brand','endorsed_brand')),
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','pending','paused','archived','parked')),
+      priority INTEGER DEFAULT 5, tags TEXT, timezone TEXT DEFAULT 'America/Chicago',
+      service_tier TEXT DEFAULT 'family', is_public INTEGER DEFAULT 0, requires_oauth INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(parent_brand_id) REFERENCES brands(id) ON DELETE SET NULL
+    );
+    INSERT INTO brands (id,name,slug,architecture_model,status)
+      VALUES ('brand_inneranimal','InnerAnimal','inneranimal','master_brand','active');
+  `);
+  try {
+    sqlite.exec(migration);
+    sqlite.exec(migration);
+    const rows = sqlite
+      .prepare(
+        "SELECT id,parent_brand_id,name,slug,tagline,description,architecture_model,status,tags,timezone,service_tier,is_public,requires_oauth FROM brands WHERE slug='primetech'",
+      )
+      .all();
+    assert.equal(rows.length, 1);
+    assert.deepEqual(
+      { ...rows[0] },
+      {
+        id: "brand_primetech",
+        parent_brand_id: "brand_inneranimal",
+        name: "PrimeTech",
+        slug: "primetech",
+        tagline: "Creative production systems",
+        description: "Creative design, media, spatial, CAD, and engineering production systems.",
+        architecture_model: "endorsed_brand",
+        status: "active",
+        tags: '["creative","production"]',
+        timezone: "America/Chicago",
+        service_tier: "family",
+        is_public: 0,
+        requires_oauth: 1,
+      },
+    );
+  } finally {
+    sqlite.close();
+  }
 });
