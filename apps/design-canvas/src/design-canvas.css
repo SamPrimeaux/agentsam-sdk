@@ -1109,3 +1109,48 @@ button{cursor:pointer}
 .dcx-template-sheet-preview>div i:nth-child(4n+1){background:color-mix(in srgb,var(--dcx-blue) 14%,var(--dcx-panel))}
 
 .dcx-template-card-art-cover img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* Phone-specific editing tools use the same callbacks and document state.
+   Desktop command groups remain untouched. */
+.dcx-desktop-commands { display:contents; }
+.dcx-phone-commands { display:none; }
+@media(max-width:767px) {
+  .dcx-phone-design-frame .dw-command-bar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:4px; padding:4px 8px 6px; overflow:visible; }
+  .dcx-phone-design-frame .dw-document-leading { min-width:0; max-width:none; }
+  .dcx-phone-design-frame .dw-document-heading { min-width:0; max-width:none; }
+  .dcx-phone-design-frame .dw-document-actions { justify-content:flex-end; min-width:0; }
+  .dcx-phone-design-frame .dcx-library-menu-button { display:none; }
+  .dcx-phone-design-frame .dcx-back-button { width:44px; height:44px; justify-content:center; padding:0; }
+  .dcx-phone-design-frame .dcx-back-button span { display:none; }
+  .dcx-phone-design-frame .dcx-leading-actions { gap:0; }
+  .dcx-phone-design-frame .dcx-topbar-actions { gap:2px; }
+  .dcx-phone-design-frame .dcx-topbar-icon { width:36px; height:40px; flex-basis:36px; }
+  .dcx-phone-design-frame .dw-command-actions { grid-column:1/-1; grid-row:2; width:100%; min-width:0; overflow:visible; }
+  .dcx-phone-design-frame .dcx-desktop-commands { display:none; }
+  .dcx-phone-commands { display:flex; justify-content:space-between; gap:8px; width:100%; min-width:0; }
+  .dcx-phone-tool-group { display:flex; align-items:center; justify-content:space-evenly; gap:0; min-width:0; padding:2px; border:1px solid var(--dw-border); border-radius:12px; background:var(--dw-elevated); }
+  .dcx-phone-tool-group > * { flex:none; }
+  .dcx-phone-tool-group :is(.dcx-menu-trigger,.dcx-command-icon) { display:flex; align-items:center; justify-content:center; gap:3px; min-width:38px; width:auto; height:44px; padding:0 6px; border-radius:8px; font-size:13px; color:var(--dw-foreground); }
+  .dcx-phone-tool-group .dcx-menu-trigger[aria-label="Insert"] span { display:none; }
+  .dcx-phone-design-frame .dcx-floating-toolbar { display:none; }
+  .dcx-phone-design-frame .dcx-selection-formatting-toolbar { max-width:calc(100% - 16px); }
+  .dcx-phone-design-frame .dw-mobile-switcher button { min-height:36px; font-size:13px; }
+  .dcx-menu-popover[data-phone-sheet="true"] { left:0!important; right:0!important; top:auto!important; bottom:0!important; min-width:0!important; width:100%!important; max-width:none!important; max-height:min(78dvh,650px)!important; padding:20px 14px max(12px,env(safe-area-inset-bottom,0px)); border-radius:20px 20px 0 0; overflow-y:auto; }
+  .dcx-menu-popover[data-phone-sheet="true"]::before { content:""; width:36px; height:4px; border-radius:4px; background:currentColor; opacity:.3; align-self:center; flex:none; margin-bottom:8px; }
+  .dcx-menu-popover[data-phone-sheet="true"] .dcx-menu-action { min-height:44px; font-size:15px; }
+}
+@media(max-width:359px) {
+  .dcx-phone-commands { gap:4px; }
+  .dcx-phone-tool-group :is(.dcx-menu-trigger,.dcx-command-icon) { min-width:32px; padding-inline:3px; }
+}
+
+@media(max-width:767px) {
+  .dcx-phone-design-frame .dw-document-leading { grid-column:1; grid-row:1; }
+  .dcx-phone-design-frame .dw-document-heading { grid-column:2; grid-row:1; }
+  .dcx-phone-design-frame .dw-document-actions { grid-column:3; grid-row:1; }
+  .dcx-phone-design-frame .dw-command-bar:has(.dw-assistant-reopen) { grid-template-columns:auto minmax(0,1fr) auto auto; }
+  .dcx-phone-design-frame .dw-assistant-reopen { grid-column:4; grid-row:1; }
+  .dcx-phone-design-frame .dcx-topbar-actions .dcx-menu-trigger span { display:none; }
+  .dcx-phone-design-frame .dcx-leading-actions .dcx-menu-trigger { max-width:100px; }
+  .dcx-phone-design-frame .dcx-leading-actions .dcx-menu-trigger span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+}

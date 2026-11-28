@@ -158,6 +158,7 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
     ref={menuRef}
     id={menuId}
     className={'dcx-menu-popover align-' + placement.align + ' side-' + placement.side}
+    data-phone-sheet={className.includes("dcx-phone-menu") || label === "Insert" ? "true" : undefined}
     role="menu"
     aria-label={label}
     style={{

@@ -1340,3 +1340,40 @@
   .agentsam-shell .agentsam-plugin-menu .agentsam-plugin-row {min-height:48px;border-radius:11px}
   .agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy small {display:block;font-size:11px}
 }
+
+/* Conversation-only identity floats over the transcript. The control row
+   remains 56px; the scroll content, not the viewport, clears the identity. */
+.agentsam-conversation-companion { display:none; }
+@media(max-width:767px) {
+  .agentsam-conversation-companion {
+    display:flex; position:relative; flex-direction:column; align-items:center;
+    width:max-content; max-width:calc(100vw - 200px); pointer-events:none;
+    color:var(--nav-text,var(--c-ink)); gap:0;
+  }
+  .agentsam-conversation-companion .agentsam-pet-trigger {
+    display:grid; place-items:center; width:68px; height:68px; min-width:68px;
+    border-radius:50%; padding:0; background:var(--nav-canvas,var(--c-bg));
+    border:1px solid var(--nav-border,var(--c-line)); pointer-events:auto;
+    z-index:1; overflow:hidden;
+  }
+  .agentsam-conversation-companion .agentsam-pet-trigger picture,
+  .agentsam-conversation-companion .agentsam-pet-trigger img {
+    display:block; width:68px; height:68px; object-fit:contain;
+  }
+  .agentsam-conversation-companion-label {
+    margin-top:-6px; padding:8px 14px; display:flex; flex-direction:column;
+    align-items:center; border:1px solid var(--nav-border,var(--c-line));
+    border-radius:18px; background:color-mix(in srgb,var(--nav-surface,var(--c-surface)) 88%,transparent);
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    white-space:nowrap; font:600 16px/1.2 var(--nav-font,system-ui);
+  }
+  .agentsam-conversation-companion-label span { font-size:13px; font-weight:400; color:var(--nav-muted,var(--c-ink-2)); }
+  .agentsam-conversation-topbar:has(.agentsam-conversation-companion) { overflow:visible; z-index:40; height:56px; min-height:56px; }
+  .agentsam-conversation-topbar > .agentsam-conversation-companion { position:absolute; top:4px; left:50%; transform:translateX(-50%); }
+  .agentsam-page-layout[data-conversation-companion="idle"] [data-agent-thread] { padding-top:64px; scroll-padding-top:64px; }
+  .agentsam-page-layout[data-conversation-companion="working"] [data-agent-thread] { padding-top:82px; scroll-padding-top:82px; }
+}
+
+@media(max-width:767px) {
+  .platform-console:has([data-design-workspace="canvas"] .dcx-phone-design-frame .dcx-back-button) .platform-console-topbar { display:none; }
+}

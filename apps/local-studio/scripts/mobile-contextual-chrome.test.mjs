@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read = path => readFileSync(new URL(path, import.meta.url),'utf8');
+test('active mobile conversation overlays the account companion without increasing the 56px control row',()=>{
+ const page=read('../frontend/agentsam/AgentSamPage.tsx');
+ const css=read('../frontend/agentsam/shell.css');
+ const host=read('../frontend/agentsam/shared-nav-host.css');
+ assert.match(page,/showConversationCompanion = isMobile && mobileHeaderState === 'conversation' && !findChatOpen/);
+ assert.match(page,/<AgentSamPetTrigger state=\{streaming \? "working" : "idle"\}/);
+ assert.match(css,/\.agentsam-conversation-companion \.agentsam-pet-trigger\s*\{[^}]+width:68px; height:68px/s);
+ assert.match(css,/\.agentsam-conversation-topbar:has\(\.agentsam-conversation-companion\)\s*\{[^}]+height:56px/s);
+ assert.match(css,/data-conversation-companion="working"\] \[data-agent-thread\]\s*\{ padding-top:82px/);
+ assert.match(host,/top:calc\(4px \+ env\(safe-area-inset-top,0px\)\)!important/);
+});
+test('focused creative editor uses compact phone controls, preserves desktop tools and exposes properties as a sheet',()=>{
+ const editor=read('../../design-canvas/src/DesignCanvasApp.tsx');
+ const css=read('../../design-canvas/src/design-canvas.css');
+ const menus=read('../../design-canvas/src/components/EditorMenus.tsx');
+ const host=read('../frontend/agentsam/shared-nav-host.css');
+ assert.match(editor,/className="dcx-phone-commands"/);
+ for(const label of ['Artboards','Editing tool','Zoom','More editor tools']) assert.ok(editor.includes('label="'+label+'"'));
+ assert.match(editor,/inspectorSheetOpen=\{inspectorOpen\}/);
+ assert.match(editor,/aria-label="Back to all work"/);
+ assert.match(css,/\.dcx-desktop-commands \{ display:contents; \}/);
+ assert.match(css,/\.dcx-phone-design-frame \.dcx-floating-toolbar \{ display:none; \}/);
+ assert.match(css,/\.dcx-menu-popover\[data-phone-sheet="true"\] \{[^}]+bottom:0!important/s);
+ assert.match(menus,/data-phone-sheet=/);
+ assert.match(host,/not\(\.agentsam-conversation-route\):has\(\[data-design-workspace="canvas"\]/);
+});
