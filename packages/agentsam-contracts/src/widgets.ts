@@ -18,6 +18,11 @@ export interface AgentSamWidgetDataSource {
   refresh?: string;
 }
 
+/** Host-owned live data access. Provider credentials and network clients stay outside Workbench. */
+export interface AgentSamWidgetDataHost {
+  load(widgetId: string, signal?: AbortSignal): Promise<unknown>;
+}
+
 export interface AgentSamWidgetDefinition {
   id: string;
   kind: AgentSamWidgetKind;

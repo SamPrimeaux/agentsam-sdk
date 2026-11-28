@@ -5,13 +5,10 @@ import {
   normalizeQueueInventory,
 } from '../backend/worker/studio-queue-observability.js';
 
-const accountId = 'cloudflare-account';
-const adminId = 'au_operator';
-const env = {
-  CLOUDFLARE_ACCOUNT_ID: accountId,
-  CLOUDFLARE_API_TOKEN: 'test-secret-never-to-client',
-  QUEUE_OBSERVABILITY_ADMIN_IDS: adminId,
-  QUEUE_OBSERVABILITY_OWNERS_JSON: '{"media-queue":{"owner_app":"MovieMode","environment":"production"}}',
+const userId = 'user-123';
+const credential = {
+  status: 'ready', accountId: 'cloudflare-account',
+  bearerToken: 'test-oauth-secret-never-to-client', grantedScopes: ['queues.read'],
 };
 const request = (path = '') => new Request('https://agentsam.test/api/queues/observability' + path);
 
@@ -34,61 +31,85 @@ function mockFetch(pathname, status = 200) {
     throw Error('unexpected path: ' + path);
   };
 }
-
-test('operator-only: missing session and unauthorized accounts never reach Cloudflare', async () => {
-  let fetched = false;
-  const fetchImpl = async () => { fetched = true; throw Error('unexpected'); };
-  assert.equal((await handleStudioQueueObservability(request(), env, null, { fetchImpl })).status, 401);
-  assert.equal((await handleStudioQueueObservability(request(), env, 'au_other', { fetchImpl })).status, 403);
-  assert.equal(fetched, false);
+const options = fetchImpl => ({
+  fetchImpl,
+  resolveCredential: async () => credential,
+  loadPermissionCatalog: async () => ({provider:'cloudflare'}),
+  assessAuthorization: () => ({status:'authorized'}),
 });
 
-test('fail closed if provider credentials are not installed', async () => {
-  const response = await handleStudioQueueObservability(request(), {
-    QUEUE_OBSERVABILITY_ADMIN_IDS: adminId,
-  }, adminId);
-  assert.equal(response.status, 503);
-  assert.equal((await response.json()).error, 'cloudflare_queue_credentials_unavailable');
-});
-
-test('Cloudflare metrics preserve real zero and account topology without leaking token', async () => {
-  const response = await handleStudioQueueObservability(request(), env, adminId, {
-    fetchImpl: mockFetch(),
+test('missing session is rejected before resolving a Cloudflare credential', async () => {
+  let resolved = false;
+  const response = await handleStudioQueueObservability(request(),{},null,{
+    resolveCredential:async()=>{resolved=true;return credential;},
   });
-  assert.equal(response.status, 200);
+  assert.equal(response.status,401);
+  assert.equal(resolved,false);
+});
+
+test('Cloudflare OAuth is required; environment API tokens are not a fallback', async () => {
+  const response = await handleStudioQueueObservability(request(),{
+    CLOUDFLARE_ACCOUNT_ID:'account',CLOUDFLARE_API_TOKEN:'must-not-be-used',
+  },userId,{
+    resolveCredential:async()=>({status:'authorization_required',error:'cloudflare_oauth_required'}),
+  });
+  assert.equal(response.status,503);
+  assert.equal((await response.json()).error,'cloudflare_oauth_required');
+});
+
+test('account selection and missing queue permission have distinct actionable errors', async () => {
+  const selection = await handleStudioQueueObservability(request(),{},userId,{
+    resolveCredential:async()=>({status:'configuration_required',accounts:[{accountIdentifier:'cf-1',accountLabel:'Production'}]}),
+  });
+  assert.equal(selection.status,409);
+  assert.equal((await selection.json()).error,'cloudflare_account_selection_required');
+  const denied = await handleStudioQueueObservability(request(),{},userId,{
+    resolveCredential:async()=>credential,
+    loadPermissionCatalog:async()=>({}),
+    assessAuthorization:()=>({status:'needs_authorization',missingScopes:['queues.read'],permissionLabel:'Account → Queues → Edit'}),
+  });
+  assert.equal(denied.status,403);
+  assert.equal((await denied.json()).error,'cloudflare_permission_denied');
+});
+
+test('Cloudflare metrics preserve real zero and topology without leaking OAuth token', async () => {
+  const env = {QUEUE_OBSERVABILITY_OWNERS_JSON:'{"media-queue":{"owner_app":"MovieMode","environment":"production"}}'};
+  const response = await handleStudioQueueObservability(request(),env,userId,options(mockFetch()));
+  assert.equal(response.status,200);
   const raw = await response.text();
-  assert.ok(!raw.includes(env.CLOUDFLARE_API_TOKEN));
+  assert.ok(!raw.includes(credential.bearerToken));
   const data = JSON.parse(raw);
-  assert.equal(data.queues.length, 1);
-  assert.equal(data.queues[0].metrics.state, 'ready');
-  assert.equal(data.queues[0].metrics.backlog_count, 0);
-  assert.equal(data.queues[0].owner_app, 'MovieMode');
-  assert.equal(data.queues[0].consumers[0].dead_letter_queue, 'media-dlq');
+  assert.equal(data.source,'cloudflare-oauth');
+  assert.equal(data.queues.length,1);
+  assert.equal(data.queues[0].metrics.state,'ready');
+  assert.equal(data.queues[0].metrics.backlog_count,0);
+  assert.equal(data.queues[0].owner_app,'MovieMode');
+  assert.equal(data.queues[0].consumers[0].dead_letter_queue,'media-dlq');
 });
 
 test('failed metric reads remain unavailable, never become a fabricated zero', async () => {
   const fetchImpl = async url => new URL(url).pathname.endsWith('/metrics')
     ? Response.json({ success: false, errors: [{ message: 'temporary failure' }] }, { status: 502 })
     : mockFetch()(url);
-  const response = await handleStudioQueueObservability(request(), env, adminId, { fetchImpl });
+  const response = await handleStudioQueueObservability(request(),{},userId,{...options(fetchImpl)});
   const data = await response.json();
-  assert.equal(data.queues[0].metrics.state, 'unavailable');
-  assert.equal(data.queues[0].metrics.backlog_count, null);
+  assert.equal(data.queues[0].metrics.state,'unavailable');
+  assert.equal(data.queues[0].metrics.backlog_count,null);
 });
 
 test('history access is scoped to queue IDs returned by inventory', async () => {
   const response = await handleStudioQueueObservability(
-    request('?queue_id=does-not-exist&history=24h'), env, adminId, { fetchImpl: mockFetch() },
+    request('?queue_id=does-not-exist&history=24h'),{},userId,options(mockFetch()),
   );
-  assert.equal(response.status, 404);
+  assert.equal(response.status,404);
 });
 
 test('queue inventory does not infer owner or environment when unknown', () => {
-  const result = normalizeQueueInventory({ queue_id: 'abc', queue_name: 'unknown' }, {
-    state: 'unavailable', backlog_count: null,
+  const result = normalizeQueueInventory({queue_id:'abc',queue_name:'unknown'},{
+    state:'unavailable',backlog_count:null,
   });
-  assert.equal(result.owner_app, null);
-  assert.equal(result.environment, null);
-  assert.deepEqual(result.producers, []);
-  assert.deepEqual(result.consumers, []);
+  assert.equal(result.owner_app,null);
+  assert.equal(result.environment,null);
+  assert.deepEqual(result.producers,[]);
+  assert.deepEqual(result.consumers,[]);
 });

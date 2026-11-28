@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BuiltinWidget, WidgetFrame, creativeWidgetEntry, type CreativeWidgetHost } from '@inneranimalmedia/agentsam-workbench/widgets';
+import type { AgentSamWidgetDataHost } from '@inneranimalmedia/agentsam-contracts/widgets';
 import '@inneranimalmedia/agentsam-workbench/widgets/widgets.css';
 import { Minus, ArrowDown, ArrowUp, GripVertical, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,16 @@ import { startArtifactCreation } from '@/lib/work/artifact-launcher';
  */
 export function NewTabWidgets({ onOpenGallery, arranging, onArrangingChange:setArranging, addRequest }: { onOpenGallery: () => void; arranging:boolean; onArrangingChange:(value:boolean)=>void; addRequest:number }) {
   const user = useCurrentUser();
+  const widgetDataHost = useMemo<AgentSamWidgetDataHost>(() => ({
+    async load(widgetId, signal) {
+      const response = await fetch('/api/widgets/data?key=' + encodeURIComponent(widgetId), {
+        credentials: 'same-origin', cache: 'no-store', signal,
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw new Error(typeof payload?.error === 'string' ? payload.error : 'widget_data_unavailable');
+      return payload.data;
+    },
+  }),[]);
   const [catalog, setCatalog] = useState<AccountWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,9 +236,9 @@ export function NewTabWidgets({ onOpenGallery, arranging, onArrangingChange:setA
                 {arranging&&<button type="button" className="as-widget-remove" disabled={Boolean(busyKey)} aria-label={'Remove '+widget.title} onClick={()=>void act(widget.key,()=>uninstallAccountWidget(widget.key))}><Minus size={16}/></button>}
                 <div className="as-widget-content" aria-hidden={arranging||undefined} ref={node=>{if(node)node.inert=arranging}}>
                 {widget.key==='media'||creativeWidgetEntry(widget.key)&&widget.key!=='artifact-preview'||widget.key==='pull-request-summary'||widget.key==='release-readiness'?
-                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>:
+                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost} dataHost={widgetDataHost}/>:
                   <WidgetFrame title={widget.key==='artifact-preview'?'':widget.title} size={widget.sizeClass as 'small' | 'medium' | 'large'}>
-                    <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost}/>
+                    <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} creativeHost={creativeHost} dataHost={widgetDataHost}/>
                   </WidgetFrame>}
                 </div>
                 {arranging?<div className="flex w-full flex-wrap items-center justify-between gap-2">
@@ -313,6 +324,40 @@ export function NewTabWidgets({ onOpenGallery, arranging, onArrangingChange:setA
                           {[...new Set([String(widget.configuration.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'), 'UTC','America/Chicago','America/New_York','America/Los_Angeles','Europe/London','Asia/Tokyo'])].map(zone => <option value={zone} key={zone}>{zone}</option>)}
                         </select>
                       </label>}
+                      {widget.key === 'pull-request-summary' && <>
+                        <label className="flex items-center justify-between gap-3">
+                          <span>Repository</span>
+                          <input className="min-w-0 max-w-[65%] rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
+                            aria-label="Pull request repository" placeholder="owner/repository" disabled={Boolean(busyKey)}
+                            defaultValue={String(widget.configuration.repository ?? '')}
+                            onBlur={event => void act(widget.key, () => updateAccountWidget(widget.key, {configuration:{repository:event.currentTarget.value.trim()}}))}/>
+                        </label>
+                        <label className="flex items-center justify-between gap-3">
+                          <span>Pull request #</span>
+                          <input type="number" min={1} className="w-24 rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
+                            aria-label="Pull request number" placeholder="844" disabled={Boolean(busyKey)}
+                            defaultValue={String(widget.configuration.pullNumber ?? '')}
+                            onBlur={event => {const raw=event.currentTarget.value.trim();void act(widget.key, () => updateAccountWidget(widget.key, {configuration:{pullNumber:raw?Number(raw):null}}));}}/>
+                        </label>
+                        <p className="text-[11px] text-muted-foreground">Live data uses your connected GitHub account.</p>
+                      </>}
+                      {widget.key === 'release-readiness' && <>
+                        <label className="flex items-center justify-between gap-3">
+                          <span>Repository</span>
+                          <input className="min-w-0 max-w-[65%] rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
+                            aria-label="Release repository" placeholder="owner/repository" disabled={Boolean(busyKey)}
+                            defaultValue={String(widget.configuration.repository ?? '')}
+                            onBlur={event => void act(widget.key, () => updateAccountWidget(widget.key, {configuration:{repository:event.currentTarget.value.trim()}}))}/>
+                        </label>
+                        <label className="flex items-center justify-between gap-3">
+                          <span>Branch / commit</span>
+                          <input className="min-w-0 max-w-[65%] rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
+                            aria-label="Release branch or commit" placeholder="main" disabled={Boolean(busyKey)}
+                            defaultValue={String(widget.configuration.ref ?? 'main')}
+                            onBlur={event => void act(widget.key, () => updateAccountWidget(widget.key, {configuration:{ref:event.currentTarget.value.trim()}}))}/>
+                        </label>
+                        <p className="text-[11px] text-muted-foreground">Only checks and SDK receipts tied to this exact commit are included.</p>
+                      </>}
                     </div>
                   ) : null}
               </li>

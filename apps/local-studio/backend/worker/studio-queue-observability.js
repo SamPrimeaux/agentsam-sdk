@@ -1,20 +1,14 @@
 import { CloudflareQueueApiAdapter } from '@inneranimalmedia/agentsam-queue-control/adapters/cloudflare';
+import {
+  assessCapabilityAuthorization,
+  loadProviderPermissionCatalog,
+  resolveCloudflareCredential,
+} from '@inneranimalmedia/agentsam-connector-cloudflare';
+import { createPluginOAuthPermissionRegistry } from './cloudflare-plugin-permission-registry.js';
 
 const reply = (body, status = 200) => Response.json(body, {
   status, headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' },
 });
-
-function allowedOperator(env, accountId) {
-  const allowed = String(env.QUEUE_OBSERVABILITY_ADMIN_IDS || '').split(',')
-    .map(id => id.trim()).filter(Boolean);
-  return Boolean(accountId && allowed.includes(accountId));
-}
-
-function providerConfig(env) {
-  const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || '').trim();
-  const token = String(env.CLOUDFLARE_API_TOKEN || '').trim();
-  return accountId && token ? { cloudflareAccountId: accountId, apiToken: token } : null;
-}
 
 function queueStatus(value) {
   return value === true ? 'delivery paused' : value === false ? 'delivery enabled' : 'unknown';
@@ -53,19 +47,72 @@ export function normalizeQueueInventory(queue, metrics, owners = {}) {
   };
 }
 
-/** Authenticated, operator-only queue inventory; never sends credentials to browsers. */
-export async function handleStudioQueueObservability(request, env, accountId, {
-  fetchImpl = fetch,
-} = {}) {
+/** Account-owned Cloudflare queue view, authorized by the user's OAuth grant and queue capability. */
+export async function handleStudioQueueObservability(request, env, userId, options = {}) {
+  const {
+    fetchImpl = fetch,
+    resolveCredential = resolveCloudflareCredential,
+    loadPermissionCatalog = async currentEnv => loadProviderPermissionCatalog(
+      createPluginOAuthPermissionRegistry(currentEnv),'cloudflare',
+    ),
+    assessAuthorization = assessCapabilityAuthorization,
+  } = options;
   if (request.method !== 'GET') return reply({ ok: false, error: 'method_not_allowed' }, 405);
-  if (!accountId) return reply({ ok: false, error: 'unauthorized' }, 401);
-  if (!allowedOperator(env, accountId)) return reply({ ok: false, error: 'forbidden' }, 403);
-  const config = providerConfig(env);
-  if (!config) return reply({ ok: false, error: 'cloudflare_queue_credentials_unavailable' }, 503);
-  const api = new CloudflareQueueApiAdapter({ ...config, fetchImpl });
+  if (!userId) return reply({ ok: false, error: 'unauthorized' }, 401);
+
+  let credential;
+  try {
+    credential = await resolveCredential({
+      env, ownerId: userId, capabilityId: 'cloudflare.queues',
+      authMode: 'oauth', fetchImpl,
+    });
+  } catch {
+    return reply({ ok: false, error: 'cloudflare_oauth_required' }, 503);
+  }
+  if (credential?.status === 'configuration_required') {
+    return reply({
+      ok: false, error: 'cloudflare_account_selection_required',
+      accounts: (credential.accounts || []).map(item => ({
+        id: item.accountIdentifier || item.connectionId || null,
+        label: item.accountLabel || item.label || 'Cloudflare account',
+      })),
+    }, 409);
+  }
+  if (credential?.error === 'cloudflare_reconnect_required') {
+    return reply({ ok: false, error: 'cloudflare_reconnect_required' }, 409);
+  }
+  if (credential?.status !== 'ready' || !credential.bearerToken || !credential.accountId) {
+    return reply({ ok: false, error: 'cloudflare_oauth_required' }, 503);
+  }
+
+  let permissionCatalog = null;
+  try { permissionCatalog = await loadPermissionCatalog(env); }
+  catch { /* A missing catalog is checked by the live API probe below, never by bypassing OAuth. */ }
+  const authorization = assessAuthorization(
+    'cloudflare.queues', credential.grantedScopes || [], permissionCatalog,
+  );
+  if (authorization?.status === 'needs_authorization') {
+    return reply({
+      ok: false, error: 'cloudflare_permission_denied',
+      missing_scopes: authorization.missingScopes || [],
+      permission: authorization.permissionLabel || null,
+    }, 403);
+  }
+  if (authorization?.status === 'unavailable') {
+    return reply({ ok: false, error: 'cloudflare_queue_capability_unavailable' }, 409);
+  }
+
+  const api = new CloudflareQueueApiAdapter({
+    cloudflareAccountId: credential.accountId,
+    apiToken: credential.bearerToken,
+    fetchImpl,
+  });
   let queues;
   try { queues = await api.listQueues(); }
-  catch { return reply({ ok: false, error: 'cloudflare_queue_inventory_unavailable' }, 502); }
+  catch (error) {
+    const forbidden = Number(error?.status) === 403;
+    return reply({ ok: false, error: forbidden ? 'cloudflare_permission_denied' : 'cloudflare_queue_inventory_unavailable' }, forbidden ? 403 : 502);
+  }
 
   let owners = {};
   try {
@@ -113,19 +160,11 @@ export async function handleStudioQueueObservability(request, env, accountId, {
       const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
       const response = await fetchImpl('https://api.cloudflare.com/client/v4/graphql', {
         method: 'POST',
-        headers: { authorization: `Bearer ${config.apiToken}`, 'content-type': 'application/json' },
+        headers: { authorization: 'Bearer ' + credential.bearerToken, 'content-type': 'application/json' },
         body: JSON.stringify({
-          query: `query QueueBacklogByHour($accountTag: string!, $queueId: string!, $datetimeStart: Time!, $datetimeEnd: Time!) {
-            viewer { accounts(filter: { accountTag: $accountTag }) {
-              backlog: queueBacklogAdaptiveGroups(
-                limit: 48,
-                filter: { queueId: $queueId, datetime_geq: $datetimeStart, datetime_leq: $datetimeEnd },
-                orderBy: [datetimeHour_ASC]
-              ) { dimensions { datetimeHour } avg { messages bytes } }
-            } }
-          }`,
+          query: 'query QueueBacklogByHour($accountTag: string!, $queueId: string!, $datetimeStart: Time!, $datetimeEnd: Time!) { viewer { accounts(filter: { accountTag: $accountTag }) { backlog: queueBacklogAdaptiveGroups(limit: 48, filter: { queueId: $queueId, datetime_geq: $datetimeStart, datetime_leq: $datetimeEnd }, orderBy: [datetimeHour_ASC]) { dimensions { datetimeHour } avg { messages bytes } } } } }',
           variables: {
-            accountTag: config.cloudflareAccountId, queueId: selected.queue_id,
+            accountTag: credential.accountId, queueId: selected.queue_id,
             datetimeStart: start.toISOString(), datetimeEnd: end.toISOString(),
           },
         }),
@@ -146,7 +185,7 @@ export async function handleStudioQueueObservability(request, env, accountId, {
     }
   }
   return reply({
-    ok: true, source: 'cloudflare', collected_at: new Date().toISOString(),
-    account_id: config.cloudflareAccountId, queues: rows, ...(history ? { history } : {}),
+    ok: true, source: 'cloudflare-oauth', collected_at: new Date().toISOString(),
+    account_id: credential.accountId, queues: rows, ...(history ? { history } : {}),
   });
 }
