@@ -194,14 +194,18 @@ assert.equal(globalInspect.productRoot.includes(ROOT), false, 'global install mu
 assert.equal(globalInspect.stateRoot.includes('node_modules'), false, 'global install state root must not be package source');
 assert.equal(path.resolve(globalInspect.stateRoot), fs.realpathSync(globalProject));
 
+const packedDependency = name => {
+  const item = candidatePacks.find(pack => pack.name === name);
+  return item ? {name: item.name, version: item.version} : null;
+};
 const receipt = {
   schema: 'agentsam.go-distribution-proof.v1',
   ok: true,
   temp_root: temp,
-  release_phase: releaseState,
-  candidate_error_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-errors') ? {name: '@inneranimalmedia/agentsam-errors', version: errorsVersion} : null,
-  candidate_contracts_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-contracts') ? {name: '@inneranimalmedia/agentsam-contracts', version: contractsVersion} : null,
-  candidate_procedures_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/primetech-procedures') ? {name: '@inneranimalmedia/primetech-procedures', version: proceduresVersion} : null,
+  release_phase: process.argv.includes('--published-dependencies') ? 'published-dependencies' : 'source-verification',
+  candidate_error_tarball: packedDependency('@inneranimalmedia/agentsam-errors'),
+  candidate_contracts_tarball: packedDependency('@inneranimalmedia/agentsam-contracts'),
+  candidate_procedures_tarball: packedDependency('@inneranimalmedia/primetech-procedures'),
   sdk: {
     name: sdkPack.name,
     version: sdkPack.version,

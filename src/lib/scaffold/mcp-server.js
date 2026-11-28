@@ -17,8 +17,14 @@ async function directoryHasEntries(dir) {
 }
 
 export async function createMcpServerProject(input = {}, options = {}) {
-  const config = resolveMcpServerTemplateConfig(input);
   const cwd = path.resolve(options.cwd || process.cwd());
+  const pythonSdkSource = input.pythonSdkSource ? path.resolve(cwd, input.pythonSdkSource) : '';
+  if (pythonSdkSource) {
+    const manifest = await fs.readFile(path.join(pythonSdkSource, 'pyproject.toml'), 'utf8');
+    if (!/^name\s*=\s*"agentsam-sdk"/m.test(manifest)) throw new Error('mcp_python_sdk_source_invalid');
+    await fs.access(path.join(pythonSdkSource, 'agentsam_sdk', 'mcp', '__init__.py'));
+  }
+  const config = resolveMcpServerTemplateConfig({...input, pythonSdkSource});
   const outputDir = path.resolve(cwd, input.outputDir || input.output || config.projectName);
   const force = Boolean(input.force || options.force);
 

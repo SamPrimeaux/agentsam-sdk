@@ -85,8 +85,9 @@ function pythonAdapter(config, files) {
     'agentsam.mcp.json': files['agentsam.mcp.json'],
     'pyproject.toml': [
       '[project]', 'name = ' + JSON.stringify(config.projectName), 'version = ' + JSON.stringify(config.version),
-      'requires-python = ">=3.10"', 'dependencies = ["agentsam-sdk[mcp]>=0.3.1,<0.4"]',
+      'requires-python = ">=3.10"', 'dependencies = ["agentsam-sdk[mcp]>=0.3.0,<0.4"]',
       '', '[tool.uv]', 'package = false', '',
+      ...(config.pythonSdkSource ? ['[tool.uv.sources]', 'agentsam-sdk = { path = ' + JSON.stringify(config.pythonSdkSource) + ', editable = true }', ''] : []),
     ].join('\n'),
     '.gitignore': '.venv/\n__pycache__/\n.env\n*.pyc\n',
     'server.py': `from pathlib import Path
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     unittest.main()
 `,
     'README.md': '# ' + config.displayName + '\n\nPython stdio MCP using the AgentSam Python SDK.\n\n' +
-      'Requires Python 3.10+ and agentsam-sdk[mcp] 0.3.1 or newer. Run `uv sync`, `uv run python -m unittest discover -s tests`, then configure the client to launch the project virtualenv Python with the absolute path to server.py.\n' +
+      'Requires Python 3.10+ and a build of agentsam-sdk that exports the MCP extra. For unreleased source, generate with --python-sdk-source /path/to/agentsam-sdk/python. Run `uv sync`, `uv run python -m unittest discover -s tests`, then configure the client to launch the project virtualenv Python with the absolute path to server.py.\n' +
       'The SDK owns the MCP runtime. Register project-specific tools, resources and prompts in server.py. Filesystem access is disabled by default; opt-in workspace reads require an explicitly scoped SDK client and a trusted per-call authorization callback. No cloud account or Node runtime is needed.\n',
   };
 }

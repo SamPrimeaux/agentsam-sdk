@@ -421,9 +421,11 @@ export function resolveMcpServerTemplateConfig(input = {}) {
   const authMode = String(input.authMode || (target.transport === 'stdio' ? 'local' : preset.authMode) || 'oauth').trim().toLowerCase();
   if (!(target.transport === 'stdio' ? ['local'] : ['oauth', 'public']).includes(authMode)) throw new Error('mcp_auth_mode_invalid:' + authMode);
   if (target.transport === 'stdio' && (input.issuer || input.audience)) throw new Error('mcp_stdio_oauth_not_supported');
+  if (input.pythonSdkSource && target.runtime !== 'python') throw new Error('mcp_python_sdk_source_requires_python');
   const scopes = normalizeScopes(input.scopes || preset.scopes);
   return Object.freeze({
     ...target,
+    pythonSdkSource: input.pythonSdkSource ? String(input.pythonSdkSource) : '',
     projectName,
     displayName: String(input.displayName || projectName.split('-').map((part) => {
       const word = part.toLowerCase();

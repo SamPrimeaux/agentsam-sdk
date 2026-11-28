@@ -72,6 +72,7 @@ export function parseMcpArgs(argv = []) {
   let pack = '';
   let preset = '';
   let runtime = '';
+  let pythonSdkSource = '';
   let workspaceId = '';
   let connectionId = '';
   let transport = '';
@@ -93,6 +94,7 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--pack') pack = argv[++i] || '';
     else if (arg === '--preset') preset = argv[++i] || '';
     else if (arg === '--runtime') runtime = argv[++i] || '';
+    else if (arg === '--python-sdk-source') pythonSdkSource = argv[++i] || '';
     else if (arg === '--workspace-id') workspaceId = argv[++i] || '';
     else if (arg === '--connection-id') connectionId = argv[++i] || '';
     else if (arg === '--transport') transport = argv[++i] || '';
@@ -121,6 +123,7 @@ export function parseMcpArgs(argv = []) {
     pack: pack.toLowerCase(),
     preset: preset.toLowerCase(),
     runtime,
+    pythonSdkSource,
     workspaceId,
     connectionId,
     transport,
@@ -168,7 +171,7 @@ function renderHelp(options = {}) {
   AgentSam · MCP Factory + Client Management
 
   Usage:
-    agentsam mcp create <name> [--preset <preset>] [--runtime cloudflare-worker|node|python] [--transport streamable_http|stdio] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
+    agentsam mcp create <name> [--preset <preset>] [--runtime cloudflare-worker|node|python] [--python-sdk-source <dir>] [--transport streamable_http|stdio] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp validate|inspect|install|test|build|dev|deploy [<project-dir>]
     agentsam mcp register <name> --url <https-url> [--write]
     agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>
@@ -215,7 +218,7 @@ export async function runMcp(argv = [], options = {}) {
   const { subcommand, target } = args;
 
   if (subcommand === 'register') {
-    if (!target || !args.url) throw new Error('mcp_register_name_and_url_required');
+    if (!target || !args.url) throw new McpResourceError('mcp_register_name_and_url_required', 'agentsam mcp register <name> --url <https-url>');
     if (args.writeAccess) await (options.authenticateImpl || authenticateViaBrowser)({
       ...options, scope:'openid profile email offline_access iam:agent',
     });
@@ -224,7 +227,7 @@ export async function runMcp(argv = [], options = {}) {
     return result;
   }
   if (subcommand === 'serve-workspace') {
-    if (!target || !args.workspaceId || !args.connectionId) throw new Error('mcp_workspace_root_and_ids_required');
+    if (!target || !args.workspaceId || !args.connectionId) throw new McpResourceError('mcp_workspace_root_and_ids_required', 'agentsam mcp serve-workspace <root> --workspace-id <id> --connection-id <id>');
     await serveNativeWorkspace({...options,root:target,workspaceId:args.workspaceId,connectionId:args.connectionId});
     return null;
   }
@@ -243,6 +246,7 @@ export async function runMcp(argv = [], options = {}) {
       projectName: target,
       preset,
       runtime: args.runtime || undefined,
+      pythonSdkSource: args.pythonSdkSource || undefined,
       transport: args.transport || undefined,
       output: args.output || target,
       issuer: args.issuer || undefined,

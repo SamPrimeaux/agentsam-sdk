@@ -1,6 +1,6 @@
 # MCP development and acceptance
 
-The AgentSam MCP factory supports Cloudflare Worker HTTP, Node HTTP, Node stdio and Python stdio. The Python target depends on the existing optional agentsam-sdk MCP extra (candidate 0.3.1); test with the source SDK before publishing.
+The AgentSam MCP factory supports Cloudflare Worker HTTP, Node HTTP, Node stdio and Python stdio. The Python target depends on the existing optional agentsam-sdk MCP extra. No version bump is needed for source acceptance. Generate with `--python-sdk-source /path/to/agentsam-sdk/python` to use an editable source install before publication; omit the flag once a distribution exposing the MCP API exists.
 
 ## Project lifecycle
 
