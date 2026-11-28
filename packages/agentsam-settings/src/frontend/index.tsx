@@ -850,14 +850,14 @@ function PluginCustomizeView({
   }
 
   async function openWorkspace(id:string) {
-    setSelectedKey(null);
     setFocusedPluginId(id);
     setWorkspace(null);
     setWorkspaceBusy(true);
     setWorkspaceError("");
     try {
       if(!host.readPluginWorkspace)throw new Error("Plugin workspace is unavailable on this host.");
-      setWorkspace(await host.readPluginWorkspace(id));
+      const brandSlug = typeof window === "undefined" ? undefined : new URLSearchParams(window.location.search).get("brand") || undefined;
+      setWorkspace(await host.readPluginWorkspace(id, { brandSlug }));
     }catch(error){
       setWorkspaceError(error instanceof Error?error.message:"Unable to read the connected workspace.");
     }finally{
@@ -989,7 +989,12 @@ function PluginCustomizeView({
         {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           {workspaceError}. Reconnect the plugin or verify the registered context tool.
         </p> : null}
-        {workspace && !workspaceError ? (isBrand ? <BrandPluginWorkspace data={data} /> :
+        {workspace && !workspaceError ? (isBrand ? <BrandPluginWorkspace
+          data={data}
+          onCreateBrand={host.createBrand ? input=>host.createBrand!(input) : undefined}
+          onUpdateBrand={host.updateBrand ? (slug,input)=>host.updateBrand!(slug,input) : undefined}
+          onRefresh={()=>openWorkspace(focusedPlugin.id)}
+        /> :
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
@@ -2501,39 +2506,41 @@ function DesignView({snapshot,host}:{
   const [context,setContext]=useState<{pluginKey:string;contextTool:string;result:unknown}|null>(null);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
+  const [brandSlug,setBrandSlug]=useState(()=>typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("brand")||"");
   useEffect(()=>{
     let cancelled=false;
     setContext(null);
     setError("");
     if(!connected || !brandPlugin?.id || !host.readPluginWorkspace)return;
     setLoading(true);
-    void host.readPluginWorkspace(brandPlugin.id).then(value=>{
+    const requestedSlug=typeof window==="undefined"?brandSlug:new URLSearchParams(window.location.search).get("brand")||brandSlug;
+    void host.readPluginWorkspace(brandPlugin.id,{brandSlug:requestedSlug||undefined}).then(value=>{
       if(!cancelled)setContext(value);
     }).catch(reason=>{
-      if(!cancelled)setError(reason instanceof Error?reason.message:"Unable to read brand context.");
+      if(!cancelled)setError(reason instanceof Error?reason.message:"Unable to read brand registry.");
     }).finally(()=>{if(!cancelled)setLoading(false);});
     return()=>{cancelled=true;};
   },[connected,brandPlugin?.id,host]);
+  async function refreshBrandWorkspace() {
+    if(!connected || !brandPlugin?.id || !host.readPluginWorkspace)return;
+    setLoading(true);
+    setError("");
+    try {
+      const requestedSlug=typeof window==="undefined"?brandSlug:new URLSearchParams(window.location.search).get("brand")||brandSlug;
+      setContext(await host.readPluginWorkspace(brandPlugin.id,{brandSlug:requestedSlug||undefined}));
+    } catch(reason) {
+      setError(reason instanceof Error?reason.message:"Unable to refresh brand registry.");
+    } finally {
+      setLoading(false);
+    }
+  }
   const wrapped=context?.result&&typeof context.result==="object"&&!Array.isArray(context.result)
     ? context.result as Record<string,unknown>:null;
   const data=wrapped?.data&&typeof wrapped.data==="object"&&!Array.isArray(wrapped.data)
     ? wrapped.data as Record<string,unknown>:wrapped;
-  const latest=data?.latestContract&&typeof data.latestContract==="object"
-    ? data.latestContract as Record<string,unknown>:null;
-  const contract=latest?.contract&&typeof latest.contract==="object"&&!Array.isArray(latest.contract)
-    ? latest.contract as Record<string,unknown>:null;
-  const identitySections=[
-    ["Purpose",contract?.purpose],
-    ["Mission",contract?.mission],
-    ["Positioning",contract?.positioning],
-    ["Audience",contract?.audience],
-    ["Voice",contract?.voice],
-    ["Values",contract?.values],
-  ].filter((entry):entry is [string,unknown]=>entry[1]!==null&&entry[1]!==undefined&&entry[1]!=="");
-  const sourceCount=Array.isArray(data?.connections)?data.connections.length:0;
   return (
     <div className="space-y-5">
-      <Section title="Brand identity" description="Your approved purpose, positioning, voice and identity decisions—not storefront themes or Studio appearance.">
+      <Section title="Brand identity" description="One shared multi-brand workspace backed by the existing brands registry, account-owned assets and approved BrandContract revisions.">
         {snapshot.pluginsError?(
           <div role="alert" className="rounded-xl border border-border/70 p-5">
             <p className="text-[13px] font-medium">Brand connection status unavailable</p>
@@ -2543,51 +2550,30 @@ function DesignView({snapshot,host}:{
           <div className="rounded-xl border border-border/70 p-5">
             <p className="text-[13px] font-medium">Brand identity is not connected</p>
             <p className="mt-2 text-[12px] text-muted-foreground">
-              Connect AgentSam Brand to inspect the authorized brand workspace and approved identity. A theme cannot substitute for a BrandContract.
+              Connect AgentSam Brand to inspect and manage the canonical multi-brand registry. Themes and editor appearance remain separate.
             </p>
             {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
               className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open plugin connections →</button>:null}
           </div>
-        ):loading?<p role="status" className="text-[12px] text-muted-foreground">Loading your authorized brand identity…</p>
-        :error?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">{error}</p>
-        :!latest?<div className="rounded-xl border border-dashed border-border/70 p-5">
-          <p className="text-[13px] font-medium">No approved BrandContract saved</p>
-          <p className="mt-2 text-[12px] text-muted-foreground">
-            Your Brand plugin is connected, but the identity has not been defined and approved. Inspect actual brand evidence, draft the contract, review it, and explicitly save the approved version.
-          </p>
-          <p className="mt-2 text-[11px] text-muted-foreground">Connected evidence sources: {sourceCount}. No identity attributes have been invented.</p>
-          {host.openPluginWorkspace || host.openSettingsUnit ? <button type="button" onClick={()=>host.openPluginWorkspace ? host.openPluginWorkspace("agentsam-brand") : host.openSettingsUnit?.("customize")}
-            className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button>:null}
+        ):loading && !data?<p role="status" className="text-[12px] text-muted-foreground">Loading your canonical brand registry…</p>
+        :error && !data?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">{error}</p>
+        :data?<div className="space-y-3">
+          <BrandPluginWorkspace
+            data={data}
+            initialBrandSlug={brandSlug}
+            onBrandSelected={setBrandSlug}
+            onCreateBrand={host.createBrand?input=>host.createBrand!(input):undefined}
+            onUpdateBrand={host.updateBrand?(slug,input)=>host.updateBrand!(slug,input):undefined}
+            onRefresh={refreshBrandWorkspace}
+          />
+          {error?<p role="alert" className="text-[11px] text-[var(--settings-warning-ink)]">{error}</p>:null}
+          {host.openPluginWorkspace?<button type="button" onClick={()=>host.openPluginWorkspace?.("agentsam-brand",brandSlug||undefined)}
+            className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Enter full Brand workspace →</button>:null}
         </div>
-        :<div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 p-4">
-            <div>
-              <p className="text-[13px] font-semibold">Approved BrandContract</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Status: {String(latest.status||"unknown")} · version: {String(latest.schema_version||"unspecified")}
-              </p>
-            </div>
-            <span className="text-[11px] text-muted-foreground">{sourceCount} evidence source{sourceCount===1?"":"s"}</span>
-          </div>
-          {identitySections.length?(
-            <div className="grid gap-3 sm:grid-cols-2">
-              {identitySections.map(([label,value])=>(
-                <article key={label} className="min-w-0 rounded-xl border border-border/70 bg-muted/10 p-4">
-                  <h3 className="text-[11px] font-semibold">{label}</h3>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-muted-foreground">
-                    {typeof value==="string"?value:JSON.stringify(value,null,2)}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ):<p className="text-[12px] text-muted-foreground">This approved contract uses custom fields; inspect the complete contract below.</p>}
-          <details className="rounded-xl border border-border/70 p-4">
-            <summary className="cursor-pointer text-[12px] font-medium">Inspect full BrandContract and evidence</summary>
-            <pre className="mt-3 max-h-[460px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(latest,null,2)}</pre>
-          </details>
-          <p className="text-[10px] text-muted-foreground">Source: {context?.contextTool} · approved contract in the authorized Brand workspace.</p>
-          {host.openPluginWorkspace ? <button type="button" onClick={()=>host.openPluginWorkspace?.("agentsam-brand")}
-            className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button> : null}
+        :<div className="rounded-xl border border-dashed border-border/70 p-5">
+          <p className="text-[13px] font-medium">Brand workspace has no response</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">The connection is present, but no registry data was returned.</p>
+          <button type="button" onClick={()=>void refreshBrandWorkspace()} className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px]">Retry</button>
         </div>}
       </Section>
       <Section title="Brand implementation" description="Logo and media assets, design tokens, application themes and campaign materials express the identity; they do not define it.">

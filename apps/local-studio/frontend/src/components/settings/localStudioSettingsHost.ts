@@ -626,10 +626,12 @@ export const localStudioSettingsHost: SettingsHost = {
     if(typeof window!=="undefined")
       window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/admin/settings/"+unit}}));
   },
-  openPluginWorkspace(pluginKey) {
+  openPluginWorkspace(pluginKey, brandSlug) {
     if(typeof window === "undefined" || !/^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(pluginKey))return;
+    const params = new URLSearchParams({ view: "plugins", plugin: pluginKey });
+    if (brandSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(brandSlug)) params.set("brand", brandSlug);
     window.dispatchEvent(new CustomEvent("agentsam:navigate",{
-      detail:{to:"/admin/settings/customize?plugin="+encodeURIComponent(pluginKey)},
+      detail:{to:"/admin/settings/customize?"+params.toString()},
     }));
   },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
@@ -692,14 +694,27 @@ export const localStudioSettingsHost: SettingsHost = {
       window.dispatchEvent(new Event("agentsam:plugins-changed"));
     }
   },
-  async readPluginWorkspace(pluginId) {
+  async readPluginWorkspace(pluginId, options = {}) {
     if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
-    const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace";
+    const params = new URLSearchParams();
+    if (options.brandSlug) params.set("brand", options.brandSlug);
+    const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace"+(params.size?"?"+params.toString():"");
     let body:{ok?:boolean;error?:string;pluginKey?:string;contextTool?:string;result?:unknown};
     const response=await fetch(path,{credentials:"same-origin"});
     body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
     if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
     return {pluginKey:body.pluginKey||"",contextTool:body.contextTool||"",result:body.result};
+  },
+  async createBrand(input) {
+    const result = await settingsRequest<{ok?:boolean;error?:string;brand?:unknown}>("/api/brands","POST",input);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent("agentsam:brand-registry-changed"));
+    return result;
+  },
+  async updateBrand(slug, input) {
+    if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(slug))throw new Error("brand_slug_invalid");
+    const result = await settingsRequest<{ok?:boolean;error?:string;brand?:unknown}>("/api/brands/"+encodeURIComponent(slug),"PATCH",input);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent("agentsam:brand-registry-changed"));
+    return result;
   },
   async listPluginRepositories(pluginId) {
     const registry = await loadPluginSettings();

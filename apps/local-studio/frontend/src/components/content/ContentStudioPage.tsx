@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ContentStudio } from "@inneranimalmedia/agentsam-content-studio";
 import type { ContentRuntime } from "@inneranimalmedia/agentsam-content";
+import type { BrandCandidate } from "@inneranimalmedia/agentsam-content";
 import { createLocalStudioContentRuntime } from "@/lib/content/createLocalStudioContentRuntime";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -48,16 +49,36 @@ function ContentStudioPageMounted({
     primaryEmail: string | null;
   };
 }) {
+  const [brandProjections,setBrandProjections]=useState<BrandCandidate[]>([]);
+  useEffect(()=>{
+    let cancelled=false;
+    void fetch("/api/brands",{credentials:"same-origin",cache:"no-store",headers:{accept:"application/json"}})
+      .then(async response=>{
+        if(!response.ok)throw new Error("brand_registry_unavailable");
+        const body=await response.json() as {ok?:boolean;brands?:Array<Record<string,unknown>>};
+        if(body.ok!==true)throw new Error("brand_registry_unavailable");
+        const projections=(body.brands||[]).map(brand=>{
+          const tags=Array.isArray(brand.tags)?brand.tags.filter((tag):tag is string=>typeof tag==="string"):[];
+          const slug=typeof brand.slug==="string"?brand.slug:"";
+          const name=typeof brand.display_name==="string"?brand.display_name:
+            typeof brand.name==="string"?brand.name:slug;
+          return {brandId:String(brand.id||slug),name,keywords:[slug,...tags].filter(Boolean)};
+        }).filter(brand=>brand.brandId && brand.name);
+        if(!cancelled)setBrandProjections(projections);
+      })
+      .catch(()=>{if(!cancelled)setBrandProjections([]);});
+    return()=>{cancelled=true;};
+  },[]);
   const runtime = useMemo(
     () =>
       createLocalStudioContentRuntime({
         accountId: user.id,
         actorRef: user.id,
         accountLabel: user.displayName ?? user.primaryEmail ?? user.id,
-        brandProjections: [],
+        brandProjections,
         projectId,
       }),
-    [user.id, user.displayName, user.primaryEmail, projectId],
+    [user.id, user.displayName, user.primaryEmail, projectId, brandProjections],
   );
 
   const [capsLabel, setCapsLabel] = useState("loading capabilities…");

@@ -76,6 +76,7 @@ import { handleStudioLivingPlan } from "./studio-living-plan.js";
 import { handleStudioStorageSettings } from "./studio-storage-settings.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
+import { handleBrandRegistryRequest } from "./brand-registry.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAgentControlRequest } from "./agent-control-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
@@ -1003,6 +1004,8 @@ export default {
     const isStudioRules = url.pathname === "/api/settings/rules"
       || url.pathname.startsWith("/api/settings/rules/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
+    const brandRegistryMatch = /^\/api\/brands\/([^/]+)$/i.exec(url.pathname);
+    const isBrandRegistry = url.pathname === "/api/brands" || Boolean(brandRegistryMatch);
     const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isAppsInstall = url.pathname === "/api/apps/install";
     const isAppsOpen = url.pathname === "/api/apps/open";
@@ -1495,6 +1498,17 @@ export default {
       return sessionAccountId;
     }
 
+    if (isBrandRegistry) {
+      const accountId = await sessionAccount();
+      const userId = await sessionUser();
+      if (!accountId || !userId) return json({ ok: false, error: "authenticated_account_required" }, 401);
+      return handleBrandRegistryRequest(request, env, {
+        accountId,
+        userId,
+        slug: brandRegistryMatch ? decodeURIComponent(brandRegistryMatch[1]) : null,
+      });
+    }
+
     if (url.pathname.startsWith("/api/samspeaks/")) {
       const accountId = await sessionAccount();
       if (!accountId) return json({ok:false,error:"authenticated_account_required"},401);
@@ -1509,7 +1523,9 @@ export default {
       const accountId=await sessionAccount();
       if(!accountId)return json({ok:false,error:"authenticated_account_required"},401);
       try{
-        const response=await readPluginWorkspace(env,accountId,workspaceMatch[1]);
+        const response=await readPluginWorkspace(env,accountId,workspaceMatch[1],fetch,{
+          brandSlug:new URL(request.url).searchParams.get("brand") || undefined,
+        });
         return json({ok:true,...response},200,{"cache-control":"no-store"});
       }catch(error){
         const code=String(error?.message||"plugin_workspace_unavailable");

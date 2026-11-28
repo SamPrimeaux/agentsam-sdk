@@ -542,14 +542,17 @@ export interface SettingsHost {
   updateNotificationSettings?(settings: SettingsNotificationProfileUpdate): Promise<void>;
   openSettingsUnit?(unit: SettingsUnitId): void;
   /** Navigate to an authenticated installed plugin workspace; does not grant new permissions. */
-  openPluginWorkspace?(pluginKey: string): void;
+  openPluginWorkspace?(pluginKey: string, brandSlug?: string): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
   setCatalogItemEnabled?(kind: SettingsCatalogKind, id: string, enabled: boolean): Promise<void>;
   discoverPlugins?(): Promise<SettingsPluginDiscovery>;
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
-  readPluginWorkspace?(pluginId: string): Promise<{pluginKey:string;contextTool:string;result:unknown}>;
+  readPluginWorkspace?(pluginId: string, options?: { brandSlug?: string }): Promise<{pluginKey:string;contextTool:string;result:unknown}>;
+  /** Authenticated CRUD for the existing shared brands registry. Slugs remain stable on rename. */
+  createBrand?(input: Record<string, unknown>): Promise<unknown>;
+  updateBrand?(slug: string, input: Record<string, unknown>): Promise<unknown>;
   /** Provider-scoped live repository read; no tokens returned to Settings. */
   listPluginRepositories?(pluginId: string): Promise<{repositories:SettingsPluginRepository[];hasMore:boolean}>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;

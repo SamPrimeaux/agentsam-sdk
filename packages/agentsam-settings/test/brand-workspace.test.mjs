@@ -7,10 +7,10 @@ const read = name => readFile(new URL(name, import.meta.url), "utf8");
 test("brand plugin uses its own accessible multi-brand workspace, not the old JSON-only pane", async () => {
   const root = await read("../src/frontend/index.tsx");
   const brand = await read("../src/frontend/brand-workspace.tsx");
-  assert.match(root, /<BrandPluginWorkspace data=\{data\}/);
+  assert.match(root, /<BrandPluginWorkspace[\s\S]*?data=\{data\}/);
   assert.doesNotMatch(root, /Brand identity and contract<\/h3>/);
   assert.match(brand, /Select brand identity/);
-  assert.match(brand, /brand\.status === "approved"/);
+  assert.match(brand, /brand\?\.contractStatus === "approved"/);
   assert.match(brand, /No recorded brand identity/);
   assert.match(brand, /No verified/);
   assert.doesNotMatch(brand, /localStorage|sessionStorage|window\.fetch\(|new URL\("data:image/);
