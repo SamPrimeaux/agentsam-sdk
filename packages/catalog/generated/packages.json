@@ -560,15 +560,20 @@
       "class": "package",
       "commands": [],
       "evidence": {
+        "approval_decision_schema": "packages/agentsam-contracts/schemas/approval-decision.v1.schema.json",
+        "approval_schema": "packages/agentsam-contracts/schemas/approval.v1.schema.json",
         "directory": "packages/agentsam-contracts",
         "purpose_source": "package-manifest-description",
         "readme": "packages/agentsam-contracts/README.md",
         "resource_ref_contract": "packages/agentsam-contracts/src/resource-ref.ts",
         "resource_ref_schema": "packages/agentsam-contracts/schemas/resource-ref.v1.schema.json",
+        "run_contract": "packages/agentsam-contracts/src/run.ts",
+        "run_schema": "packages/agentsam-contracts/schemas/run.v1.schema.json",
         "scene_document_contract": "packages/agentsam-contracts/src/scene-document.ts",
         "scene_document_schema": "packages/agentsam-contracts/schemas/scene-document.v2.schema.json",
         "scene_format_contract": "packages/agentsam-contracts/src/scene-format.ts",
         "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json",
+        "spawn_schema": "packages/agentsam-contracts/schemas/run-spawn.v1.schema.json",
         "tests": [
           "packages/agentsam-contracts/test/scene-format.test.mjs",
           "packages/agentsam-contracts/test/design-workspace.test.mjs",
@@ -595,7 +600,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-contracts",
-      "purpose": "Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/round-trip receipts; does not implement codecs, renderers, authorization or asset storage.",
+      "purpose": "Portable AgentSam contracts for agents, runs, parent/child spawn orchestration, approvals, events, tools, authority, providers, workspaces and resource references; does not implement execution, authorization or asset storage.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-contracts",
@@ -619,7 +624,10 @@
         "tools",
         "runtime-capability",
         "scene-document",
-        "scene-v2"
+        "scene-v2",
+        "agent-run",
+        "spawn-jobs",
+        "approvals"
       ],
       "use_when": [
         "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
@@ -2405,7 +2413,7 @@
         "directory": "packages/primetech-procedures",
         "host_integration": "sdk-cli-bound",
         "readme": "packages/primetech-procedures/README.md",
-        "runtime_proof": "sam-superbash-integration-fixture",
+        "runtime_proof": "terminal-exec-and-sam-runtime-integration-fixtures",
         "tests": [
           "packages/primetech-procedures/test/procedure.test.mjs",
           "packages/primetech-procedures/test/test_inventory.py",
@@ -2470,7 +2478,7 @@
         "Packaging creative assets, design systems and EPUB 3 publications with verified outputs",
         "Mapping, implementing and visually validating responsive UI/UX flows and demos"
       ],
-      "version": "2.6.18"
+      "version": "2.6.20"
     },
     {
       "avoid_when": [],

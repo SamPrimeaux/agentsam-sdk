@@ -3,14 +3,14 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { createMcpServerProject } from '../src/lib/scaffold/mcp-server.js';
-import { runMcp } from '../src/commands/mcp.js';
-import { mcpServerTemplates, resolveMcpServerTemplateConfig } from '../src/lib/scaffold/templates/mcp-server/index.js';
+import { createMcpServerProject } from '../../src/lib/scaffold/mcp-server.js';
+import { runMcp } from '../../src/commands/mcp.js';
+import { mcpServerTemplates, resolveMcpServerTemplateConfig } from '../../src/lib/scaffold/templates/mcp-server/index.js';
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 async function createFixture(options = {}) {
   const directory = await fs.mkdtemp(path.join(repoRoot, '.mcp-server-scaffold-test-'));
