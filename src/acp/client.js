@@ -30,6 +30,10 @@ export class LocalAgentControlClient {
   spawn(id, input = {}) { return this.#withClient((client) => client.spawn(id, input)); }
   cancel(id) { return this.#withClient((client) => client.cancel(id)); }
   receipt(id) { return this.#withClient((client) => client.receipt(id)); }
+  requestApproval(input = {}) { return this.#withClient((client) => client.requestApproval(input)); }
+  getApproval(id) { return this.#withClient((client) => client.getApproval(id)); }
+  listApprovals(options = {}) { return this.#withClient((client) => client.listApprovals(options)); }
+  decideApproval(id, input = {}) { return this.#withClient((client) => client.decideApproval(id, input)); }
 }
 
 export class HttpAgentControlClient {
