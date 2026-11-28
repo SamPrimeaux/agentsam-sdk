@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/approval.v1.schema.json",
+  "title": "AgentApprovalV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "accountId",
+    "actionSummary",
+    "sanitizedInput",
+    "response",
+    "metadata",
+    "riskLevel",
+    "approvalType",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "accountId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "conversationId": {
+      "type": "string"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "toolCallId": {
+      "type": "string"
+    },
+    "terminalJobId": {
+      "type": "string"
+    },
+    "executionStepId": {
+      "type": "string"
+    },
+    "capabilityKey": {
+      "type": "string"
+    },
+    "workflowKey": {
+      "type": "string"
+    },
+    "toolName": {
+      "type": "string"
+    },
+    "toolId": {
+      "type": "string"
+    },
+    "toolKey": {
+      "type": "string"
+    },
+    "handlerKey": {
+      "type": "string"
+    },
+    "routeKey": {
+      "type": "string"
+    },
+    "actionSummary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sanitizedInput": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "riskLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "approvalType": {
+      "enum": [
+        "tool",
+        "workflow",
+        "command",
+        "script",
+        "deploy",
+        "db_write",
+        "r2_write",
+        "github_write",
+        "terminal",
+        "hook",
+        "spawn",
+        "escalation",
+        "route_upgrade"
+      ]
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "approved",
+        "denied",
+        "expired"
+      ]
+    },
+    "approvedBy": {
+      "type": "string"
+    },
+    "decidedAt": {
+      "type": "number"
+    },
+    "expiresAt": {
+      "type": "number"
+    },
+    "notifiedAt": {
+      "type": "number"
+    },
+    "haltedAt": {
+      "type": "number"
+    },
+    "createdAt": {
+      "type": "number"
+    }
+  }
+}
