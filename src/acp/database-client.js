@@ -16,7 +16,7 @@ const RUN_JOIN = `
            WHERE e.run_id = r.id AND e.event_type = 'run.timed_out'
            ORDER BY e.seq DESC LIMIT 1) AS terminal_event_type,
          (SELECT COUNT(*) FROM agentsam_agent_run child
-           WHERE child.parent_run_id = r.id AND child.status IN ('queued','running')) AS active_child_count,
+           WHERE child.parent_run_id = r.id AND child.account_id = r.account_id AND child.status IN ('queued','running')) AS active_child_count,
          (SELECT COUNT(*) FROM agentsam_approval_queue approval
            WHERE approval.agent_run_id = r.id AND approval.account_id = r.account_id
              AND approval.status = 'pending'
@@ -28,8 +28,9 @@ const RUN_JOIN = `
 function mapRun(row) {
   if (!row) return null;
   const status = row.terminal_event_type === 'run.timed_out' ? 'timed_out'
-    : Number(row.pending_approval_count || 0) > 0 ? 'awaiting_approval'
-      : Number(row.active_child_count || 0) > 0 ? 'waiting_child' : row.status;
+    : isTerminal(row.status) ? row.status
+      : Number(row.pending_approval_count || 0) > 0 ? 'awaiting_approval'
+        : Number(row.active_child_count || 0) > 0 ? 'waiting_child' : row.status;
   return {
     schema: 'agentsam.run.v1', id: row.id, accountId: row.account_id ?? undefined,
     conversationId: row.conversation_id ?? undefined, parentRunId: row.parent_run_id ?? undefined,
@@ -154,10 +155,10 @@ export class DatabaseAgentControlClient {
       " SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE " + rootFilter +
       " UNION ALL SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','" +
       ' FROM agentsam_agent_run child JOIN descendants ON child.parent_run_id = descendants.id' +
-      ' WHERE descendants.depth < 64 AND instr(descendants.path, "," || child.id || ",") = 0' + childAccountClause +
+      ' WHERE descendants.depth < 64 AND instr(descendants.path, char(44) || child.id || char(44)) = 0' + childAccountClause +
       ') SELECT r.*, descendants.depth,' +
       " (SELECT e.event_type FROM agentsam_agent_run_event e WHERE e.run_id = r.id AND e.event_type = 'run.timed_out' ORDER BY e.seq DESC LIMIT 1) AS terminal_event_type," +
-      " (SELECT COUNT(*) FROM agentsam_agent_run child WHERE child.parent_run_id = r.id AND child.status IN ('queued','running')) AS active_child_count," +
+      " (SELECT COUNT(*) FROM agentsam_agent_run child WHERE child.parent_run_id = r.id AND child.account_id = r.account_id AND child.status IN ('queued','running')) AS active_child_count," +
       " (SELECT COUNT(*) FROM agentsam_approval_queue approval WHERE approval.agent_run_id = r.id AND approval.account_id = r.account_id AND approval.status = 'pending' AND (approval.expires_at IS NULL OR approval.expires_at > unixepoch())) AS pending_approval_count" +
       ' FROM descendants JOIN agentsam_agent_run r ON r.id = descendants.id' +
       ' ORDER BY descendants.depth, r.created_at_unix, r.id'
