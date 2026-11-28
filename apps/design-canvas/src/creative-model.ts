@@ -195,6 +195,25 @@ export function makeArtifact(type: CreativeType, name?: string, data?: CreativeA
 }
 
 export function reidentifyCreativeData<T>(value: T): T {
+  // Spreadsheet cell maps and activeSheetId reference IDs; copy those references
+  // together with their owners instead of silently disconnecting populated cells.
+  if (isSpreadsheetDocument(value)) {
+    const sheetIds = new Map(value.sheets.map(sheet => [sheet.id, makeId('sheet')]));
+    const sheets = value.sheets.map(sheet => {
+      const columnIds = new Map(sheet.columns.map(column => [column.id, makeId('column')]));
+      return {
+        ...sheet,
+        id: sheetIds.get(sheet.id)!,
+        columns: sheet.columns.map(column => ({ ...column, id: columnIds.get(column.id)! })),
+        rows: sheet.rows.map(row => ({
+          ...row,
+          id: makeId('row'),
+          cells: Object.fromEntries(Object.entries(row.cells).map(([columnId, raw]) => [columnIds.get(columnId) ?? columnId, raw])),
+        })),
+      };
+    });
+    return { ...value, activeSheetId: sheetIds.get(value.activeSheetId)!, sheets } as T;
+  }
   if (Array.isArray(value)) return value.map(reidentifyCreativeData) as unknown as T;
   if (!value || typeof value !== 'object') return value;
   const source = value as Record<string, unknown>;
