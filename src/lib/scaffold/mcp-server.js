@@ -40,9 +40,12 @@ export async function createMcpServerProject(input = {}, options = {}) {
     tool_count: manifest.tools.length,
     tool_names: manifest.tools.map((tool) => tool.name),
     auth_mode: config.authMode,
-    test_command: 'npm test',
+    install_command: config.runtime === 'python' ? 'uv sync' : 'npm install',
+    test_command: config.runtime === 'python' ? 'uv run python -m unittest discover -s tests' : 'npm test',
+    dev_command: config.runtime === 'python' ? 'uv run python server.py' : 'npm run dev',
     manifest_path: path.join(outputDir, 'agentsam.mcp.json'),
-    transport: 'streamable_http',
-    endpoint_path: '/mcp',
+    runtime: config.runtime,
+    transport: config.transport,
+    endpoint_path: config.transport === 'stdio' ? null : '/mcp',
   });
 }

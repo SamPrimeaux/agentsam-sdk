@@ -1,3 +1,4 @@
+import { MCP_RUNTIME_TARGETS } from '../templates/mcp-server/runtime-adapters.js';
 import {
   text,
   select,
@@ -31,7 +32,7 @@ export async function runMcpServerWizard() {
     options: presets.map((item) => ({
       value: item.key,
       label: item.display_name,
-      hint: item.description || 'Portable MCP Worker',
+      hint: item.description || 'Portable MCP server',
     })),
   });
   if (isCancel(preset)) { cancel('Cancelled.'); process.exit(0); }
@@ -48,14 +49,21 @@ export async function runMcpServerWizard() {
   });
   if (isCancel(projectName)) { cancel('Cancelled.'); process.exit(0); }
 
-  const issuer = await text({
+  const choice = await select({
+    message: 'Runtime and transport?',
+    options: MCP_RUNTIME_TARGETS.map((target, i) => ({ value: String(i), label: target.label })),
+    initialValue: '1',
+  });
+  if (isCancel(choice)) { cancel('Cancelled.'); process.exit(0); }
+  const target = MCP_RUNTIME_TARGETS[Number(choice)];
+  const issuer = target.transport === 'stdio' ? '' : await text({
     message: 'OAuth issuer URL? (leave blank to configure later)',
     placeholder: 'https://identity.example.com',
     validate(value) { return validateOptionalUrl(value, 'OAuth issuer'); },
   });
   if (isCancel(issuer)) { cancel('Cancelled.'); process.exit(0); }
 
-  const audience = await text({
+  const audience = target.transport === 'stdio' ? '' : await text({
     message: 'MCP resource audience URL? (leave blank to configure later)',
     placeholder: 'https://mcp.example.com/mcp',
     validate(value) { return validateOptionalUrl(value, 'MCP resource audience'); },
@@ -73,6 +81,7 @@ export async function runMcpServerWizard() {
   const result = await createMcpServerProject({
     projectName: String(projectName).trim(),
     preset,
+    ...target,
     issuer: String(issuer || '').trim(),
     audience: String(audience || '').trim(),
   });
@@ -80,16 +89,16 @@ export async function runMcpServerWizard() {
   note([
     `Generated ${result.file_count} files`,
     `Manifest: ${result.manifest_path}`,
-    `Transport: ${result.transport} ${result.endpoint_path}`,
+    `Runtime: ${result.runtime}`,
+    `Transport: ${result.transport} ${result.endpoint_path || ''}`,
     `Tools: ${result.tool_count} executable tools`,
-    `Auth: ${result.auth_mode} (fail-closed unless explicitly public)`,
-    `OAuth issuer: ${String(issuer || '').trim() || 'configure before deployment'}`,
-    `Resource audience: ${String(audience || '').trim() || 'configure before deployment'}`,
+    `Auth: ${result.auth_mode}`,
+    ...(target.transport === 'stdio' ? [] : [`OAuth issuer: ${String(issuer || '').trim() || 'configure before deployment'}`, `Resource audience: ${String(audience || '').trim() || 'configure before deployment'}`]),
     '',
     `cd ${String(projectName).trim()}`,
-    'npm install',
-    'npm test',
-    'npm run dev',
+    result.install_command,
+    result.test_command,
+    result.dev_command,
   ].join('\n'), pc.green('MCP server ready'));
 
   return result;

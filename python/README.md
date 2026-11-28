@@ -208,3 +208,8 @@ trusted invoker. AgentSamClient exposes the existing client as `client.cad_jobs`
 `async_client.cad_jobs` facade. The Python SDK creates no parallel job table or
 local queue. See the
 [Python CAD transport architecture](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/docs/architecture/PYTHON_CAD_SERVICE_TRANSPORT.md).
+
+
+## MCP servers (optional)
+
+Install `agentsam-sdk[mcp]` and use `agentsam_sdk.mcp.create_stdio_server` with an AgentSam MCP manifest. Generate a Python project using `agentsam mcp create my-server --runtime python` from the JavaScript SDK. Filesystem tools are absent by default; host-integrated read operations need an explicitly scoped `AgentSamClient`, declared tool, and per-call authorization callback. No remote account access, terminal commands or filesystem mutations are implicitly granted.

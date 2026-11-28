@@ -29,6 +29,7 @@ dependencies = ["rich>=13.7,<15"]
 
 [project.optional-dependencies]
 opencv = ["opencv-python-headless>=4.10,<5"]
+mcp = ["mcp>=2.3,<3"]
 
 [project.urls]
 Homepage = "https://github.com/SamPrimeaux/agentsam-sdk"

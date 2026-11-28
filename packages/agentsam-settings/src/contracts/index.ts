@@ -120,6 +120,8 @@ export type SettingsGeneralPreferences = {
 export type SettingsAgentPolicy = {
   allowSubagentSpawn: boolean;allowFanoutExecution: boolean;
   maxSpawnDepth: number;requireAllowlistForMcp: boolean;
+  externalFileProtection?: boolean;fileDeletionProtection?: boolean;
+  mcpToolsProtection?: boolean;ignoreSymlinks?: boolean;canRunPty?: boolean;
 };
 
 export type SettingsModel = {
