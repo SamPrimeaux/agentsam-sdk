@@ -323,6 +323,13 @@ export async function requestAgentApproval(database, input = {}) {
     error.code = 'approval_risk_level_invalid';
     throw error;
   }
+  const toolCallId = clean(input.tool_call_id || input.toolCallId) || null;
+  if (toolCallId) {
+    const existingToolApproval = await database.prepare(
+      'SELECT * FROM agentsam_approval_queue WHERE account_id = ? AND tool_call_id = ? AND approval_type = ? ORDER BY created_at DESC LIMIT 1'
+    ).bind(accountId, toolCallId, type).first();
+    if (existingToolApproval) return mapApproval(existingToolApproval);
+  }
   const summary = clean(input.action_summary || input.actionSummary);
   if (!summary) {
     const error = new TypeError('approval_action_summary_required');
@@ -349,7 +356,7 @@ export async function requestAgentApproval(database, input = {}) {
     clean(input.session_id || input.sessionId) || null,
     clean(input.conversation_id || input.conversationId) || null,
     runId,
-    clean(input.tool_call_id || input.toolCallId) || null,
+    toolCallId,
     clean(input.terminal_job_id || input.terminalJobId) || null,
     stepId,
     clean(input.capability_key || input.capabilityKey) || null,
@@ -427,6 +434,9 @@ export async function listAgentApprovals(database, {
   await database.prepare(
     "UPDATE agentsam_approval_queue SET status = 'expired' WHERE account_id = ? AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?"
   ).bind(owner, now).run();
+  await database.prepare(
+    "UPDATE agentsam_spawn_job SET status = 'failed', error_message = 'Spawn approval expired', completed_at = datetime('now') WHERE account_id = ? AND status = 'awaiting_approval' AND id IN (SELECT json_extract(metadata_json, '$.spawn_job_id') FROM agentsam_approval_queue WHERE account_id = ? AND approval_type = 'spawn' AND status = 'expired')"
+  ).bind(owner, owner).run();
   const params = [owner];
   let where = 'account_id = ?';
   if (clean(runId)) { where += ' AND agent_run_id = ?'; params.push(clean(runId)); }
@@ -749,7 +759,28 @@ export async function decideAgentApproval(database, {
   const row = await readApproval(database, approvalId, owner);
   if (!row) return null;
   if (row.status !== 'pending') {
-    if (row.status === choice) return { approval: mapApproval(row), spawn: null, idempotent: true };
+    if (row.status === choice) {
+      let recoveredSpawn = null;
+      const decidedMetadata = parseJson(row.metadata_json, {});
+      const decidedSpawnId = clean(decidedMetadata.spawn_job_id);
+      if (choice === 'approved' && decidedSpawnId) {
+        const decidedSpawnJob = await database.prepare(
+          'SELECT * FROM agentsam_spawn_job WHERE id = ? AND account_id = ? LIMIT 1'
+        ).bind(decidedSpawnId, owner).first();
+        if (decidedSpawnJob && ['pending', 'awaiting_approval'].includes(decidedSpawnJob.status)) {
+          const spec = object(decidedMetadata.spawn);
+          recoveredSpawn = await spawnChildrenForJob(database, {
+            spawnJob: decidedSpawnJob, accountId: owner, children: spec.children,
+            objective: spec.objective, role: spec.role, workItemId: spec.work_item_id,
+            stepId: spec.step_id, runtimeRequirements: spec.runtime_requirements,
+            metadata: spec.metadata, priority: spec.priority, selectedBy: spec.selected_by,
+            routingArmId: spec.routing_arm_id, reasoningEffort: spec.reasoning_effort,
+            serviceTier: spec.service_tier, queueControl,
+          });
+        }
+      }
+      return { approval: mapApproval(row), spawn: recoveredSpawn, idempotent: true };
+    }
     const error = new Error('approval_already_decided:' + row.status);
     error.code = 'approval_already_decided';
     error.status = 409;
