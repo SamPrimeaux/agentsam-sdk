@@ -98,6 +98,7 @@ import { handleStudioNavigation, loadStudioNavigationCatalog } from "./studio-na
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
 import { handleAccountWidgetsRequest } from "./account-widgets.js";
+import { handleStudioWidgetData } from "./studio-widget-data.js";
 import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from "./browser-trust.js";
 import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
@@ -1885,6 +1886,9 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
           code==="app_install_not_supported"?409:
           code==="app_install_key_invalid"||code==="app_enabled_invalid"||code==="app_pinned_invalid"?400:503);
       }
+    }
+    if (url.pathname === "/api/widgets/data") {
+      return handleStudioWidgetData(request, env, await sessionAccount(), await sessionUser());
     }
     if (url.pathname === "/api/widgets") {
       return handleAccountWidgetsRequest(request, env.DB, await sessionAccount());
