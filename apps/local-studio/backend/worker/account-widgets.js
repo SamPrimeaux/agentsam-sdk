@@ -8,6 +8,7 @@
 import { BUILTIN_WIDGET_DEFINITIONS, WIDGET_GALLERY_DEFINITIONS } from '../../../../packages/agentsam-workbench/src/widgets/registry.ts';
 
 import { validReleaseWidgetConfiguration } from '../../../../packages/agentsam-workbench/src/widgets/release-snapshots.ts';
+import { SUPPORTED_WIDGET_DATA_ADAPTERS } from './widget-data-adapters.js';
 
 const BUILTIN = new Map(BUILTIN_WIDGET_DEFINITIONS.map(def => [def.id, def]));
 // The store-chat embed is a separate storefront surface, not a New Tab widget.
@@ -35,9 +36,14 @@ function parseJson(value, fallback) {
 }
 function readyDefinition(row) {
   const compiled = BUILTIN.get(row?.widget_key);
+  const catalogAdapter = String(row?.data_adapter_key || '').trim();
+  const compiledAdapter = String(compiled?.data?.source || '').trim();
+  const adapterReady = catalogAdapter === compiledAdapter &&
+    (!catalogAdapter || SUPPORTED_WIDGET_DATA_ADAPTERS.has(catalogAdapter));
   return row?.is_enabled === 1 &&
     compiled?.availability === 'ready' &&
     compiled.componentKey === row.component_key &&
+    adapterReady &&
     (Array.isArray(compiled.sizes) && compiled.sizes.length) ? compiled : null;
 }
 function validatedConfiguration(key, value) {
@@ -69,7 +75,13 @@ function validatedConfiguration(key, value) {
   }
   if (key === 'pull-request-summary' || key === 'release-readiness') {
     if (!validReleaseWidgetConfiguration(key,value)) throw Error('widget_configuration_invalid');
-    return value;
+    const normalized = {};
+    if (typeof value.repository === 'string' && value.repository.trim()) normalized.repository = value.repository.trim();
+    if (key === 'pull-request-summary' && value.pullNumber !== undefined && value.pullNumber !== null && value.pullNumber !== '')
+      normalized.pullNumber = Number(value.pullNumber);
+    if (key === 'release-readiness' && typeof value.ref === 'string' && value.ref.trim()) normalized.ref = value.ref.trim();
+    if (typeof value.githubAccount === 'string' && value.githubAccount.trim()) normalized.githubAccount = value.githubAccount.trim();
+    return normalized;
   }
   if (keys.length) throw Error('widget_configuration_invalid');
   return {};
@@ -95,7 +107,7 @@ function parseSafeBody(body, method) {
   return body;
 }
 async function catalogRow(db, key) {
-  return db.prepare('SELECT widget_key, component_key, is_enabled, default_size, supported_sizes_json FROM agentsam_widget_catalog WHERE widget_key = ?')
+  return db.prepare('SELECT widget_key, component_key, is_enabled, default_size, supported_sizes_json, data_adapter_key FROM agentsam_widget_catalog WHERE widget_key = ?')
     .bind(key).first();
 }
 async function installedRow(db, accountId, key, surface) {
@@ -190,7 +202,10 @@ export async function changeAccountWidget(db, accountId, body) {
       Number('sizeClass' in body), Number('orderIndex' in body)).run();
   }
   if ('configuration' in body) {
-    const config = validatedConfiguration(key,body.configuration);
+    const previous = await db.prepare('SELECT preferences_json FROM agentsam_widget_preferences WHERE installation_id=?')
+      .bind(row.id).first();
+    const merged = {...parseJson(previous?.preferences_json,{}),...body.configuration};
+    const config = validatedConfiguration(key,merged);
     await db.prepare(
       'INSERT INTO agentsam_widget_preferences(installation_id,preferences_json) VALUES (?, ?) ' +
       'ON CONFLICT(installation_id) DO UPDATE SET preferences_json = excluded.preferences_json,updated_at = unixepoch()'
