@@ -25,13 +25,24 @@ function ageOf(timestamp: number | null | undefined) {
   if (!timestamp || timestamp < 0) return 'Unknown';
   const age = Math.max(0, Date.now() - timestamp);
   return age < 60_000 ? '<1m' : age < 3_600_000
-    ? `${Math.floor(age / 60_000)}m` : `${Math.floor(age / 3_600_000)}h`;
+    ? \`\${Math.floor(age / 60_000)}m\` : \`\${Math.floor(age / 3_600_000)}h\`;
+}
+function errorMessage(code: string | null) {
+  switch (code) {
+    case 'cloudflare_oauth_required': return 'Connect Cloudflare in Settings → Integrations to view your queues.';
+    case 'cloudflare_reconnect_required': return 'Reconnect Cloudflare in Settings → Integrations.';
+    case 'cloudflare_account_selection_required': return 'Choose a Cloudflare account in Settings → Integrations.';
+    case 'cloudflare_permission_denied': return 'Your Cloudflare connection needs permission to read Queues.';
+    case 'cloudflare_queue_capability_unavailable': return 'Queue access is not enabled for this Cloudflare connection.';
+    default: return 'Cloudflare queue data is temporarily unavailable.';
+  }
 }
 
 export function QueueDepthWidget({ compact = false, interactive = true }: { compact?: boolean; interactive?: boolean }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [errorCode,setErrorCode] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<Snapshot['history']>(undefined);
 
@@ -42,15 +53,20 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
         const response = await fetch('/api/queues/observability', {
           credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         });
-        if (!response.ok) throw new Error('inventory_unavailable');
-        const next: Snapshot = await response.json();
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(typeof payload?.error === 'string' ? payload.error : 'inventory_unavailable');
+        const next: Snapshot = payload;
         if (!next.ok || !Array.isArray(next.queues)) throw new Error('invalid_inventory');
         setSnapshot(next);
+        setErrorCode(null);
         setSelectedId(previous => next.queues.some(queue => queue.queue_id === previous)
           ? previous : next.queues[0]?.queue_id || '');
         setState('ready');
-      } catch {
-        if (!controller.signal.aborted) setState('unavailable');
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          setErrorCode(cause instanceof Error ? cause.message : 'inventory_unavailable');
+          setState('unavailable');
+        }
       }
     };
     void load();
@@ -65,7 +81,7 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
     void (async () => {
       try {
         const response = await fetch(
-          `/api/queues/observability?history=24h&queue_id=${encodeURIComponent(selectedId)}`,
+          \`/api/queues/observability?history=24h&queue_id=\${encodeURIComponent(selectedId)}\`,
           { credentials: 'same-origin', cache: 'no-store', signal: controller.signal },
         );
         if (!response.ok) throw new Error('history_unavailable');
@@ -80,7 +96,7 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
 
   if (state === 'loading') return <p role="status" className="text-xs text-muted-foreground">Loading Cloudflare Queues…</p>;
   if (state === 'unavailable' || !snapshot)
-    return <p role="status" className="text-xs text-muted-foreground">Queue metrics unavailable. Operator access or Cloudflare credentials may not be configured.</p>;
+    return <p role="status" className="text-xs text-muted-foreground">{errorMessage(errorCode)}</p>;
   if (snapshot.queues.length === 0)
     return <p role="status" className="text-xs text-muted-foreground">No queues found for this Cloudflare account.</p>;
 
@@ -111,8 +127,8 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
       {history?.state === 'unavailable' ? <p className="text-xs text-muted-foreground">Historical analytics unavailable.</p>
         : history?.state === 'ready' ? points.length ? <div className="flex h-12 items-end gap-px" role="img" aria-label="Hourly average backlog">
           {points.map((point, index) => <div key={point.at || index} className="min-w-0 flex-1 rounded-t-sm bg-violet-400/75 h-[var(--queue-height)]"
-            title={`${point.at || 'Unknown'}: ${point.backlog_count ?? 'unavailable'} messages`}
-            style={{ '--queue-height': `${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%` } as import('react').CSSProperties}/>)}
+            title={\`\${point.at || 'Unknown'}: \${point.backlog_count ?? 'unavailable'} messages\`}
+            style={{ '--queue-height': \`\${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%\` } as import('react').CSSProperties}/>)}
         </div> : <p className="text-xs text-muted-foreground">No historical samples for this period.</p>
         : <p className="text-xs text-muted-foreground">Loading history…</p>}
     </div>}
