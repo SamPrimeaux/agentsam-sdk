@@ -188,7 +188,7 @@ export function MenuPopover({ label, trigger, children, align = 'start', side = 
         {trigger}
       </button>
     </div>
-    {popover && typeof document !== 'undefined' ? createPortal(popover, document.body) : popover}
+    {popover && typeof document !== 'undefined' ? createPortal(<>{(className.includes("dcx-phone-menu") || label === "Insert") && typeof window !== 'undefined' && window.matchMedia('(max-width:767px)').matches ? <button type="button" className="dcx-phone-menu-backdrop" aria-label="Close menu" onClick={close}/> : null}{popover}</>, document.body) : popover}
   </>;
 }
 

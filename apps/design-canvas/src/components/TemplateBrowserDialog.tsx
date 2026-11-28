@@ -24,7 +24,6 @@ type Props = {
   error?: string;
   actionError?: string;
   busyId?: string;
-  embedded?: boolean;
   onClose: () => void;
   onStartFromScratch: (type: CreativeType) => void;
   onImportFile: () => void;
@@ -109,7 +108,7 @@ function TemplateVisual({ template }: { template: TemplateBrowserItem }) {
   </div>;
 }
 
-export function TemplateBrowserDialog({ open, templates, loading = false, error = '', actionError = '', busyId = '', embedded = false, onClose, onStartFromScratch, onImportFile, onUploadImage, onCreateOther, onSelectTemplate }: Props) {
+export function TemplateBrowserDialog({ open, templates, loading = false, error = '', actionError = '', busyId = '', onClose, onStartFromScratch, onImportFile, onUploadImage, onCreateOther, onSelectTemplate }: Props) {
   const [category, setCategory] = useState<TemplateCategory>('for-you');
   const [query, setQuery] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -120,8 +119,19 @@ export function TemplateBrowserDialog({ open, templates, loading = false, error 
   const visible = useMemo(() => {
     const categoryItems = category === 'for-you' ? templates : templates.filter((item) => kinds[category].includes(item.kind));
     const search = query.trim().toLowerCase();
-    return categoryItems.filter((item) => !search || [item.title, item.description, item.category || '', item.kind].join(' ').toLowerCase().includes(search));
+    return categoryItems.filter((item) => !search || [item.title, item.description, item.category || '', item.kind].join(' ').toLowerCase().includes(search))
+      .sort((a, b) => Number(Boolean(b.payloadUrl && b.previewUrl)) - Number(Boolean(a.payloadUrl && a.previewUrl)));
   }, [category, query, templates]);
+  const groups = useMemo(() => {
+    const stock = visible.filter(item => item.kind === 'slide_template');
+    const prompts = visible.filter(item => item.kind === 'image_generation_template' || item.kind === 'image_template');
+    const native = visible.filter(item => !stock.includes(item) && !prompts.includes(item));
+    return [
+      { title: category === 'slides' ? 'Complete presentations' : 'Editable templates', items: native },
+      { title: 'Reusable stock slides', items: stock },
+      { title: 'Image generation presets', items: prompts },
+    ].filter(group => group.items.length);
+  }, [visible, category]);
 
   useEffect(() => {
     if (!open) return;
@@ -166,7 +176,7 @@ export function TemplateBrowserDialog({ open, templates, loading = false, error 
     <div ref={backdropRef} className="dcx-template-browser-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="dcx-template-browser" role="dialog" aria-modal="true" aria-labelledby="dcx-template-browser-title" ref={dialogRef}>
         <header className="dcx-template-browser-header">
-          <div><span className="dcx-template-browser-eyebrow">DESIGN CANVAS</span><h2 id="dcx-template-browser-title">Create</h2><p>Start with a document or choose an editable template from your shared catalog.</p></div>
+          <div><span className="dcx-template-browser-eyebrow">DESIGN CANVAS</span><h2 id="dcx-template-browser-title">Create</h2><p>Choose a ready-to-edit template or create a new file.</p></div>
           <button ref={closeRef} className="dcx-template-browser-close" type="button" onClick={onClose} aria-label="Close template browser"><X size={18}/></button>
         </header>
         <nav className="dcx-template-browser-tabs" role="tablist" aria-label="Template categories">
@@ -179,13 +189,13 @@ export function TemplateBrowserDialog({ open, templates, loading = false, error 
         {(error || actionError) ? <div className="dcx-template-browser-alert" role="alert">{actionError || error}</div> : null}
         <div className="dcx-template-browser-scroll">
           {(['for-you', 'pages', 'documents', 'slides', 'sheets'] as TemplateCategory[]).includes(category) ? <section className="dcx-template-start-section" aria-label="Start a new creative document">
-            <div className="dcx-template-section-heading"><strong>{category === 'for-you' ? 'Start something new' : 'Start a ' + (category === 'pages' ? 'Page' : category === 'documents' ? 'Document' : category === 'sheets' ? 'Spreadsheet' : 'presentation')}</strong><span>{category === 'for-you' ? 'Choose an editable format' : 'Start with a blank editable file'}</span></div>
+            <div className="dcx-template-section-heading"><strong>{category === 'for-you' ? 'New file' : 'Start a ' + (category === 'pages' ? 'Page' : category === 'documents' ? 'Document' : category === 'sheets' ? 'Spreadsheet' : 'presentation')}</strong><span>{category === 'for-you' ? 'Choose an editable format' : 'New file, not a template'}</span></div>
             <div className="dcx-template-start-grid">
               {category === 'for-you' ? <>
-                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('page')}><span className="dcx-template-start-icon"><PanelTop size={19}/></span><span><strong>Blank Page</strong><small>Flexible blocks and checklists</small></span><ArrowUpRight size={15}/></button>
-                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('document')}><span className="dcx-template-start-icon"><FileUp size={19}/></span><span><strong>Blank Document</strong><small>Structured writing and sections</small></span><ArrowUpRight size={15}/></button>
-                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('spreadsheet')}><span className="dcx-template-start-icon"><Layers3 size={19}/></span><span><strong>Blank Spreadsheet</strong><small>Editable cells and formulas</small></span><ArrowUpRight size={15}/></button>
-                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('slides')}><span className="dcx-template-start-icon"><Plus size={19}/></span><span><strong>Blank Presentation</strong><small>Start a new editable deck</small></span><ArrowUpRight size={15}/></button>
+                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('page')}><span className="dcx-template-start-icon"><PanelTop size={19}/></span><span><strong>New Page</strong><small>Flexible blocks and checklists</small></span><ArrowUpRight size={15}/></button>
+                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('document')}><span className="dcx-template-start-icon"><FileUp size={19}/></span><span><strong>New Document</strong><small>Structured writing and sections</small></span><ArrowUpRight size={15}/></button>
+                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('spreadsheet')}><span className="dcx-template-start-icon"><Layers3 size={19}/></span><span><strong>New Spreadsheet</strong><small>Editable cells and formulas</small></span><ArrowUpRight size={15}/></button>
+                <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('slides')}><span className="dcx-template-start-icon"><Plus size={19}/></span><span><strong>New Presentation</strong><small>Start a new editable deck</small></span><ArrowUpRight size={15}/></button>
               </> : category === 'slides' ? <>
                 <button type="button" className="dcx-template-start-card" onClick={() => onStartFromScratch('slides')}><span className="dcx-template-start-icon"><Plus size={19}/></span><span><strong>Start from scratch</strong><small>Open a new editable presentation</small></span><ArrowUpRight size={15}/></button>
                 <button type="button" className="dcx-template-start-card" onClick={onImportFile}><span className="dcx-template-start-icon"><FileUp size={19}/></span><span><strong>Create from a file</strong><small>Import an AgentSam deck (.json)</small></span><ArrowUpRight size={15}/></button>
@@ -194,17 +204,16 @@ export function TemplateBrowserDialog({ open, templates, loading = false, error 
             </div>
           </section> : null}
           <section className="dcx-template-results" aria-label={`${category} templates`}>
-            <div className="dcx-template-section-heading"><strong>{category === 'for-you' ? 'Templates for you' : `${categories.find((item) => item.id === category)?.label} templates`}</strong><span>From the shared template catalog</span></div>
-            {!embedded ? <div className="dcx-template-empty"><Layers3 size={24}/><strong>Open Design Canvas in AgentSam Work</strong><p>The shared template catalog is available inside the Work surface.</p></div>
-              : loading && !templates.length ? <div className="dcx-template-loading" role="status"><span/><span/><span/><small>Loading shared templates…</small></div>
-                : visible.length ? <div className="dcx-template-card-grid">{visible.map((template) => <article className="dcx-template-card" key={template.id}>
+            <div className="dcx-template-section-heading"><strong>{category === 'for-you' ? 'Featured templates' : `${categories.find((item) => item.id === category)?.label} templates`}</strong><span>Editable catalog</span></div>
+            {loading && !templates.length ? <div className="dcx-template-loading" role="status"><span/><span/><span/><small>Loading shared templates…</small></div>
+                : visible.length ? <div className="dcx-template-groups">{groups.map(group => <section key={group.title} className="dcx-template-group" aria-label={group.title}><div className="dcx-template-group-heading"><h3>{group.title}</h3><span>{group.items.length}</span></div><div className="dcx-template-card-grid">{group.items.map((template) => <article className="dcx-template-card" key={template.id}>
                   <button type="button" className="dcx-template-card-select" onClick={() => void onSelectTemplate(template)} disabled={busyId === template.id || !template.payloadUrl} aria-label={`Use ${template.title}`}>
                     <TemplateVisual template={template}/>
-                    <span className="dcx-template-card-copy"><strong>{template.title}</strong><small>{template.category || (template.kind === 'presentation_template' ? 'Full presentation' : template.kind === 'slide_template' ? 'Single slide' : template.kind === 'page_template' ? 'Page' : template.kind === 'document_template' ? 'Document' : template.kind === 'spreadsheet_template' || template.kind === 'sheet_template' ? 'Spreadsheet' : 'Image prompt')}</small><span>{template.description}</span></span>
+                    <span className="dcx-template-card-copy"><strong>{template.title}</strong><small>{template.kind === 'presentation_template' ? (Number(template.specs?.slide_count) > 0 ? `${Number(template.specs?.slide_count)} editable slides` : 'Presentation') : template.kind === 'slide_template' ? 'Stock slide' : template.kind === 'page_template' || template.kind === 'page' ? 'Page' : template.kind === 'document_template' ? 'Document' : template.kind === 'spreadsheet_template' || template.kind === 'sheet_template' ? 'Spreadsheet' : 'Image preset'}</small><span>{template.description}</span></span>
                     <span className="dcx-template-card-action">{busyId === template.id ? 'Opening…' : template.kind === 'image_generation_template' ? String(template.specs?.reference_input || '') === 'required-upload' ? 'Upload reference' : 'Use prompt' : template.kind === 'slide_template' ? 'Add slide' : template.kind === 'presentation_template' ? 'Create presentation' : template.kind === 'page_template' ? 'Create Page' : template.kind === 'document_template' ? 'Create Document' : template.kind === 'spreadsheet_template' || template.kind === 'sheet_template' ? 'Create Spreadsheet' : 'Use template'} <ArrowUpRight size={14}/></span>
                   </button>
                   {!template.payloadUrl ? <span className="dcx-template-card-unavailable">Template payload not registered</span> : null}
-                </article>)}</div>
+                </article>)}</div></section>)}</div>
                   : <div className="dcx-template-empty"><Sparkles size={24}/><strong>{emptyCopy}</strong><p>{category === 'pages' || category === 'documents' || category === 'sheets' ? 'Start with a blank file or clear your search to see the available templates.' : 'Try another search or choose a different category.'}</p></div>}
           </section>
           {category === 'for-you' ? <section className="dcx-template-other-tools" aria-label="Other creative tools"><span>More creative tools</span><button type="button" onClick={() => onCreateOther('design')}><Shapes size={15}/> Design</button><button type="button" onClick={() => onCreateOther('system')}><Layers3 size={15}/> Design system</button><button type="button" onClick={() => onCreateOther('whiteboard')}><Sparkles size={15}/> Whiteboard</button><button type="button" onClick={() => onCreateOther('code')}><Code2Icon/> Code workspace</button></section> : null}

@@ -1,12 +1,12 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Plus, Trash2, Sparkles, ListChecks, Type, AlignLeft, Table2, Calculator, FileText, PanelTop } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type CSSProperties } from 'react';
+import { Plus, Trash2, Sparkles, ListChecks, Type, AlignLeft, Table2, Calculator, FileText, PanelTop, ChevronDown, ChevronLeft, X, Bold, Italic, Underline, Strikethrough, AlignCenter, AlignRight, PaintBucket, Grid2X2, Undo2, Redo2, List, Upload, Copy } from 'lucide-react';
 import { DesignWorkspaceFrame } from '@inneranimalmedia/agentsam-workbench/design';
 import type { DesignWorkspaceSnapshot } from '@inneranimalmedia/agentsam-contracts';
 import type {
   CreativeArtifact, DesignCanvasAgentContext, PageDocument, PageBlock,
-  PageTaskItem, TextDocument, DocumentBlock, SpreadsheetDocument, SpreadsheetSheet,
+  PageTaskItem, TextDocument, DocumentBlock, SpreadsheetDocument, SpreadsheetSheet, SpreadsheetCellStyle,
 } from '../creative-model';
-import { makeId } from '../creative-model';
+import { makeId, blankSpreadsheet, reidentifyCreativeData } from '../creative-model';
 
 type ChromeProps = {
   leading?: ReactNode;
@@ -231,60 +231,127 @@ function evaluateFormula(raw: string, sheet: SpreadsheetSheet, depth = 0): strin
   return String(Math.max(...numbers));
 }
 
+type CellPoint = { rowId: string; columnId: string };
+
+function parseWorkbookCSV(text: string): string[][] {
+  const result: string[][] = []; let row: string[] = [], value = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (quoted && text[i + 1] === '"') { value += '"'; i++; }
+      else if (quoted || value === '') quoted = !quoted;
+      else value += ch;
+    } else if (!quoted && ch === ',') { row.push(value); value = ''; }
+    else if (!quoted && (ch === '\n' || ch === '\r')) {
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      row.push(value); result.push(row); row = []; value = '';
+    } else value += ch;
+  }
+  if (quoted) throw new Error('CSV contains an unclosed quoted field.');
+  if (value || row.length) { row.push(value); result.push(row); }
+  return result;
+}
+
 export function SpreadsheetEditor({ artifact, onChange, onAsk, ...chrome }: Props) {
   const data = artifact.data as SpreadsheetDocument;
-  const sheet = data.sheets.find((item) => item.id === data.activeSheetId) || data.sheets[0];
-  const [selected, setSelected] = useState<{ rowId: string; columnId: string } | null>(null);
-  const selectedRow = selected ? sheet.rows.find((row) => row.id === selected.rowId) : undefined;
+  const sheet = data.sheets.find(item => item.id === data.activeSheetId) || data.sheets[0];
+  const [selected, setSelected] = useState<CellPoint | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<CellPoint | null>(null);
+  const [editing, setEditing] = useState<CellPoint | null>(null);
+  const [menu, setMenu] = useState<'sheets' | 'add' | 'zoom' | 'format' | 'help' | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [error, setError] = useState('');
+  const [past, setPast] = useState<SpreadsheetDocument[]>([]);
+  const [future, setFuture] = useState<SpreadsheetDocument[]>([]);
+  const csvInput = useRef<HTMLInputElement>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const drag = useRef(false);
+  const selectedRow = selected ? sheet.rows.find(row => row.id === selected.rowId) : undefined;
   const selectedRaw = selectedRow && selected ? selectedRow.cells[selected.columnId] || '' : '';
-  const formulaHelp = useMemo(() => 'Supported formulas: =SUM(A1:A5), =AVERAGE(B2:B8), =COUNT(A1:A5), =COUNTA(A1:A5), =MIN(A1:A5), =MAX(A1:A5).', []);
-  const updateSheet = (next: SpreadsheetSheet) => onChange({ ...data, sheets: data.sheets.map((item) => item.id === sheet.id ? next : item) });
-  const setCell = (rowId: string, columnId: string, value: string) => updateSheet({ ...sheet, rows: sheet.rows.map((row) => row.id === rowId ? { ...row, cells: { ...row.cells, [columnId]: value } } : row) });
-  const addRow = () => updateSheet({ ...sheet, rows: [...sheet.rows, { id: makeId('row'), cells: Object.fromEntries(sheet.columns.map((column) => [column.id, ''])) }] });
-  const addColumn = () => {
-    const column = { id: makeId('column'), label: 'New column', width: 180, type: 'text' as const };
-    updateSheet({ ...sheet, columns: [...sheet.columns, column], rows: sheet.rows.map((row) => ({ ...row, cells: { ...row.cells, [column.id]: '' } })) });
+  const selectedStyle = selectedRow && selected ? selectedRow.cellStyles?.[selected.columnId] || {} : {};
+  const indexes = (point: CellPoint | null) => point ? { row: sheet.rows.findIndex(r => r.id === point.rowId), col: sheet.columns.findIndex(c => c.id === point.columnId) } : { row: -1, col: -1 };
+  const start = indexes(selected), end = indexes(rangeEnd || selected);
+  const inRange = (r: number, c: number) => start.row >= 0 && end.row >= 0 && start.col >= 0 && end.col >= 0 && r >= Math.min(start.row,end.row) && r <= Math.max(start.row,end.row) && c >= Math.min(start.col,end.col) && c <= Math.max(start.col,end.col);
+  const commit = (next: SpreadsheetDocument) => { setPast(p => [...p.slice(-49), data]); setFuture([]); onChange(next); };
+  const updateSheet = (next: SpreadsheetSheet) => commit({ ...data, sheets: data.sheets.map(item => item.id === sheet.id ? next : item) });
+  const setCell = (rowId: string, columnId: string, value: string) => updateSheet({ ...sheet, rows: sheet.rows.map(row => row.id === rowId ? { ...row, cells: { ...row.cells, [columnId]: value } } : row) });
+  const resetSelection = () => { setSelected(null); setRangeEnd(null); setEditing(null); };
+  const select = (point: CellPoint, extend = false) => { if (extend && selected) setRangeEnd(point); else { setSelected(point); setRangeEnd(null); } setEditing(null); };
+  const activate = (id: string) => { if (id !== sheet.id) { onChange({ ...data, activeSheetId: id }); resetSelection(); if (grid.current) grid.current.scrollTo(0,0); } setMenu(null); };
+  const addRow = () => updateSheet({ ...sheet, rows: [...sheet.rows, { id: makeId('row'), cells: Object.fromEntries(sheet.columns.map(c => [c.id, ''])) }] });
+  const addColumn = () => { const column = { id: makeId('column'), label: 'Column ' + columnName(sheet.columns.length), width: 136, type: 'text' as const }; updateSheet({ ...sheet, columns: [...sheet.columns, column], rows: sheet.rows.map(row => ({ ...row, cells: { ...row.cells, [column.id]: '' } })) }); };
+  const nextName = () => { let n = data.sheets.length + 1; while (data.sheets.some(s => s.name === 'Sheet ' + n)) n++; return 'Sheet ' + n; };
+  const appendSheet = (next: SpreadsheetSheet) => { commit({ ...data, activeSheetId: next.id, sheets: [...data.sheets, next] }); resetSelection(); setMenu(null); };
+  const addSheet = () => { const next = blankSpreadsheet().sheets[0]; next.name = nextName(); appendSheet(next); };
+  const duplicateSheet = () => { const next = reidentifyCreativeData({ activeSheetId: sheet.id, sheets: [sheet] }).sheets[0]; next.name = sheet.name + ' copy'; appendSheet(next); };
+  const removeSheet = () => { if (data.sheets.length < 2 || !window.confirm('Delete sheet "' + sheet.name + '"?')) return; const sheets = data.sheets.filter(s => s.id !== sheet.id); commit({ ...data, sheets, activeSheetId: sheets[0].id }); resetSelection(); setMenu(null); };
+  const importCSV = async (file: File) => {
+    try {
+      if (file.size > 5 * 1024 * 1024) throw new Error('CSV must be smaller than 5 MB.');
+      const rows = parseWorkbookCSV((await file.text()).replace(/^\uFEFF/, ''));
+      if (!rows.length || rows.length > 5000 || rows.some(r => r.length > 100)) throw new Error('Use a CSV with 1–5000 rows and up to 100 columns.');
+      const width = Math.max(...rows.map(r => r.length)); const cols = Array.from({length:width}, (_,i) => ({ id: makeId('column'), label: 'Column ' + columnName(i), width: 136, type: 'text' as const }));
+      appendSheet({ id:makeId('sheet'), name:file.name.replace(/\.csv$/i,'') || nextName(), columns:cols, rows:rows.map(r => ({id:makeId('row'), cells:Object.fromEntries(cols.map((c,i)=>[c.id,r[i]||'']))})) }); setError('');
+    } catch(e) { setError(e instanceof Error ? e.message : 'CSV import failed.'); }
   };
-  const renameColumn = (columnId: string, label: string) => updateSheet({ ...sheet, columns: sheet.columns.map((column) => column.id === columnId ? { ...column, label } : column) });
-  const activeCell = selected ? sheet.columns.find((column) => column.id === selected.columnId) : undefined;
-
-  return <Frame artifact={artifact} stageLabel="Spreadsheet editor" selection={selected ? { id: selected.rowId, kind: 'cell' } : { id: sheet.id, kind: 'sheet' }} chrome={chrome}>
-    <div className="dcx-structured-stage dcx-spreadsheet-stage">
-      <div className="dcx-structured-toolbar">
-        <div className="dcx-structured-toolbar-group">
-          <button type="button" onClick={addRow}><Plus size={15}/> Add row</button>
-          <button type="button" onClick={addColumn}><Plus size={15}/> Add column</button>
-          <span className="dcx-structured-sheet-name"><Table2 size={15}/><input aria-label="Sheet name" value={sheet.name} onChange={(event) => updateSheet({ ...sheet, name: event.target.value })}/></span>
-        </div>
-        {onAsk ? <button type="button" className="dcx-structured-ask" onClick={() => onAsk(askContext(artifact, 'spreadsheet-data', 'Analyze and update this spreadsheet'))}><Sparkles size={15}/> Ask AgentSam</button> : null}
-      </div>
+  const format = (patch: SpreadsheetCellStyle) => { if (!selected) return; updateSheet({ ...sheet, rows: sheet.rows.map((row,r) => { const styles = { ...row.cellStyles }; sheet.columns.forEach((c,i) => { if(inRange(r,i)) styles[c.id] = {...styles[c.id], ...patch}; }); return {...row,cellStyles:styles}; }) }); };
+  const undo = () => { if (!past.length) return; setFuture(f=>[data,...f]); onChange(past[past.length-1]); setPast(p=>p.slice(0,-1)); resetSelection(); };
+  const redo = () => { if (!future.length) return; setPast(p=>[...p,data]); onChange(future[0]); setFuture(f=>f.slice(1)); resetSelection(); };
+  const move = (dr:number, dc:number, extend=false) => { const base = extend ? end : start; const r = sheet.rows[Math.max(0,Math.min(sheet.rows.length-1,base.row+dr))]; const c = sheet.columns[Math.max(0,Math.min(sheet.columns.length-1,base.col+dc))]; if (r && c) { select({rowId:r.id,columnId:c.id},extend); requestAnimationFrame(()=>grid.current?.querySelector('[data-row="'+r.id+'"][data-column="'+c.id+'"]')?.scrollIntoView({block:'nearest',inline:'nearest'})); } };
+  useEffect(()=>{ resetSelection(); },[sheet.id]);
+  useEffect(()=>{ const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(null);};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close); },[]);
+  const styleFor = (s:SpreadsheetCellStyle): CSSProperties => ({ fontWeight:s.bold?700:undefined, fontStyle:s.italic?'italic':undefined, textDecoration:[s.underline?'underline':'',s.strike?'line-through':''].filter(Boolean).join(' ')||undefined, textAlign:s.align, background:s.fill, color:s.color, boxShadow:s.border?'inset 0 0 0 1px var(--dcx-text)':undefined });
+  const activeAddress = start.row>=0 && start.col>=0 ? columnName(start.col)+(start.row+1) : 'Cell';
+  const tool = (label:string, icon:ReactNode, action:()=>void, active=false, disabled=false) => <button type="button" aria-label={label} title={label} aria-pressed={active} disabled={disabled} className={active?'is-active':''} onClick={action}>{icon}</button>;
+  return <Frame artifact={artifact} stageLabel="Spreadsheet editor" selection={selected ? {id:selected.rowId,kind:'cell'} : {id:sheet.id,kind:'sheet'}} chrome={chrome}>
+    <div className="dcx-structured-stage dcx-spreadsheet-stage dcx-workbook">
       <div className="dcx-spreadsheet-formula-bar">
-        <strong>{selected && activeCell ? columnName(sheet.columns.findIndex((column) => column.id === activeCell.id)) + (sheet.rows.findIndex((row) => row.id === selected.rowId) + 1) : 'Cell'}</strong>
-        <span>fx</span>
-        <input aria-label="Formula bar" value={selectedRaw} onChange={(event) => { if (selected) setCell(selected.rowId, selected.columnId, event.target.value); }} placeholder="Enter a value or formula, e.g. =SUM(A1:A5)"/>
-        <small>{selectedRaw.startsWith('=') && selected ? evaluateFormula(selectedRaw, sheet) : ''}</small>
+        <strong>{activeAddress}</strong><span>ƒx</span>
+        <input aria-label="Formula bar" value={selectedRaw} disabled={!selected} onChange={e=>selected&&setCell(selected.rowId,selected.columnId,e.target.value)} placeholder="Select a cell"/>
+        <small>{selectedRaw.startsWith('=') ? evaluateFormula(selectedRaw,sheet) : ''}</small>
+        <button type="button" aria-label="Zoom" onClick={()=>setMenu('zoom')}>{zoom}% <ChevronDown size={14}/></button>
+        {tool('Undo',<Undo2 size={17}/>,undo,false,!past.length)}
+        {tool('Redo',<Redo2 size={17}/>,redo,false,!future.length)}
       </div>
-      <div className="dcx-spreadsheet-grid-wrap">
-        <table className="dcx-spreadsheet-grid">
-          <thead><tr><th className="dcx-spreadsheet-row-number">#</th>{sheet.columns.map((column, index) => <th key={column.id}><span>{columnName(index)}</span><input aria-label={'Column ' + columnName(index) + ' name'} value={column.label} onChange={(event) => renameColumn(column.id, event.target.value)}/></th>)}</tr></thead>
-          <tbody>{sheet.rows.map((row, rowIndex) => <tr key={row.id}>
-            <th className="dcx-spreadsheet-row-number">{rowIndex + 1}</th>
-            {sheet.columns.map((column, columnIndex) => {
-              const raw = row.cells[column.id] || '';
-              const display = evaluateFormula(raw, sheet);
-              const isSelected = selected?.rowId === row.id && selected?.columnId === column.id;
-              const shared = { value: display, onFocus: () => setSelected({ rowId: row.id, columnId: column.id }), onChange: (event: ChangeEvent<HTMLInputElement>) => setCell(row.id, column.id, event.target.value), 'aria-label': column.label + ' row ' + (rowIndex + 1), className: isSelected ? 'is-selected' : '' };
-              return <td key={column.id}>
-                {column.type === 'status' ? <select {...shared} value={raw} onChange={(event) => setCell(row.id, column.id, event.target.value)}><option value="">—</option><option>Not started</option><option>In progress</option><option>Blocked</option><option>Done</option></select>
-                  : column.type === 'priority' ? <select {...shared} value={raw} onChange={(event) => setCell(row.id, column.id, event.target.value)}><option value="">—</option><option>Low</option><option>Normal</option><option>High</option><option>Urgent</option></select>
-                  : <input {...shared} type={column.type === 'date' ? 'date' : 'text'} title={raw.startsWith('=') ? raw : undefined}/>}
-                {raw.startsWith('=') ? <span className="dcx-spreadsheet-formula-result">{display}</span> : null}
-              </td>;
-            })}
-          </tr>)}</tbody>
+      <div className="dcx-spreadsheet-grid-wrap" ref={grid} tabIndex={0} aria-label="Spreadsheet grid" onKeyDown={e=>{if(e.target instanceof HTMLInputElement||e.target instanceof HTMLSelectElement)return;const arrows:Record<string,[number,number]>={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};if(arrows[e.key]){e.preventDefault();move(...arrows[e.key],e.shiftKey);}else if(e.key==='Enter'&&selected){e.preventDefault();setEditing(selected);} }}>
+        <table className="dcx-spreadsheet-grid" style={{zoom:zoom/100}}>
+          <colgroup><col style={{width:36}}/>{sheet.columns.map(c=><col key={c.id} style={{width:Math.max(96,Math.min(c.width||136,320))}}/>)}</colgroup>
+          <thead><tr><th className="dcx-spreadsheet-row-number">#</th>{sheet.columns.map((c,i)=><th key={c.id} className={start.col===i?'is-axis-selected':''}><span>{columnName(i)}</span><input aria-label={'Column '+columnName(i)+' name'} value={c.label} onChange={e=>updateSheet({...sheet,columns:sheet.columns.map(col=>col.id===c.id?{...col,label:e.target.value}:col)})}/></th>)}</tr></thead>
+          <tbody>{sheet.rows.map((row,r)=><tr key={row.id}><th className={'dcx-spreadsheet-row-number '+(start.row===r?'is-axis-selected':'')}>{r+1}</th>{sheet.columns.map((c,i)=>{
+            const point={rowId:row.id,columnId:c.id};const raw=row.cells[c.id]||'';const display=evaluateFormula(raw,sheet);const active=selected?.rowId===row.id&&selected.columnId===c.id;const edit=editing?.rowId===row.id&&editing.columnId===c.id;const typed=c.type==='status'||c.type==='priority';const choices=c.type==='status'?['','Not started','In progress','Blocked','Done']:['','Low','Normal','High','Urgent'];
+            return <td key={c.id} data-row={row.id} data-column={c.id} className={(active?'is-selected ':'')+(inRange(r,i)?'is-in-range':'')} style={styleFor(row.cellStyles?.[c.id]||{})} onClick={e=>{if(!edit)select(point,e.shiftKey);}} onDoubleClick={()=>{select(point);setEditing(point);}} aria-selected={inRange(r,i)}>
+              {typed?<select aria-label={c.label+' row '+(r+1)} className="dcx-workbook-choice" value={raw} onFocus={()=>select(point)} onChange={e=>setCell(row.id,c.id,e.target.value)}>{[...new Set([...choices,raw])].map(v=><option key={v} value={v}>{v||'—'}</option>)}</select>:edit?<input autoFocus aria-label={c.label+' row '+(r+1)} value={raw} onChange={e=>setCell(row.id,c.id,e.target.value)} onBlur={()=>setEditing(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();setEditing(null);grid.current?.focus();}}}/>:<button type="button" className="dcx-workbook-cell" aria-label={c.label+' row '+(r+1)} onClick={e=>{e.stopPropagation();if(active&&!e.shiftKey)setEditing(point);else select(point,e.shiftKey);}}>{display}</button>}
+              {raw.startsWith('=')?<span className="dcx-spreadsheet-formula-result" hidden>{display}</span>:null}
+              {active&&!edit?<span className="dcx-workbook-range-handle" role="button" aria-label="Extend cell selection" onPointerDown={e=>{e.stopPropagation();drag.current=true;e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(!drag.current)return;const td=document.elementFromPoint(e.clientX,e.clientY)?.closest<HTMLElement>('td[data-row][data-column]');if(td?.dataset.row&&td.dataset.column)setRangeEnd({rowId:td.dataset.row,columnId:td.dataset.column});}} onPointerUp={()=>{drag.current=false;}} onPointerCancel={()=>{drag.current=false;}}/>:null}
+            </td>;})}</tr>)}</tbody>
         </table>
+        <button type="button" className="dcx-workbook-add-row" onClick={addRow}><Plus size={15}/> Add row</button>
       </div>
-      <p className="dcx-spreadsheet-help"><Calculator size={14}/>{formulaHelp}</p>
+      <div className="dcx-workbook-format" role="toolbar" aria-label="Cell formatting">
+        {tool('Bold',<Bold size={19}/>,()=>format({bold:!selectedStyle.bold}),!!selectedStyle.bold,!selected)}
+        {tool('Italic',<Italic size={19}/>,()=>format({italic:!selectedStyle.italic}),!!selectedStyle.italic,!selected)}
+        {tool('Underline',<Underline size={19}/>,()=>format({underline:!selectedStyle.underline}),!!selectedStyle.underline,!selected)}
+        {tool('Strikethrough',<Strikethrough size={19}/>,()=>format({strike:!selectedStyle.strike}),!!selectedStyle.strike,!selected)}
+        {tool('Align left',<AlignLeft size={19}/>,()=>format({align:'left'}),selectedStyle.align==='left',!selected)}
+        {tool('Align center',<AlignCenter size={19}/>,()=>format({align:'center'}),selectedStyle.align==='center',!selected)}
+        {tool('Align right',<AlignRight size={19}/>,()=>format({align:'right'}),selectedStyle.align==='right',!selected)}
+        {tool('Cell colors',<PaintBucket size={19}/>,()=>setMenu('format'),false,!selected)}
+        {tool('Cell border',<Grid2X2 size={19}/>,()=>format({border:!selectedStyle.border}),!!selectedStyle.border,!selected)}
+        {tool('Add column',<Plus size={19}/>,addColumn)}
+        {onAsk?tool('Ask AgentSam',<Sparkles size={19}/>,()=>onAsk(askContext(artifact,'spreadsheet-data','Analyze and update this spreadsheet'))):null}
+        {tool('Formula help',<Calculator size={19}/>,()=>setMenu('help'))}
+      </div>
+      <div className="dcx-workbook-tabs" aria-label="Workbook sheets">
+        {tool('Add sheet',<Plus size={20}/>,()=>setMenu('add'))}
+        {tool('Manage sheets',<List size={20}/>,()=>setMenu('sheets'))}
+        <div role="tablist" aria-label="Worksheets">{data.sheets.map(s=><button type="button" key={s.id} role="tab" aria-selected={s.id===sheet.id} className={s.id===sheet.id?'is-active':''} onClick={()=>activate(s.id)}>{s.name}{s.id===sheet.id?<ChevronDown size={13} onClick={e=>{e.stopPropagation();setMenu('sheets');}}/>:null}</button>)}</div>
+      </div>
+      <input ref={csvInput} type="file" accept=".csv,text/csv" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void importCSV(f);e.target.value='';}}/>
+      {menu?<div className="dcx-workbook-overlay" onClick={()=>setMenu(null)}><section className="dcx-workbook-sheet" role="dialog" aria-modal="true" aria-label={menu==='sheets'?'Manage sheets':menu==='add'?'Add sheet':menu==='zoom'?'Zoom':menu==='format'?'Cell colors':'Formula help'} onClick={e=>e.stopPropagation()}>
+        <div className="dcx-workbook-sheet-handle"/><header>{menu==='add'?<button type="button" aria-label="Back to sheets" onClick={()=>setMenu('sheets')}><ChevronLeft size={20}/></button>:null}<strong>{menu==='sheets'?'Worksheets':menu==='add'?'Add sheet':menu==='zoom'?'Zoom':menu==='format'?'Cell colors':'Formula help'}</strong><button type="button" aria-label="Close menu" onClick={()=>setMenu(null)}><X size={20}/></button></header>
+        {menu==='sheets'?<><button type="button" onClick={()=>setMenu('add')}><Plus size={18}/> Add sheet</button>{data.sheets.map(s=><button key={s.id} type="button" onClick={()=>activate(s.id)}>{s.name}<span>{s.id===sheet.id?'✓':''}</span></button>)}<label>Sheet name<input aria-label="Sheet name" value={sheet.name} onChange={e=>updateSheet({...sheet,name:e.target.value})}/></label><button type="button" onClick={duplicateSheet}><Copy size={18}/> Duplicate current sheet</button><button type="button" disabled={data.sheets.length===1} onClick={removeSheet}><Trash2 size={18}/> Delete current sheet</button></>:menu==='add'?<><button type="button" onClick={()=>csvInput.current?.click()}><Upload size={18}/> Import CSV</button><button type="button" onClick={addSheet}><FileText size={18}/> Blank sheet</button></>:menu==='zoom'?<>{[50,75,100,125,150,200].map(z=><button key={z} type="button" onClick={()=>{setZoom(z);setMenu(null);}}>{z}%<span>{zoom===z?'✓':''}</span></button>)}</>:menu==='format'?<><label>Fill<input type="color" aria-label="Cell fill" value={selectedStyle.fill||'#ffffff'} onChange={e=>format({fill:e.target.value})}/></label><label>Text<input type="color" aria-label="Cell text color" value={selectedStyle.color||'#222222'} onChange={e=>format({color:e.target.value})}/></label><button type="button" onClick={()=>format({fill:undefined,color:undefined})}>Reset colors</button></>:<p>Supported formulas: SUM, AVERAGE, COUNT, COUNTA, MIN and MAX. Example: =SUM(A1:A5).</p>}
+        {error?<p role="alert">{error}</p>:null}
+      </section></div>:null}
     </div>
   </Frame>;
 }

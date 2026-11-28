@@ -839,26 +839,26 @@ function DesignEditor({ artifact, onChange, onOpenReferences, onAsk, leading, do
           <MenuAction label="Add portrait artboard" onClick={() => addBoard('portrait')} close={close}/>
         </>}</MenuPopover>
         <MenuPopover label="Editing tool" className="dcx-phone-menu" trigger={<>{tool === 'hand' ? <Hand size={18}/> : tool === 'pen' ? <PenTool size={18}/> : <MousePointer2 size={18}/>}<ChevronDown size={12}/></>}>{close => <>
-          {(['select','hand','text','shape','image','pen','frame','comment','rect','ellipse',...(artifact.type === 'whiteboard' ? ['note'] : [])] as Tool[]).map(value => <MenuAction key={value} label={value === 'rect' ? 'Rectangle' : value === 'note' ? 'Sticky note' : value[0].toUpperCase()+value.slice(1)} icon={tool === value ? <Check size={16}/> : undefined} onClick={() => handleToolChange(value)} close={close}/>)}
+          {(['select','hand','text','shape','image','pen','frame','comment','rect','ellipse',...(artifact.type === 'whiteboard' ? ['note'] : [])] as Tool[]).map(value => <MenuAction key={value} label={value === 'rect' ? 'Rectangle' : value === 'note' ? 'Sticky note' : value[0].toUpperCase()+value.slice(1)} icon={tool === value ? <Check size={16}/> : value === 'select' ? <MousePointer2 size={16}/> : value === 'hand' ? <Hand size={16}/> : value === 'text' ? <Type size={16}/> : value === 'image' ? <Image size={16}/> : value === 'pen' ? <PenTool size={16}/> : value === 'comment' ? <MessageSquare size={16}/> : value === 'ellipse' ? <Circle size={16}/> : value === 'note' ? <StickyNote size={16}/> : <Square size={16}/>} onClick={() => handleToolChange(value)} close={close}/>)}
         </>}</MenuPopover>
         <InsertMenu onText={() => addObject('text')} onImage={uploadImage} onShape={addShape}/>
       </div>
       <div className="dcx-phone-tool-group" role="group" aria-label="View and properties">
         <button type="button" className="dcx-command-icon" title="Properties" aria-label="Properties" aria-pressed={inspectorOpen && !commentsOpen} onClick={() => {setCommentsOpen(false); setInspectorOpen(value => commentsOpen || !value);}}><SlidersHorizontal size={18}/></button>
         <MenuPopover label="Zoom" className="dcx-phone-menu" trigger={<>{zoom}%<ChevronDown size={12}/></>}>{close => <>
-          <MenuAction label="Zoom in" onClick={() => setZoom(Math.min(400,Math.round(zoom*1.2)))} close={close}/>
-          <MenuAction label="Zoom out" onClick={() => setZoom(Math.max(4,Math.round(zoom/1.2)))} close={close}/>
-          <MenuAction label="Fit artboard" onClick={fitCanvas} close={close}/>
+          <MenuAction label="Zoom in" icon={<ZoomIn size={17}/>} onClick={() => setZoom(Math.min(400,Math.round(zoom*1.2)))} close={close}/>
+          <MenuAction label="Zoom out" icon={<ZoomOut size={17}/>} onClick={() => setZoom(Math.max(4,Math.round(zoom/1.2)))} close={close}/>
+          <MenuAction label="Fit artboard" icon={<Maximize2 size={17}/>} onClick={fitCanvas} close={close}/>
           <MenuDivider/>
           {[25,50,75,100,150,200].map(value => <MenuAction key={value} label={value+'%'} icon={zoom===value?<Check size={16}/>:undefined} onClick={() => setZoom(value)} close={close}/>)}
           <MenuDivider/><MenuAction label="Layout grid" icon={showGrid?<Check size={16}/>:undefined} onClick={() => setShowGrid(!showGrid)} close={close}/>
-          <MenuAction label="Undo" disabled={historyIndex===0} onClick={undo} close={close}/><MenuAction label="Redo" disabled={historyIndex>=history.length-1} onClick={redo} close={close}/>
+          <MenuAction label="Undo" icon={<Undo2 size={17}/>} disabled={historyIndex===0} onClick={undo} close={close}/><MenuAction label="Redo" icon={<Redo2 size={17}/>} disabled={historyIndex>=history.length-1} onClick={redo} close={close}/>
         </>}</MenuPopover>
         <MenuPopover label="More editor tools" className="dcx-phone-menu" trigger={<MoreHorizontal size={18}/>}>{close => <>
-          <MenuAction label="Comments" onClick={() => {setCommentsOpen(true);setInspectorOpen(true);}} close={close}/>
-          <MenuAction label="Source library" onClick={onOpenReferences} close={close}/>
-          {onAsk ? <MenuAction label="Ask AgentSam" onClick={() => onAsk({artifactId:artifact.id,artifactType:artifact.type,title:artifact.name,selection:selected?{id:selected.id,kind:selected.type,label:selected.name}:board?{id:board.id,kind:'artboard',label:board.name}:undefined})} close={close}/> : null}
-          <MenuAction label="Export design JSON" onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.json',artifact)} close={close}/>
+          <MenuAction label="Comments" icon={<MessageSquare size={17}/>} onClick={() => {setCommentsOpen(true);setInspectorOpen(true);}} close={close}/>
+          <MenuAction label="Source library" icon={<Library size={17}/>} onClick={onOpenReferences} close={close}/>
+          {onAsk ? <MenuAction label="Ask AgentSam" icon={<Sparkles size={17}/>} onClick={() => onAsk({artifactId:artifact.id,artifactType:artifact.type,title:artifact.name,selection:selected?{id:selected.id,kind:selected.type,label:selected.name}:board?{id:board.id,kind:'artboard',label:board.name}:undefined})} close={close}/> : null}
+          <MenuAction label="Export design JSON" icon={<Download size={17}/>} onClick={() => download(artifact.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.json',artifact)} close={close}/>
         </>}</MenuPopover>
       </div>
     </div>
@@ -1274,12 +1274,6 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
   };
   const active = artifacts.find((item) => item.id === activeId);
   useEffect(() => {
-    if (!embedded) {
-      setStudioTemplates([]);
-      setTemplatesError('');
-      setTemplatesLoading(false);
-      return;
-    }
     const controller = new AbortController();
     setTemplatesLoading(true);
     setTemplatesError('');
@@ -1293,7 +1287,7 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
       .catch((error) => { if (error?.name !== 'AbortError') setTemplatesError(error instanceof Error ? error.message : 'Template catalog could not be loaded.'); })
       .finally(() => { if (!controller.signal.aborted) setTemplatesLoading(false); });
     return () => controller.abort();
-  }, [embedded]);
+  }, []);
   useEffect(() => {
     if (!remoteStore) { setRemoteReady(true); return; }
     let cancelled = false;
@@ -1753,7 +1747,6 @@ export function DesignCanvasApp({ onAskAgentSam, assistant, assistantOpen: contr
         error={templatesError}
         actionError={templateActionError}
         busyId={templateBusyId}
-        embedded={embedded}
         onClose={() => { setTemplateBrowserOpen(false); setPendingImageTemplate(null); setPendingImagePrompt(''); }}
         onStartFromScratch={createFromScratch}
         onImportFile={() => presentationImportInput.current?.click()}

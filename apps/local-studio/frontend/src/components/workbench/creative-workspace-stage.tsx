@@ -14,7 +14,7 @@ import { useWorkStore } from "@/lib/work/store";
 const API = "/api/work/canvases";
 const CREATIVE_SCHEMA = "agentsam.creative-workspace.v1";
 type CanvasSummary = { id: string; contentHash: string; name: string; revision: number };
-type CanvasRecord = { etag: string; serialized: string };
+type CanvasRecord = { etag: string; serialized: string; serverSerialized: string };
 type CanvasResponse = { ok: boolean; canvas?: CanvasSummary; document?: CreativeCanvasDocument; error?: string };
 type CreativeCanvasDocument = {
   version: 1;
@@ -132,14 +132,14 @@ function isCreativeArtifact(value: unknown): value is CreativeArtifact {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<CreativeArtifact>;
   return typeof item.id === "string" && item.id.startsWith("canvas_") &&
-    ["slides", "design", "code", "system", "whiteboard"].includes(String(item.type)) &&
+    ["page", "document", "spreadsheet", "slides", "design", "code", "system", "whiteboard"].includes(String(item.type)) &&
     typeof item.name === "string" && !!item.data && typeof item.data === "object";
 }
 
 export function CreativeWorkspaceStage({ tab }: { tab: SideTab }) {
   const params = new URL(tab.url || "/canvas", window.location.origin).searchParams;
   const host = params.get("host");
-  if (params.has("site_id") || (host && !["slides", "design", "code", "system", "whiteboard"].includes(host))) {
+  if (params.has("site_id") || (host && !["page", "document", "spreadsheet", "slides", "design", "code", "system", "whiteboard"].includes(host))) {
     return <CanvasEntryStage tab={tab}/>;
   }
   return <CreativeDocumentStage tab={tab}/>;
@@ -190,7 +190,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         const requestedId = params.get("canvas") || "";
         const hostParam = params.get("host") || "";
         setInitialRoute(params.get("library") === "sources" ? "references" : "gallery");
-        const allowed: CreativeType[] = ["slides", "design", "code", "system", "whiteboard"];
+        const allowed: CreativeType[] = ["page", "document", "spreadsheet", "slides", "design", "code", "system", "whiteboard"];
         const host = allowed.includes(hostParam as CreativeType) ? hostParam as CreativeType : undefined;
         // Always hydrate the account's Creative Workspace collection. A direct
         // document URL selects one item but must not hide the rest of the gallery.
@@ -210,7 +210,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
               ? payload.document.creativeWorkspace.artifact : null;
             if (!isCreativeArtifact(artifact)) return null;
             const etag = response.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
-            records.current.set(artifact.id, { etag, serialized: JSON.stringify(artifact) });
+            records.current.set(artifact.id, { etag, serialized: JSON.stringify(artifact), serverSerialized: JSON.stringify(artifact) });
             return artifact;
           }));
           loaded.push(...batch.filter((item): item is CreativeArtifact => !!item));
@@ -240,7 +240,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         if (import.meta.env.DEV && message.includes("_404")) {
           const params = new URL(tab.url || "/canvas", window.location.origin).searchParams;
           const hostParam = params.get("host") || "";
-          const allowed: CreativeType[] = ["slides", "design", "code", "system", "whiteboard"];
+          const allowed: CreativeType[] = ["page", "document", "spreadsheet", "slides", "design", "code", "system", "whiteboard"];
           const host = allowed.includes(hostParam as CreativeType) ? hostParam as CreativeType : undefined;
           setLocalFallback(true);
           setInitialWorkspace(!params.get("canvas") ? host : undefined);
@@ -265,24 +265,31 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       if (previous?.serialized === serialized) continue;
       const document = toCanvasDocument(artifact, project ? { id: project.id, name: project.name } : null);
       if (previous) {
-        const response = await fetch(API + "/" + encodeURIComponent(artifact.id), {
-          method: "PUT",
-          credentials: "same-origin",
-          headers: { "content-type": "application/json", "if-match": previous.etag },
+        const url = API + "/" + encodeURIComponent(artifact.id);
+        const put = (etag: string) => fetch(url, {
+          method: "PUT", credentials: "same-origin",
+          headers: { "content-type": "application/json", "if-match": etag },
           body: JSON.stringify({ document }),
         });
-        // A lost response or another instance saving the exact same edit is safe
-        // to acknowledge. Never replace a genuinely newer, different document.
-        const result = response.status === 409
-          ? await fetch(API + "/" + encodeURIComponent(artifact.id), { credentials: "same-origin" })
-          : response;
-        const payload = await readJson<CanvasResponse>(result);
-        if (response.status === 409 && JSON.stringify(payload.document?.creativeWorkspace?.artifact) !== serialized) {
-          throw new Error("revision_conflict");
-        }
+        let result = await put(previous.etag);
+        let payload: CanvasResponse;
+        if (result.status === 409 || result.status === 412) {
+          const latest = await fetch(url, { credentials: "same-origin" });
+          const remote = await readJson<CanvasResponse>(latest);
+          const remoteSerialized = JSON.stringify(remote.document?.creativeWorkspace?.artifact);
+          if (remoteSerialized === serialized) { result = latest; payload = remote; }
+          else if (remoteSerialized === previous.serverSerialized) {
+            // Only metadata/ETag changed. Retry once with the fresh revision;
+            // never overwrite a different remote artifact.
+            const fresh = latest.headers.get("etag") || (remote.canvas?.contentHash ? '"' + remote.canvas.contentHash + '"' : "");
+            if (!fresh) throw new Error("canvas_revision_missing");
+            result = await put(fresh);
+            payload = await readJson<CanvasResponse>(result);
+          } else throw new Error("revision_conflict");
+        } else payload = await readJson<CanvasResponse>(result);
         const etag = result.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
         if (!etag) throw new Error("canvas_revision_missing");
-        records.current.set(artifact.id, { etag, serialized });
+        records.current.set(artifact.id, { etag, serialized, serverSerialized: JSON.stringify(payload.document?.creativeWorkspace?.artifact ?? artifact) });
       } else {
         const response = await fetch(API, {
           method: "POST",
@@ -296,7 +303,7 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
         }
         const etag = response.headers.get("etag") || (payload.canvas?.contentHash ? '"' + payload.canvas.contentHash + '"' : "");
         if (!etag) throw new Error("canvas_revision_missing");
-        records.current.set(artifact.id, { etag, serialized });
+        records.current.set(artifact.id, { etag, serialized, serverSerialized: JSON.stringify(payload.document?.creativeWorkspace?.artifact ?? artifact) });
         if (!urlPinned.current) {
           setTabUrl(tab.id, "/canvas?workspace=creative&canvas=" + encodeURIComponent(artifact.id));
           urlPinned.current = true;
@@ -526,12 +533,13 @@ function CreativeDocumentStage({ tab }: { tab: SideTab }) {
       }}
     /></div>
     {documentActionMessage ? <div role="status" className="shrink-0 border-t border-border/70 bg-background px-3 py-2 text-xs text-muted-foreground">{documentActionMessage}</div> : null}
-    <div role="status" className="flex shrink-0 items-center justify-end gap-1 border-t border-border/70 bg-background px-3 py-1 text-[10px] text-muted-foreground">
+    <div role="status" className="sr-only">
       {localFallback ? <>Local draft · not synced</> :
        saveState === "saving" ? <><LoaderCircle size={11} className="animate-spin"/> Saving</> :
        saveState === "error" ? <><AlertCircle size={11} className="text-destructive"/> Save issue</> :
        saveState === "saved" ? <><Check size={11}/> Saved</> : <>Private workspace</>}
     </div>
+    {localFallback ? <div role="status" className="shrink-0 px-3 py-1 text-xs text-muted-foreground">Local draft · not synced</div> : null}
     {saveState === "error" ? <div role="alert" className="shrink-0 border-t border-destructive/40 bg-background px-3 py-2 text-xs">
       <p className="text-destructive">{loadingError === "revision_conflict" ? "A newer revision exists. Your unsaved edits are retained while this editor is open; export them before closing." : "Could not save changes. Your edits remain in this editor."}</p>
       <div className="mt-2 flex flex-wrap gap-2">

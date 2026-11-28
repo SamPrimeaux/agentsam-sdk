@@ -83,7 +83,8 @@ export type DocumentBlock =
   | { id: string; type: 'divider' };
 export type TextDocument = { title: string; subtitle: string; blocks: DocumentBlock[] };
 export type SpreadsheetColumn = { id: string; label: string; width?: number; type?: 'text' | 'number' | 'date' | 'status' | 'priority' };
-export type SpreadsheetRow = { id: string; cells: Record<string, string> };
+export type SpreadsheetCellStyle = { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; align?: 'left' | 'center' | 'right'; fill?: string; color?: string; border?: boolean };
+export type SpreadsheetRow = { id: string; cells: Record<string, string>; cellStyles?: Record<string, SpreadsheetCellStyle> };
 export type SpreadsheetSheet = { id: string; name: string; columns: SpreadsheetColumn[]; rows: SpreadsheetRow[] };
 export type SpreadsheetDocument = { activeSheetId: string; sheets: SpreadsheetSheet[] };
 
@@ -209,6 +210,7 @@ export function reidentifyCreativeData<T>(value: T): T {
           ...row,
           id: makeId('row'),
           cells: Object.fromEntries(Object.entries(row.cells).map(([columnId, raw]) => [columnIds.get(columnId) ?? columnId, raw])),
+          ...(row.cellStyles ? { cellStyles: Object.fromEntries(Object.entries(row.cellStyles).map(([columnId, style]) => [columnIds.get(columnId) ?? columnId, { ...style }])) } : {}),
         })),
       };
     });
