@@ -20,7 +20,6 @@ import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/wor
 import { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, restoreBrowserFsaIDEWorkspace, reconnectBrowserFsaIDEWorkspace, type FileWorkspace, type BrowserFsaRestore } from '@inneranimalmedia/agentsam-ide/workspace';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { WorkspaceGate } from '@/components/workbench/workspace-gate';
-import { NewTabStage } from '@/components/workbench/new-tab-stage';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { RemoteFilesSource } from '@/components/workbench/remote-files-source';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
@@ -214,9 +213,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     </div>
     {connectDialog}
   </section>;
-  // No connection: the New tab is the default surface. The connector only appears on request.
+  // Disconnected Files remains a file-source surface, not a nested New Tab dashboard.
   if (!project || projectNeedsConnection(project) || !ready)
-    return <div className="h-full overflow-y-auto">
+    return <div className="work-files-stage flex h-full min-h-0 min-w-0 flex-col">
       <AgentSamFilesystem sources={localSources} sourceId="local" onSourceSelect={setSource}
         palette={palette} onContextChange={publishFilesystemContext} setup={<>
       {sourceNotice?<p role="alert" className="p-3 text-xs text-destructive">{sourceNotice}</p>:null}
@@ -248,7 +247,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
             <FolderOpen className="size-4"/>Connect a local workspace</button>}
         </div>
       </section>
-      <NewTabStage tab={tab} omitKinds={['files']} onConnectProject={()=>setConnectOpen(true)} onOpenFolder={browserFsaReady?openBrowserFolder:undefined} />
+      {browserFsaReady&&<button type="button" className="mx-3 mt-2 rounded-md border border-border px-3 py-2 text-left" onClick={()=>void openBrowserFolder()}>Open browser folder</button>}
       </>} />
       {connectDialog}
     </div>;

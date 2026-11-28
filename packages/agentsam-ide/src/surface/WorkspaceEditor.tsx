@@ -86,6 +86,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [revealRequest,setRevealRequest]=useState<{path:string;line:number;column:number;requestId:number}|null>(null);
   const [sidebarWidth,setSidebarWidth]=useState(235);
   const [explorerOpen,setExplorerOpen]=useState(true);
+  const [compactPane,setCompactPane]=useState<'files'|'editor'>(()=>initialFilePath||initialUntitledDrafts?.length?'editor':'files');
+  const [actionsOpen,setActionsOpen]=useState(false);
   const [splitPercent,setSplitPercent]=useState(50);
   const [changeEntries,setChangeEntries]=useState<import('../workspace/files.js').WorkspaceChange[]>([]);
   const [snapshot,setSnapshot]=useState<import('../workspace/files.js').WorkspaceSnapshot|null>(null);
@@ -124,6 +126,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     };
     setTabs(previous=>[...previous,tab]);
     setActive(path);
+    setCompactPane('editor');
     setPanel('Explorer');
     setPreviewOnly(false);
     setMessage('');
@@ -180,7 +183,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
 
   const open=useCallback(async(path:string)=>{
     setExpanded(prev=>new Set([...prev,...workspaceParents(path)]));
-    if(latestTabs.current.some(tab=>tab.path===path)){setActive(path);return;}
+    if(latestTabs.current.some(tab=>tab.path===path)){setActive(path);setCompactPane('editor');return;}
     try{
       if (workspace.preview && mediaKindForPath(path)) {
         const preview=await workspace.preview(path);
@@ -188,13 +191,13 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
           const asset:Tab={path,content:'',value:'',version:preview.version||'media-preview',readonly:true,
             status:'saved',diagnostics:[],editorDiagnostics:[],preview};
           setTabs(prev=>prev.some(tab=>tab.path===path)?prev:[...prev,asset]);
-          setActive(path);setMessage('');return;
+          setActive(path);setCompactPane('editor');setMessage('');return;
         }
       }
       const file=assertWorkspaceFile(await workspace.read(path));
       queue.acceptDiskVersion(file.path,file.version);
       setTabs(prev=>prev.some(tab=>tab.path===file.path)?prev:[...prev,{...file,value:file.content,status:'saved',diagnostics:[],editorDiagnostics:[]}]);
-      setActive(file.path);setMessage('');
+      setActive(file.path);setCompactPane('editor');setMessage('');
     }catch(e){setMessage(e instanceof Error?e.message:String(e));}
   },[queue,workspace]);
   useEffect(() => {
@@ -427,21 +430,29 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     onActiveFileChange?.(current ? {path:current.path,version:current.version} : null);
   }, [onActiveFileChange, current?.path, current?.version]);
   const dirty=current&&current.status!=='saved';
-  return <div className="asi-ide">
+  return <div className="asi-ide" data-compact-pane={compactPane} data-has-file={Boolean(current)}>
     <header className="asi-toolbar">
       <div className="asi-toolbar-identity"><span className="asi-toolbar-kicker">FILES / EDITOR</span><strong title={label}>{label}</strong></div>
       <nav aria-label="Editor actions">
+        <button className="asi-compact-switch" type="button" aria-label="Show files" aria-pressed={compactPane==='files'} onClick={()=>{setCompactPane('files');setExplorerOpen(true);}}>Files</button>
+        <button className="asi-compact-switch" type="button" aria-label="Show editor" aria-pressed={compactPane==='editor'} onClick={()=>setCompactPane('editor')}>Editor</button>
         <button className="asi-action-primary" type="button" aria-label="New file" title="New file (⌘N / Ctrl+N)" onClick={()=>createUntitled()}>＋ New file</button>
-        <button type="button" aria-pressed={explorerOpen} onClick={()=>setExplorerOpen(value=>!value)}>{explorerOpen?'Hide files':'Show files'}</button>
-        <button type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
+        <button className="asi-wide-only" type="button" aria-pressed={explorerOpen} onClick={()=>setExplorerOpen(value=>!value)}>{explorerOpen?'Hide files':'Show files'}</button>
+        <button className="asi-wide-only" type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
+        <button type="button" className="asi-action-overflow" aria-label="More editor actions" aria-expanded={actionsOpen} onClick={()=>setActionsOpen(value=>!value)}>•••</button>
+        {actionsOpen&&<button type="button" className="asi-actions-dismiss" aria-label="Dismiss editor actions" onClick={()=>setActionsOpen(false)}/>}
+        <div className="asi-extra-actions" data-open={actionsOpen} onClick={()=>setActionsOpen(false)} onKeyDown={event=>{if(event.key==='Escape')setActionsOpen(false);}}>
+        <button className="asi-compact-only" type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
         <button type="button" onClick={()=>{setPaletteMode('command');setPaletteQuery('');}}>Commands</button>
-        <button type="button" disabled={!current} onClick={()=>{setSplit(!split);setPreviewOnly(false);}}>{split?'Close split':'Split'}</button>
+        <button className="asi-wide-only" type="button" disabled={!current} onClick={()=>{setSplit(!split);setPreviewOnly(false);}}>{split?'Close split':'Split'}</button>
         <button type="button" disabled={!current||(!current.preview&&!isMarkdownPath(current.path)&&!isHtmlPath(current.path))}
-          onClick={()=>{setPreviewOnly(!previewOnly);setSplit(false);}}>{previewOnly?'Source':'Preview'}</button>
+          onClick={()=>{setPreviewOnly(!previewOnly);setSplit(false);setCompactPane('editor');}}>{previewOnly?'Source':'Preview'}</button>
         <button type="button" disabled={!current||!canHistory} onClick={()=>void showHistory()}>History</button>
         <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
-        <button type="button" disabled={!current||current.readonly||(readonly&&!current.untitled)} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
         {onExit&&<button type="button" onClick={()=>{if(tabs.some(t=>t.status!=='saved')){setMessage('Save all changes before exiting.');return;}onExit();}}>Close</button>}
+        </div>
+        <button className="asi-save-action" type="button" disabled={!current||current.readonly||(readonly&&!current.untitled)} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
+
       </nav>
     </header>
     {appearanceOpen&&<div className="asi-appearance-panel" role="group" aria-label="Editor appearance">
@@ -493,7 +504,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         onDoubleClick={()=>setSidebarWidth(235)}
         onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSidebarWidth(value=>Math.max(150,Math.min(450,value+(event.key==='ArrowLeft'?-16:16))));}}}/>
       <section className="asi-center" aria-label="Code editor">
-        <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
+        <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>{setActive(tab.path);setCompactPane('editor');}}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
         {current?<><div className="asi-breadcrumb"><span>{current.untitled?'Unsaved draft / '+current.displayName:current.displayName||current.path.split('/').join(' › ')}</span><div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={Boolean(current.untitled)||!canRename||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>setConfirmation({kind:'delete'})} disabled={Boolean(current.untitled)||!canDelete||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
           style={{'--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr'} as CSSProperties}>
@@ -555,7 +566,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       </div>
     </section>}
     {agent&&current&&<div className="asi-agent"><button type="button" disabled={agentBusy} onClick={()=>void ask()}>{agentBusy?'Preparing proposal…':'Work with '+agent.label}</button></div>}
-    <footer className="asi-status"><span>{label}</span><span>{current?.status||''}</span><span>Ln {cursor.line}, Col {cursor.column}</span><span>{current?.eol||'LF'}</span><span>{current?.encoding||'UTF-8'}</span><span>{current?.language||'Text'}</span><button type="button" aria-expanded={problemsOpen} onClick={()=>{setPanel('Problems');setProblemsOpen(value=>!value);}}>{problems.length} problems</button></footer>
+    <footer className="asi-status"><span>{label}</span><span>{current?.status||''}</span><span>Ln {cursor.line}, Col {cursor.column}</span><span>{current?.eol||'LF'}</span><span>{current?.encoding||'UTF-8'}</span><span>{current?.language||'Text'}</span><button type="button" aria-expanded={problemsOpen} onClick={()=>{setPanel('Problems');setCompactPane('files');setExplorerOpen(true);setProblemsOpen(value=>!value);}}>{problems.length} problems</button></footer>
     {message&&<div className="asi-message" role="status">{message}<button type="button" onClick={()=>setMessage('')}>×</button></div>}
     {modal&&<div className="asi-overlay"><form className="asi-dialog" role="dialog" aria-modal="true" aria-labelledby="asi-dialog-title" onSubmit={e=>{e.preventDefault();void create();}}>
       <div className="asi-dialog-heading"><span className="asi-dialog-symbol" aria-hidden="true">⌁</span><div>

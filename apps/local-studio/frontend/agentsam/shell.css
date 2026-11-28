@@ -1020,10 +1020,10 @@
 /* Hide the dock only for touch text entry, rather than every focused input
    in a desktop browser's narrow pane (which hid Home's dock unnecessarily). */
 @media (max-width: 1099px) and (pointer: coarse) {
-  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus) .as-nav-launch-dock {
+  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus):not(:has([data-side-stage-kind="terminal"] [data-terminal-viewport] textarea:focus)) .as-nav-launch-dock {
     display: none;
   }
-  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus) .agentsam-main:has(.as-nav-launch-dock) {
+  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus):not(:has([data-side-stage-kind="terminal"] [data-terminal-viewport] textarea:focus)) .agentsam-main:has(.as-nav-launch-dock) {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
@@ -1339,4 +1339,9 @@
   .agentsam-shell .agentsam-plugin-menu[data-section="commands"] {inline-size:min(440px,calc(100vw - 20px))}
   .agentsam-shell .agentsam-plugin-menu .agentsam-plugin-row {min-height:48px;border-radius:11px}
   .agentsam-shell .agentsam-plugin-menu[data-section="root"] .agentsam-plugin-row-copy small {display:block;font-size:11px}
+}
+
+/* Terminal uses the same dock clearance as Files, not a second bottom inset. */
+@media(max-width:1099px) {
+  .agentsam-shell .agentsam-main:has(.as-nav-launch-dock) [data-side-stage-kind="terminal"] [data-terminal-viewport] { padding-bottom:4px; }
 }

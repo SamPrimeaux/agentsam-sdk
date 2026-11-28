@@ -12,6 +12,7 @@ export function AgentSamLaunchDock() {
   const navigate = useNavigate();
   const setSideOpen = useWorkStore((state) => state.setSideOpen);
   const workSurface = useWorkStore((state) => state.workSurface);
+  const terminalStageActive = useWorkStore(state => state.sideOpen && state.sideTabs.some(tab => tab.id === state.activeSideTabId && tab.kind === "terminal"));
   const setWorkSurface = useWorkStore((state) => state.setWorkSurface);
   const [path, routeSearch = ''] = (data.pathname ?? '').split('?');
   const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
@@ -68,11 +69,11 @@ export function AgentSamLaunchDock() {
 
   if (conversationRoute) {
     return <Nav.LaunchDock coverage="tablet" label="Work surfaces" items={[
-      { id: 'chat', label: 'Chat', icon: <MessageCircle />, active: workSurface === 'chat', onSelect: () => setWorkSurface('chat') },
-      { id: 'files', label: 'Files', icon: <Folder />, active: workSurface === 'files', onSelect: () => setWorkSurface('files') },
-      { id: 'code', label: 'Code', icon: <FileCode />, active: workSurface === 'code', onSelect: () => setWorkSurface('code') },
-      { id: 'terminal', label: 'Terminal', icon: <SquareTerminal />, active: workSurface === 'terminal', onSelect: () => setWorkSurface('terminal') },
-      { id: 'preview', label: 'Preview', icon: <MonitorPlay />, active: workSurface === 'preview', onSelect: () => setWorkSurface('preview') },
+      { id: 'chat', label: 'Chat', icon: <MessageCircle />, active: !terminalStageActive && workSurface === 'chat', onSelect: () => setWorkSurface('chat') },
+      { id: 'files', label: 'Files', icon: <Folder />, active: !terminalStageActive && workSurface === 'files', onSelect: () => setWorkSurface('files') },
+      { id: 'code', label: 'Code', icon: <FileCode />, active: !terminalStageActive && workSurface === 'code', onSelect: () => setWorkSurface('code') },
+      { id: 'terminal', label: 'Terminal', icon: <SquareTerminal />, active: terminalStageActive || workSurface === 'terminal', onSelect: () => setWorkSurface('terminal') },
+      { id: 'preview', label: 'Preview', icon: <MonitorPlay />, active: !terminalStageActive && workSurface === 'preview', onSelect: () => setWorkSurface('preview') },
     ]} />;
   }
 

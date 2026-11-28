@@ -18,6 +18,9 @@ test('Files source remains a real Monaco workbench without an authorized provide
   assert.match(html,/Connect GitHub/);
   assert.match(html,/Your editor is ready/);
   assert.match(html,/Commands/);
+  assert.match(html,/data-compact-pane="files"/);
+  assert.match(html,/aria-label="Show editor"/);
+  assert.match(html,/aria-label="More editor actions"/);
   assert.doesNotMatch(html,/window\.prompt/);
 });
 
